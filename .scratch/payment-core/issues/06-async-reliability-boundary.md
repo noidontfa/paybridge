@@ -32,7 +32,7 @@ Resolved in a grilling session with the user, rounds 1 to 3.
 
 ### Transactional Outbox
 
-- Only Payment-level events are written: `PaymentCreated`, `PaymentSucceeded`, `PaymentCancelled`, `PaymentExpired`, `PaymentRequiresReview`. A `PaymentTransaction` transition writes no outbox row in Phase 1, unless it also changes the Payment status.
+- Only Payment-level events are written: `PaymentCreated`, `PaymentSucceeded`, `PaymentCancelled`, `PaymentExpired`, `PaymentRequiresReview`. A `PaymentTransaction` transition writes no outbox row in Phase 1, unless it also changes the Payment status. The one exception is `PaymentRequiresReview`, which is written when a `PaymentTransaction` first enters `REQUIRES_REVIEW`, even though the Payment status does not change.
 - The outbox row is written in the same database transaction as the state change, into `core_outbox_events`.
 - A relay inside Core reads unpublished rows, adds each one to BullMQ with `jobId` = outbox row id, then sets `published_at`. Delivery is at-least-once, so consumers must be idempotent.
 - If Redis is unavailable, rows stay unpublished in PostgreSQL. The relay retries on the next poll, and writes keep working.

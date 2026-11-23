@@ -36,6 +36,7 @@ Resolved in a grilling session with the user, rounds 1 to 4.
 - Stripe PaymentIntent has no expiry, and VNPay does not document an automatic IPN at expiry. Core therefore enforces `expiresAt` itself for every gateway. The provider-side value is a backup, not the authority.
 - At `expiresAt`, a scheduler first queries the provider for each non-terminal attempt. If the provider confirms payment, the result follows the normal success rule. If not, the attempt goes to `EXPIRED` (with a best-effort cancel at the provider) and the Payment goes to `EXPIRED`.
 - Attempt deadlines never exceed `Payment.expiresAt`.
+- A `PENDING` Payment with no `PaymentTransaction` also expires at `expiresAt`. No provider query is made for it.
 
 ### PaymentTransaction states
 
@@ -72,6 +73,7 @@ PaymentTransaction:
 | `CREATED` or `PENDING` | `FAILED` | Webhook/IPN or query | Clear failure |
 | `CREATED` or `PENDING` | `REQUIRES_REVIEW` | Webhook/IPN or query | Non-binary code, or amount differs |
 | `PENDING` | `EXPIRED` | Scheduler at `expiresAt` | Provider queried first and confirmed unpaid |
+| `CREATED` | `CANCELLED` | Core (gateway switch) | Best-effort cancel at the provider |
 | `PENDING` | `CANCELLED` | Core (gateway switch or merchant cancel) | Best-effort cancel at the provider |
 | `FAILED`, `EXPIRED` or `CANCELLED` | `SUCCEEDED` | Late success | Payment is `PENDING`, no attempt is `SUCCEEDED`, and the amount equals `Payment.amount` |
 | `FAILED`, `EXPIRED` or `CANCELLED` | `REQUIRES_REVIEW` | Late success | Payment is `EXPIRED` or `CANCELLED`, another attempt is already `SUCCEEDED`, or the amount differs from `Payment.amount` |
@@ -105,7 +107,7 @@ The webhook can arrive before Core records `PENDING`, so `CREATED` also accepts 
 
 - Each attempt records a `review_reason`: `AMBIGUOUS_PROVIDER_STATUS`, `AMOUNT_MISMATCH`, `LATE_SUCCESS_ON_CLOSED_PAYMENT` or `DUPLICATE_SUCCESS`, plus `review_opened_at`.
 - **Automatic**: `AMBIGUOUS_PROVIDER_STATUS` and `AMOUNT_MISMATCH` are re-queried on schedule. A clear answer (success or failure) is applied with the same rules as any other result.
-- **Operator, after 72 hours** from `review_opened_at` with no clear answer. The operator may only set `SUCCEEDED` (if the amount equals `Payment.amount` and the Payment is `PENDING`) or `FAILED`. A note is mandatory, and every action is recorded with its actor in the audit trail.
+- **Operator, after 72 hours** from `review_opened_at` with no clear answer. The operator may only set `SUCCEEDED` (if the amount equals `Payment.amount` and the Payment is `PENDING`) or `FAILED`. For `AMOUNT_MISMATCH` this means only `FAILED` is possible. A note is mandatory, and every action is recorded with its actor in the audit trail.
 - **Refund flag**: whenever money was collected but the attempt is not `SUCCEEDED`, `refund_required` is set to `true`.
 - `LATE_SUCCESS_ON_CLOSED_PAYMENT` and `DUPLICATE_SUCCESS` stay `REQUIRES_REVIEW` with `refund_required = true` until the RefundService effort exists. Operators may only add notes to them.
 

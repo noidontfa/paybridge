@@ -62,16 +62,16 @@ A Vitest spec asserts that these indexes exist, so they cannot be dropped silent
 
 - `review_reason` is an enum with four values: `AMBIGUOUS_PROVIDER_STATUS`, `AMOUNT_MISMATCH`, `LATE_SUCCESS_ON_CLOSED_PAYMENT`, `DUPLICATE_SUCCESS`. It is set when an attempt enters `REQUIRES_REVIEW`. `review_opened_at` records when that happened.
 - **Automatic**: `AMBIGUOUS_PROVIDER_STATUS` and `AMOUNT_MISMATCH` are re-queried on schedule. A clear answer is applied with the normal rules.
-- **Operator, after 72 hours** without a clear answer. The operator may only set `SUCCEEDED` (if the amount equals `Payment.amount` and the Payment is `PENDING`) or `FAILED`. A note is mandatory, and the action is recorded in `core_status_transitions`.
+- **Operator, after 72 hours** without a clear answer. The operator may only set `SUCCEEDED` (if the amount equals `Payment.amount` and the Payment is `PENDING`) or `FAILED`. For `AMOUNT_MISMATCH` this means only `FAILED` is possible. A note is mandatory, and the action is recorded in `core_status_transitions`.
 - **`refund_required`** is set to `true` whenever money was collected but the attempt is not `SUCCEEDED`.
 - **`LATE_SUCCESS_ON_CLOSED_PAYMENT` and `DUPLICATE_SUCCESS`** stay `REQUIRES_REVIEW` with `refund_required = true` until the RefundService effort exists. Until then, operators may only add notes.
 
 ### Refund status
 
-- `RefundStatus`: `PENDING`, `SUCCEEDED`, `FAILED`, `REQUIRES_ACTION`, `CANCELED`.
+- `RefundStatus`: `PENDING`, `SUCCEEDED`, `FAILED`, `REQUIRES_ACTION`, `CANCELLED`.
 - `PENDING` and `REQUIRES_ACTION` are non-terminal. The rest are terminal.
 - Mapping from provider statuses (VNPay and ZaloPay "processing" maps to `PENDING`) and the transitions belong to the RefundService effort.
-- Invariants 10 and 11 are enforced by RefundService under the Payment row lock. `FAILED` and `CANCELED` refunds are not counted toward the total.
+- Invariants 10 and 11 are enforced by RefundService under the Payment row lock. `FAILED` and `CANCELLED` refunds are not counted toward the total.
 - Phase 1 has no code that writes `core_refunds`. The table exists so that RefundService needs no breaking change.
 
 ### Migration
