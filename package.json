@@ -1,0 +1,31 @@
+{
+  "name": "paybridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PayBridge - payment gateway platform (Turborepo monorepo)",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=26",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write \"**/*.{ts,json,md,yml,yaml}\"",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "pnpm --filter @paybridge/api db:migrate",
+    "db:deploy": "pnpm --filter @paybridge/api db:deploy",
+    "db:studio": "pnpm --filter @paybridge/api db:studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "turbo": "^2.11.13"
+  }
+}

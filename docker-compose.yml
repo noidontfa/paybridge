@@ -1,0 +1,47 @@
+# Local infrastructure for PayBridge development.
+#   pnpm docker:up     start PostgreSQL + Redis in the background
+#   pnpm docker:down   stop them (data is kept in named volumes; add -v to wipe)
+# Values can be overridden through a root .env file (see .env.example).
+name: paybridge
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: paybridge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-paybridge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paybridge}
+      POSTGRES_DB: ${POSTGRES_DB:-paybridge}
+    ports:
+      # Bound to localhost only: this is a dev database.
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: paybridge-redis
+    restart: unless-stopped
+    # AOF persistence so queued/idempotency data survives a restart.
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
