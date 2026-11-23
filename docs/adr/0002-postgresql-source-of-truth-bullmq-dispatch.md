@@ -1,0 +1,3 @@
+# PostgreSQL is the source of truth; BullMQ is a derived dispatch queue
+
+PayBridge must use BullMQ on Redis for asynchronous jobs, but PostgreSQL holds the source of truth for every asynchronous flow. Outbox events, webhook inbox rows, idempotency keys and Payment deadlines are written to `core_*` tables in the same transaction as the state change, and BullMQ jobs are only dispatch: each one can be rebuilt from those rows. We rejected treating Redis as authoritative (for example, a delayed BullMQ job as the only expiry trigger), because Redis data can be lost and a lost job must never lose a deadline or an event. The cost is extra tables and a periodic PostgreSQL sweep, which adds up to about one minute of latency to expiry.
