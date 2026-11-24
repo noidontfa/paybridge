@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { PaymentService } from './application/payment.service.js';
+import { CreatePayment } from './application/use-cases/create-payment.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { Clock, SystemClock } from './domain/clock.js';
+import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
+import { PaymentsController } from './http/payments.controller.js';
+import { WebhooksController } from './http/webhooks.controller.js';
 import {
   PrismaTransactionRunner,
   TransactionRunner,
 } from './infrastructure/prisma/transaction-runner.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';
-import { WebhooksController } from './http/webhooks.controller.js';
 
 /**
  * Payment Core. Needs `PrismaModule` (global), the config module and the
@@ -15,12 +20,15 @@ import { WebhooksController } from './http/webhooks.controller.js';
  */
 @Module({
   imports: [QueueModule],
-  controllers: [WebhooksController],
+  controllers: [PaymentsController, WebhooksController],
   providers: [
+    { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
+    CreatePayment,
+    PaymentService,
     WebhookIntake,
   ],
-  exports: [Clock, QueueModule, TransactionRunner],
+  exports: [Clock, PaymentService, QueueModule, TransactionRunner],
 })
 export class PaymentCoreModule {}
