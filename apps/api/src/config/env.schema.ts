@@ -10,7 +10,28 @@ export const LOG_LEVELS = [
   'silent',
 ] as const;
 
-export const envSchema = z.object({
+/** An empty value (`KEY=` in a .env file) counts as unset. */
+const optionalKey = (prefixes: readonly string[], label: string) =>
+  z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine((v) => prefixes.some((p) => v.startsWith(p)), {
+        message: `must start with ${label}`,
+      })
+      .optional(),
+  );
+
+const STRIPE_KEYS = [
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PUBLISHABLE_KEY',
+] as const;
+
+const stripeMode = (key: string): 'test' | 'live' | undefined =>
+  key.includes('_test_') ? 'test' : key.includes('_live_') ? 'live' : undefined;
+
+const envObject = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
@@ -45,6 +66,33 @@ export const envSchema = z.object({
     .min(1)
     .max(1000)
     .default(100),
+  /** Stripe Gateway Plugin: all three keys or none. */
+  STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
+  STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
+  STRIPE_PUBLISHABLE_KEY: optionalKey(['pk_'], '"pk_"'),
+});
+
+export const envSchema = envObject.superRefine((env, ctx) => {
+  const missing = STRIPE_KEYS.filter((k) => !env[k]);
+  if (missing.length > 0 && missing.length < STRIPE_KEYS.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [missing[0]],
+      message: `Stripe is partly configured: set all of ${STRIPE_KEYS.join(', ')} or none; missing ${missing.join(', ')}`,
+    });
+    return;
+  }
+  if (env.STRIPE_SECRET_KEY && env.STRIPE_PUBLISHABLE_KEY) {
+    const secretMode = stripeMode(env.STRIPE_SECRET_KEY);
+    const publishableMode = stripeMode(env.STRIPE_PUBLISHABLE_KEY);
+    if (secretMode && publishableMode && secretMode !== publishableMode) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['STRIPE_PUBLISHABLE_KEY'],
+        message: `STRIPE_SECRET_KEY is a ${secretMode} key but STRIPE_PUBLISHABLE_KEY is a ${publishableMode} key`,
+      });
+    }
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -72,4 +120,25 @@ export function resolveOutboxRelayEnabled(
   env: Pick<Env, 'NODE_ENV' | 'OUTBOX_RELAY_ENABLED'>,
 ): boolean {
   return env.OUTBOX_RELAY_ENABLED ?? env.NODE_ENV !== 'test';
+}
+
+export interface StripeConfig {
+  secretKey: string;
+  webhookSecret: string;
+  publishableKey: string;
+}
+
+/** The Stripe config when all three keys are set; undefined when none are. */
+export function resolveStripeConfig(
+  env: Pick<Env, (typeof STRIPE_KEYS)[number]>,
+): StripeConfig | undefined {
+  const { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PUBLISHABLE_KEY } =
+    env;
+  if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !STRIPE_PUBLISHABLE_KEY)
+    return undefined;
+  return {
+    secretKey: STRIPE_SECRET_KEY,
+    webhookSecret: STRIPE_WEBHOOK_SECRET,
+    publishableKey: STRIPE_PUBLISHABLE_KEY,
+  };
 }
