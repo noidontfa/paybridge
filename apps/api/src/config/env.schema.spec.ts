@@ -1,6 +1,7 @@
 import {
   envSchema,
   resolveLogLevel,
+  resolveOutboxRelayEnabled,
   resolveSwaggerEnabled,
 } from './env.schema.js';
 
@@ -78,5 +79,32 @@ describe('environment-derived defaults', () => {
     expect(
       resolveSwaggerEnabled({ NODE_ENV: 'production', SWAGGER_ENABLED: true }),
     ).toBe(true);
+  });
+});
+
+describe('outbox relay settings', () => {
+  it('defaults to polling every second, 100 rows at a time', () => {
+    const env = envSchema.parse(required);
+    expect(env.OUTBOX_RELAY_POLL_INTERVAL_MS).toBe(1000);
+    expect(env.OUTBOX_RELAY_BATCH_SIZE).toBe(100);
+  });
+
+  it('runs the relay everywhere except test unless set explicitly', () => {
+    expect(resolveOutboxRelayEnabled({ NODE_ENV: 'production' })).toBe(true);
+    expect(resolveOutboxRelayEnabled({ NODE_ENV: 'development' })).toBe(true);
+    expect(resolveOutboxRelayEnabled({ NODE_ENV: 'test' })).toBe(false);
+    expect(
+      resolveOutboxRelayEnabled({
+        NODE_ENV: 'production',
+        OUTBOX_RELAY_ENABLED: false,
+      }),
+    ).toBe(false);
+  });
+
+  it('rejects a batch size of zero', () => {
+    expect(
+      envSchema.safeParse({ ...required, OUTBOX_RELAY_BATCH_SIZE: '0' })
+        .success,
+    ).toBe(false);
   });
 });
