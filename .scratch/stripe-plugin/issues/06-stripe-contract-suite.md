@@ -1,6 +1,6 @@
 # 06: Stripe contract suite registration
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** The Stripe plugin passes the shared `PaymentGateway` contract suite against recorded Stripe test-mode responses, with no live Stripe calls in CI. See [spec](../spec.md), "Testing Decisions".
 

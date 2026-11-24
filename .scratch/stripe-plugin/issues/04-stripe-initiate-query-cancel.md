@@ -1,6 +1,6 @@
 # 04: Stripe initiate, query and cancel
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** A `StripeGatewayPlugin` in `apps/api/src/gateways/stripe/` that creates, reads and cancels PaymentIntents, maps their status to the four normalised states, and maps Stripe SDK errors to Core's error categories. See [spec](../spec.md), sections "Stripe SDK", "`initiate`", "`query`", "`cancel`" and "Error mapping".
 

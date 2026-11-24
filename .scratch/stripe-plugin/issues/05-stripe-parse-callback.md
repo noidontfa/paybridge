@@ -1,6 +1,6 @@
 # 05: Stripe webhook parsing
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** The Stripe plugin's `parseCallback` verifies `Stripe-Signature` over the raw body, maps the four `payment_intent.*` events to normalised states, and ignores everything else. See [spec](../spec.md), "`parseCallback`".
 

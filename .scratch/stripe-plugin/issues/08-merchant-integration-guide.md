@@ -1,6 +1,6 @@
 # 08: Merchant integration guide and smoke test
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** A short guide in `docs/` that shows a merchant how to take a Stripe card payment through PayBridge with the Payment Element, plus the manual smoke test to run before release. No sample app. See [spec](../spec.md), user stories 2 and 14.
 

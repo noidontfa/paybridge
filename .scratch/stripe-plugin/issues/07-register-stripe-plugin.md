@@ -1,6 +1,6 @@
 # 07: Register the Stripe plugin
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** The composition root registers the Stripe plugin whenever the Stripe configuration is present, in every environment, so `gatewayId: "stripe"` works end to end. See [spec](../spec.md), "Location and registration".
 
