@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GatewayNotFoundError,
   GatewayRejectedError,
@@ -27,8 +27,10 @@ const initiateInput: InitiateInput = {
 describe('StripeGatewayPlugin', () => {
   let http: FixtureHttpClient;
   let plugin: StripeGatewayPlugin;
+  const logger = { warn: vi.fn(), log: vi.fn(), error: vi.fn() };
 
   beforeEach(() => {
+    logger.warn.mockClear();
     http = new FixtureHttpClient();
     plugin = new StripeGatewayPlugin({
       secretKey: 'sk_test_fixture',
@@ -36,6 +38,7 @@ describe('StripeGatewayPlugin', () => {
       webhookSecret: WEBHOOK_SECRET,
       httpClient: http,
       maxNetworkRetries: 0,
+      logger,
     });
   });
 
@@ -96,6 +99,12 @@ describe('StripeGatewayPlugin', () => {
       expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'requires_payment_method' });
       expect(JSON.stringify(result.rawPayload)).not.toContain('client_secret');
       expect(JSON.stringify(result.rawPayload)).not.toContain('TestSecretValue123');
+    });
+
+    it('is OutcomeUnknown when Stripe returns no client secret', async () => {
+      http.respond(200, 'payment-intent.no-client-secret');
+
+      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(OutcomeUnknownError);
     });
 
     it.each(['1500.5', '100.25', 'abc', ''])(
@@ -171,6 +180,15 @@ describe('StripeGatewayPlugin', () => {
       const result = await query({});
 
       expect(result.providerRef).toBe('pi_3QxTest2Newer0000000000');
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(ATTEMPT_KEY));
+    });
+
+    it('does not warn when the search returns one match', async () => {
+      http.respond(200, 'search.one-match');
+
+      await query({});
+
+      expect(logger.warn).not.toHaveBeenCalled();
     });
 
     it('is NotFound on resource_missing', async () => {
@@ -206,6 +224,48 @@ describe('StripeGatewayPlugin', () => {
       const result = await cancel();
 
       expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
+    });
+
+    it('retrieves the PaymentIntent when the error body does not carry it', async () => {
+      http.respond(400, 'error.unexpected-state-no-payment-intent');
+      http.respond(200, 'payment-intent.canceled');
+
+      const result = await cancel();
+
+      expect(http.requests[1]).toMatchObject({
+        method: 'GET',
+        path: `/v1/payment_intents/${PI_ID}`,
+      });
+      expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
+    });
+
+    it('rejects when the error body is bare and the PaymentIntent succeeded', async () => {
+      http.respond(400, 'error.unexpected-state-no-payment-intent');
+      http.respond(200, 'payment-intent.succeeded');
+
+      await expect(cancel()).rejects.toBeInstanceOf(GatewayRejectedError);
+    });
+
+    it('finds the PaymentIntent by attempt key when no id is known, then cancels it', async () => {
+      http.respond(200, 'search.one-match');
+      http.respond(200, 'payment-intent.canceled');
+
+      const result = await plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: {} });
+
+      expect(http.requests[0]?.path).toContain('/v1/payment_intents/search');
+      expect(http.requests[1]).toMatchObject({
+        method: 'POST',
+        path: `/v1/payment_intents/${PI_ID}/cancel`,
+      });
+      expect(result.rawPayload).toMatchObject({ status: 'canceled' });
+    });
+
+    it('is NotFound when no id is known and the search has no match', async () => {
+      http.respond(200, 'search.no-match');
+
+      await expect(
+        plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: {} }),
+      ).rejects.toBeInstanceOf(GatewayNotFoundError);
     });
 
     it('rejects when the PaymentIntent already succeeded', async () => {

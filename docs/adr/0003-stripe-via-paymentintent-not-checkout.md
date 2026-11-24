@@ -11,3 +11,4 @@ The Stripe Gateway Plugin creates a PaymentIntent and returns its `client_secret
 - The `CLIENT_SDK` next action gains an optional, provider-neutral `clientParams` bag, used by Stripe to hand the browser its publishable key and the return URL for 3-D Secure.
 - The Provider Reference is the PaymentIntent id (`pi_…`), which exists at creation and is the id refunds will target later.
 - A Stripe decline does not end the attempt: the PaymentIntent returns to `requires_payment_method` and the customer retries on it, so the plugin reports `PENDING`.
+- `parseCallback` may return an Ignored Callback (`{ ignored: true, ack }`) so that events for PaymentIntents PayBridge did not create are acknowledged without entering the webhook inbox; this is a provider-neutral change to Core's port.
