@@ -8,6 +8,7 @@ import type {
   PaymentTransaction,
   PaymentTransactionChanges,
 } from '../../domain/payment-transaction.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 import type { DbContext } from './db.js';
 import {
   definedOnly,
@@ -108,4 +109,31 @@ export class PrismaPaymentRepository {
     });
     return toPaymentTransaction(row);
   }
+
+  /**
+   * Ids of `PENDING` Payments whose deadline is at or before `now`, earliest
+   * deadline first, at most `limit`. Served by the partial expiry index.
+   */
+  async findExpiredPendingIds(now: Date, limit: number): Promise<string[]> {
+    const rows = await this.ctx.db.$queryRaw<{ id: string }[]>(
+      expiredPendingPaymentsQuery(now, limit),
+    );
+    return rows.map((row) => row.id);
+  }
+}
+
+/**
+ * The expiry sweep's query. `'PENDING'` is a literal, not a parameter, so the
+ * planner can match it to the partial index `core_payments_pending_expiry_idx`
+ * (status, expires_at) WHERE status = 'PENDING'. Exported for the index test.
+ */
+export function expiredPendingPaymentsQuery(
+  now: Date,
+  limit: number,
+): Prisma.Sql {
+  return Prisma.sql`
+    SELECT id FROM core_payments
+    WHERE status = 'PENDING' AND expires_at <= ${now}
+    ORDER BY expires_at
+    LIMIT ${limit}`;
 }
