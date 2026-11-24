@@ -145,7 +145,10 @@ describe('PaymentGateway port', () => {
         'supportsCancel',
       );
       expectTypeOf<
-        Exclude<keyof PaymentGateway, 'gatewayId' | 'capabilities'>
+        Exclude<
+          keyof PaymentGateway,
+          'gatewayId' | 'capabilities' | 'callbackHeaders'
+        >
       >().toEqualTypeOf<'initiate' | 'query' | 'cancel' | 'parseCallback'>();
     });
   });
