@@ -1,6 +1,6 @@
 # 03: Stripe configuration
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** The app reads three optional Stripe keys and refuses to boot when they are only partly set or mix test and live mode. See [spec](../spec.md), "Configuration".
 

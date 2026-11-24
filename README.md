@@ -98,6 +98,10 @@ are loaded for `NODE_ENV` (default `development`), first match wins:
 | `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                           |
 | `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                           |
 
+## Integrations
+
+- [Taking Stripe card payments](docs/integrations/stripe.md): merchant guide (Payment Element, webhook setup, smoke test).
+
 ## Conventions
 
 - **Logging**: `nestjs-pino`. Each request gets an `x-request-id` (reused if the client sends

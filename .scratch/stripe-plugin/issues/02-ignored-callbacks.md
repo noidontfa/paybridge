@@ -1,6 +1,6 @@
 # 02: Ignored callbacks in the port
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** A Gateway Plugin can tell Core that a verified callback is irrelevant (an event type it does not handle, or a provider object PayBridge did not create). Core acknowledges it with the plugin's acknowledgement and stores nothing, so it never becomes a `FAILED` webhook inbox row that alerts every hour. See [spec](../spec.md), "Core change 2".
 

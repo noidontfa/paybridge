@@ -134,6 +134,40 @@ describe('PaymentGateway port', () => {
     });
   });
 
+  describe('CLIENT_SDK next action', () => {
+    type ClientSdk = Extract<NextAction, { type: 'CLIENT_SDK' }>;
+
+    it('carries only a token when it has no client parameters', () => {
+      const action: NextAction = { type: 'CLIENT_SDK', token: 'secret_1' };
+      expect(action).toEqual({ type: 'CLIENT_SDK', token: 'secret_1' });
+    });
+
+    it('carries an optional bag of string parameters for the client', () => {
+      const action: NextAction = {
+        type: 'CLIENT_SDK',
+        token: 'secret_1',
+        clientParams: {
+          publishableKey: 'pk_test_1',
+          returnUrl: 'https://shop.example/return',
+        },
+      };
+      expect(JSON.parse(JSON.stringify(action))).toEqual(action);
+      expectTypeOf<ClientSdk['clientParams']>().toEqualTypeOf<
+        Readonly<Record<string, string>> | undefined
+      >();
+    });
+
+    it('rejects non-string parameter values', () => {
+      const action: NextAction = {
+        type: 'CLIENT_SDK',
+        token: 'secret_1',
+        // @ts-expect-error parameters are strings only
+        clientParams: { retries: 3 },
+      };
+      expect(action.type).toBe('CLIENT_SDK');
+    });
+  });
+
   describe('operations', () => {
     it('declares initiate, query, cancel and parseCallback, and no refund operations', () => {
       expectTypeOf<PaymentGateway>().toHaveProperty('initiate');

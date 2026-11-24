@@ -35,8 +35,11 @@ export interface ContractOutcome<P> {
   readonly expected: NormalizedStatus;
   /** Makes the provider answer the next `query` with this situation. */
   readonly arrangeQuery: Arrange<P>;
-  /** An authentic provider callback that reports this situation. */
-  readonly callback: Arrange<P, CallbackInput>;
+  /**
+   * An authentic provider callback that reports this situation. Omit it when
+   * the provider reports the situation through `query` only.
+   */
+  readonly callback?: Arrange<P, CallbackInput>;
 }
 
 /** Error categories reported by `initiate`, `query` or `cancel`. */
@@ -60,6 +63,12 @@ export interface ContractInvalidCallback<P> {
   readonly build: Arrange<P, CallbackInput>;
 }
 
+/** A verified callback the plugin must ignore: acknowledged, never applied. */
+export interface ContractIgnoredCallback<P> {
+  readonly situation: string;
+  readonly build: Arrange<P, CallbackInput>;
+}
+
 export interface GatewayContractRegistration<
   P extends PaymentGateway = PaymentGateway,
 > {
@@ -71,6 +80,8 @@ export interface GatewayContractRegistration<
   outcomes: ContractOutcome<P>[];
   /** Must cover every operation error category. */
   errors: ContractError<P>[];
+  /** Authentic callbacks that are irrelevant to PayBridge. Optional. */
+  ignoredCallbacks?: ContractIgnoredCallback<P>[];
   /** Provider-specific invalid callbacks, on top of the suite's tampered body. */
   invalidCallbacks: ContractInvalidCallback<P>[];
 }
@@ -184,11 +195,18 @@ export function gatewayContractChecks<P extends PaymentGateway>(
       },
     );
 
+    const { callback } = outcome;
+    if (!callback) continue;
+
     check(
       `callback: ${outcome.situation} -> ${outcome.expected} with the success acknowledgement`,
       async (plugin) => {
-        const input = await outcome.callback(plugin, context);
+        const input = await callback(plugin, context);
         const result = await plugin.parseCallback(input);
+        expect(result.ignored, 'callback was ignored, not handled').not.toBe(
+          true,
+        );
+        if (result.ignored) return;
         expectNormalisedStatus(result.status, outcome.expected);
         expectAmount(result.amount);
         expect(result.attemptKey, 'attemptKey derived from provider data').toBe(
@@ -238,12 +256,30 @@ export function gatewayContractChecks<P extends PaymentGateway>(
     );
   }
 
+  for (const ignored of registration.ignoredCallbacks ?? []) {
+    check(
+      `callback: ${ignored.situation} -> ignored with a 2xx acknowledgement`,
+      async (plugin) => {
+        const result = await plugin.parseCallback(
+          await ignored.build(plugin, context),
+        );
+        expect(result.ignored, 'plugin ignored the callback').toBe(true);
+        expectAck(result.ack);
+        expect(
+          result.ack.httpStatus,
+          'ack is a 2xx response',
+        ).toBeGreaterThanOrEqual(200);
+        expect(result.ack.httpStatus).toBeLessThan(300);
+      },
+    );
+  }
+
   check(
     'callback: a tampered body -> InvalidCallback with an error acknowledgement',
     async (plugin) => {
-      const [first] = registration.outcomes;
-      expect(first, 'at least one outcome is registered').toBeDefined();
-      const authentic = await first.callback(plugin, context);
+      const first = registration.outcomes.find((o) => o.callback);
+      expect(first?.callback, 'an outcome with a callback').toBeDefined();
+      const authentic = await first!.callback!(plugin, context);
       const rawBody = Uint8Array.from(authentic.rawBody);
       rawBody[Math.floor(rawBody.length / 2)] ^= 0x01;
       await expectInvalidCallback(
@@ -312,6 +348,22 @@ function expectAmount(amount: string | null): void {
   );
 }
 
+function expectClientParams(nextAction: InitiateResult['nextAction']): void {
+  if (nextAction.type !== 'CLIENT_SDK' || nextAction.clientParams === undefined)
+    return;
+  const params: unknown = nextAction.clientParams;
+  expect(
+    params !== null && typeof params === 'object' && !Array.isArray(params),
+    'clientParams is an object of string values',
+  ).toBe(true);
+  for (const [key, value] of Object.entries(params as object)) {
+    expect(
+      typeof value,
+      `clientParams.${key} is a string, not ${typeof value}`,
+    ).toBe('string');
+  }
+}
+
 function expectInitiateResult(result: InitiateResult): void {
   const field = NEXT_ACTION_FIELD[result.nextAction?.type];
   expect(field, `unknown next action ${result.nextAction?.type}`).toBeDefined();
@@ -319,6 +371,7 @@ function expectInitiateResult(result: InitiateResult): void {
     (result.nextAction as unknown as Record<string, unknown>)[field],
     `next action ${result.nextAction.type} has its ${field}`,
   ).toBeTruthy();
+  expectClientParams(result.nextAction);
   expect(result.providerMetadata).toBeTypeOf('object');
   expect(
     JSON.parse(JSON.stringify(result.providerMetadata)),

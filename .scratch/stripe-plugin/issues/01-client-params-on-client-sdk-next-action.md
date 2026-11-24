@@ -1,6 +1,6 @@
 # 01: `clientParams` on the client SDK next action
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** The `CLIENT_SDK` next action can carry an optional, provider-neutral bag of string parameters that Core stores and returns without interpreting. Stripe uses it for the publishable key and the return URL. See [spec](../spec.md), "Core change 1".
 

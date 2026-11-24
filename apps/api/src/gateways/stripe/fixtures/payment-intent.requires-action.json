@@ -1,0 +1,24 @@
+{
+  "id": "pi_3QxTest1AbCdEfGh0aBcDeFg",
+  "object": "payment_intent",
+  "amount": 150000,
+  "amount_capturable": 0,
+  "amount_received": 0,
+  "capture_method": "automatic",
+  "client_secret": "pi_3QxTest1AbCdEfGh0aBcDeFg_secret_TestSecretValue123",
+  "confirmation_method": "automatic",
+  "created": 1764000000,
+  "currency": "vnd",
+  "description": "Order 1001",
+  "livemode": false,
+  "metadata": {
+    "attemptKey": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
+  },
+  "payment_method": null,
+  "payment_method_types": [
+    "card"
+  ],
+  "status": "requires_action",
+  "canceled_at": null,
+  "cancellation_reason": null
+}

@@ -2,6 +2,7 @@ import {
   envSchema,
   resolveLogLevel,
   resolveOutboxRelayEnabled,
+  resolveStripeConfig,
   resolveSwaggerEnabled,
 } from './env.schema.js';
 
@@ -120,5 +121,109 @@ describe('outbox relay settings', () => {
       envSchema.safeParse({ ...required, OUTBOX_RELAY_BATCH_SIZE: '0' })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('Stripe configuration', () => {
+  const sk = 'sk_test_abc';
+  const whsec = 'whsec_abc';
+  const pk = 'pk_test_abc';
+  const all = {
+    STRIPE_SECRET_KEY: sk,
+    STRIPE_WEBHOOK_SECRET: whsec,
+    STRIPE_PUBLISHABLE_KEY: pk,
+  };
+
+  function issueText(input: Record<string, string>): string {
+    const result = envSchema.safeParse({ ...required, ...input });
+    expect(result.success).toBe(false);
+    return result.error ? JSON.stringify(result.error.issues) : '';
+  }
+
+  it('resolves the config when all three keys are set', () => {
+    const env = envSchema.parse({ ...required, ...all });
+    expect(resolveStripeConfig(env)).toEqual({
+      secretKey: sk,
+      webhookSecret: whsec,
+      publishableKey: pk,
+    });
+  });
+
+  it('accepts a restricted secret key (rk_)', () => {
+    const env = envSchema.parse({
+      ...required,
+      ...all,
+      STRIPE_SECRET_KEY: 'rk_test_abc',
+    });
+    expect(resolveStripeConfig(env)?.secretKey).toBe('rk_test_abc');
+  });
+
+  it('resolves nothing when none are set, or all are empty', () => {
+    expect(resolveStripeConfig(envSchema.parse(required))).toBeUndefined();
+    expect(
+      resolveStripeConfig(
+        envSchema.parse({
+          ...required,
+          STRIPE_SECRET_KEY: '',
+          STRIPE_WEBHOOK_SECRET: '',
+          STRIPE_PUBLISHABLE_KEY: '',
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it('fails when only one key is set, naming the missing keys', () => {
+    const text = issueText({ STRIPE_SECRET_KEY: sk });
+    expect(text).toContain('STRIPE_WEBHOOK_SECRET');
+    expect(text).toContain('STRIPE_PUBLISHABLE_KEY');
+    expect(text).not.toMatch(/missing[^"]*STRIPE_SECRET_KEY/);
+  });
+
+  it('fails when two keys are set, naming the one missing', () => {
+    const text = issueText({
+      STRIPE_SECRET_KEY: sk,
+      STRIPE_PUBLISHABLE_KEY: pk,
+    });
+    expect(text).toContain('STRIPE_WEBHOOK_SECRET');
+  });
+
+  it('rejects keys with the wrong prefix', () => {
+    for (const bad of [
+      { ...all, STRIPE_SECRET_KEY: 'pk_test_abc' },
+      { ...all, STRIPE_WEBHOOK_SECRET: 'sk_test_abc' },
+      { ...all, STRIPE_PUBLISHABLE_KEY: 'sk_test_abc' },
+    ]) {
+      expect(envSchema.safeParse({ ...required, ...bad }).success).toBe(false);
+    }
+  });
+
+  it('rejects mixing test and live mode', () => {
+    expect(
+      envSchema.safeParse({
+        ...required,
+        ...all,
+        STRIPE_SECRET_KEY: 'sk_test_abc',
+        STRIPE_PUBLISHABLE_KEY: 'pk_live_abc',
+      }).success,
+    ).toBe(false);
+    expect(
+      envSchema.safeParse({
+        ...required,
+        ...all,
+        STRIPE_SECRET_KEY: 'rk_live_abc',
+        STRIPE_PUBLISHABLE_KEY: 'pk_test_abc',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts matching live keys', () => {
+    expect(
+      envSchema.safeParse({
+        ...required,
+        ...all,
+        STRIPE_SECRET_KEY: 'sk_live_abc',
+        STRIPE_PUBLISHABLE_KEY: 'pk_live_abc',
+      }).success,
+    ).toBe(true);
   });
 });

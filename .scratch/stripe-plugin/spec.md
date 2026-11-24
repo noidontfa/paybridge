@@ -55,7 +55,7 @@ Stripe does not fit the port without care. A PaymentIntent never expires on its 
 
 - Code lives in `apps/api/src/gateways/stripe/`, next to `fake/`. Not in `packages/`: the port types live in the app, and the lint rule in `apps/api/.oxlintrc.json` that stops Core importing plugins matches `**/gateways/**`.
 - The plugin is registered explicitly in the `GATEWAY_PLUGINS` factory in `gateways.module.ts`. It is registered in every environment when configured. The fake plugin keeps its current rule (outside production only).
-- Gateway id: `stripe`. Webhooks arrive at `POST /webhooks/stripe`.
+- Gateway id: `stripe`. Webhooks arrive at `POST /api/webhooks/stripe`.
 - `capabilities.supportsCancel = true`.
 - `callbackHeaders = ['stripe-signature']`.
 
@@ -77,7 +77,7 @@ Stripe does not fit the port without care. A PaymentIntent never expires on its 
 - Creates a PaymentIntent with:
   - `amount`: the Core amount as an integer. VND is zero-decimal in Stripe, so whole dong is sent unchanged. A non-integer amount is a defensive `GatewayRejected`.
   - `currency: "vnd"`.
-  - `payment_method_types: ["card"]`.
+  - `allowed_payment_method_types: ["card"]` (the pinned `apiVersion` `2026-11-18.endive` uses this param instead of `payment_method_types`).
   - `capture_method: "automatic"`.
   - `description`: the input description.
   - `metadata.attemptKey`: the attempt key.
@@ -165,7 +165,7 @@ Stripe does not fit the port without care. A PaymentIntent never expires on its 
 - Configuration: tests for the all-or-none rule and the test/live mix check.
 - Core changes: the existing port type test gains a case for `clientParams`; webhook intake gets a test that an ignored callback is acknowledged and not stored; webhook processing gets a test for a re-parsed ignored row.
 - Prior art: `apps/api/src/gateways/fake/fake-gateway.contract.spec.ts`.
-- Manual smoke test before release, documented in the guide: Stripe test keys, `stripe listen --forward-to localhost:<port>/webhooks/stripe`, a test card payment end to end, a decline then a retry, a 3-D Secure card, and a cancel by expiry.
+- Manual smoke test before release, documented in the guide: Stripe test keys, `stripe listen --forward-to localhost:<port>/api/webhooks/stripe`, a test card payment end to end, a decline then a retry, a 3-D Secure card, and a cancel by expiry.
 
 ## Out of Scope
 

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "type": "api_error",
+    "message": "An unknown error occurred.",
+    "doc_url": "https://stripe.com/docs/error-codes"
+  }
+}

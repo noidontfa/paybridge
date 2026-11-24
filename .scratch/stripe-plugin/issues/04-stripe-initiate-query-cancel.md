@@ -1,6 +1,6 @@
 # 04: Stripe initiate, query and cancel
 
-Status: ready-for-agent
+Status: resolved
 
 **What to build:** A `StripeGatewayPlugin` in `apps/api/src/gateways/stripe/` that creates, reads and cancels PaymentIntents, maps their status to the four normalised states, and maps Stripe SDK errors to Core's error categories. See [spec](../spec.md), sections "Stripe SDK", "`initiate`", "`query`", "`cancel`" and "Error mapping".
 
@@ -9,7 +9,7 @@ Status: ready-for-agent
 - [ ] Adds the official `stripe` package at an exact version, and pins `apiVersion` in the client constructor.
 - [ ] The plugin has gateway id `stripe`, `supportsCancel: true`, and `callbackHeaders: ['stripe-signature']`. It imports only from Core's port, never from other Core modules.
 - [ ] The Stripe HTTP layer is injectable, so tests replay recorded responses.
-- [ ] `initiate` creates a PaymentIntent with integer VND amount, `currency: "vnd"`, `payment_method_types: ["card"]`, `capture_method: "automatic"`, the description, and `metadata.attemptKey`, sending `Idempotency-Key` equal to the attempt key.
+- [ ] `initiate` creates a PaymentIntent with integer VND amount, `currency: "vnd"`, `allowed_payment_method_types: ["card"]` (the pinned `apiVersion` `2026-11-18.endive` uses this param instead of `payment_method_types`), `capture_method: "automatic"`, the description, and `metadata.attemptKey`, sending `Idempotency-Key` equal to the attempt key.
 - [ ] `initiate` returns `providerRef` `pi_…`; a `CLIENT_SDK` next action with the client secret and `clientParams: { publishableKey, returnUrl }`; `providerMetadata: { paymentIntentId, livemode }`; and a raw payload with `client_secret` removed.
 - [ ] A non-integer amount is rejected as `GatewayRejected` without calling Stripe.
 - [ ] `query` retrieves by `paymentIntentId`. Without one, it searches on `metadata['attemptKey']` and returns `NotFound` on no match.
