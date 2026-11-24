@@ -8,6 +8,7 @@ import type {
   PaymentTransaction,
   PaymentTransactionChanges,
 } from '../../domain/payment-transaction.js';
+import type { ReviewReason } from '../../domain/statuses.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import type { DbContext } from './db.js';
 import {
@@ -118,6 +119,28 @@ export class PrismaPaymentRepository {
     const rows = await this.ctx.db.$queryRaw<{ id: string }[]>(
       expiredPendingPaymentsQuery(now, limit),
     );
+    return rows.map((row) => row.id);
+  }
+
+  /**
+   * Ids of attempts in `REQUIRES_REVIEW` for one of `reasons` whose review
+   * opened after `openedAfter`, oldest review first.
+   */
+  async findReviewRequeryAttemptIds(
+    reasons: readonly ReviewReason[],
+    openedAfter: Date,
+    limit: number,
+  ): Promise<string[]> {
+    const rows = await this.ctx.db.paymentTransaction.findMany({
+      where: {
+        status: 'REQUIRES_REVIEW',
+        reviewReason: { in: [...reasons] },
+        reviewOpenedAt: { gt: openedAfter },
+      },
+      orderBy: { reviewOpenedAt: 'asc' },
+      take: limit,
+      select: { id: true },
+    });
     return rows.map((row) => row.id);
   }
 
