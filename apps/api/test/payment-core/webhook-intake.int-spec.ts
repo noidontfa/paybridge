@@ -27,6 +27,17 @@ const ROUTE = `/${GLOBAL_PREFIX}/webhooks/fake`;
 
 /** Stand-in for the BullMQ queue: records adds; can be made to hang. */
 class RecordingQueue {
+  /**
+   * Read by @nestjs/bullmq to build the webhook worker (ticket 19), which then
+   * listens on the real (empty) queue while adds are only recorded here.
+   */
+  get opts() {
+    // Read lazily: the config module loads .env.test after this file runs.
+    return {
+      connection: { url: process.env.REDIS_URL, maxRetriesPerRequest: null },
+      prefix: process.env.QUEUE_PREFIX,
+    };
+  }
   readonly added: { name: string; data: unknown; jobId?: string }[] = [];
   hang = false;
   add(name: string, data: unknown, opts: { jobId?: string } = {}) {

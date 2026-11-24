@@ -121,6 +121,15 @@ export class PrismaPaymentRepository {
     return rows.map((row) => row.id);
   }
 
+  /** The id of the Payment an attempt belongs to, if the attempt exists. */
+  async findPaymentIdByAttemptId(attemptId: string): Promise<string | null> {
+    const row = await this.ctx.db.paymentTransaction.findUnique({
+      where: { id: attemptId },
+      select: { paymentId: true },
+    });
+    return row?.paymentId ?? null;
+  }
+
   /** The id of the Payment with this Upstream Reference, if any. */
   async findIdByUpstreamReference(
     merchantOrderId: string,

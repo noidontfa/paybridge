@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
 import { GetPayment } from './application/use-cases/get-payment.js';
 import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
+import { ProcessWebhook } from './application/workers/process-webhook.js';
 import { Clock, SystemClock } from './domain/clock.js';
 import { AttemptsController } from './http/attempts.controller.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
@@ -21,6 +23,7 @@ import { ExpirySweep } from './reliability/expiry-sweep.js';
 import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
+import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
 import {
   OutboxRelay,
   outboxRelayOptionsProvider,
@@ -40,6 +43,7 @@ import {
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
+    BestEffortCancel,
     CreatePayment,
     ExpirePayment,
     ExpirySweep,
@@ -49,7 +53,9 @@ import {
     OutboxRelay,
     PaymentExpiryProcessor,
     PaymentService,
+    ProcessWebhook,
     StartAttempt,
+    WebhookInboxProcessor,
     WebhookIntake,
   ],
   exports: [Clock, PaymentService, QueueModule, TransactionRunner],
