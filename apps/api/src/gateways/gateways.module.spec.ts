@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import Stripe from 'stripe';
 import { GATEWAY_PLUGINS } from '../payment-core/gateway-manager/gateway-plugins.token.js';
 import { GatewayManagerModule } from '../payment-core/gateway-manager/gateway-manager.module.js';
 import { GatewayManager } from '../payment-core/gateway-manager/gateway-manager.js';
@@ -57,6 +58,51 @@ describe('Gateway composition root', () => {
     const manager = moduleRef.get(GatewayManager);
     expect(manager.gatewayIds()).toEqual(['fake', 'stripe']);
     expect(manager.resolve('stripe')).toBeInstanceOf(StripeGatewayPlugin);
+  });
+
+  it('wires the configured webhook secret into the Stripe plugin', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        configFor('test', STRIPE_ENV),
+        GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+      ],
+    }).compile();
+    const plugin = moduleRef.get(GatewayManager).resolve('stripe');
+
+    const sign = (secret: string) => {
+      const body = JSON.stringify({
+        id: 'evt_1QxModule',
+        object: 'event',
+        type: 'payment_intent.succeeded',
+        livemode: false,
+        data: {
+          object: {
+            id: 'pi_3QxModule',
+            object: 'payment_intent',
+            amount: 150000,
+            amount_received: 150000,
+            livemode: false,
+            metadata: { attemptKey: '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b' },
+          },
+        },
+      });
+      return {
+        rawBody: new TextEncoder().encode(body),
+        headers: {
+          'stripe-signature': new Stripe(
+            'sk_test_123',
+          ).webhooks.generateTestHeaderString({ payload: body, secret }),
+        },
+        query: {},
+      };
+    };
+
+    await expect(
+      plugin.parseCallback(sign(STRIPE_ENV.STRIPE_WEBHOOK_SECRET)),
+    ).resolves.toMatchObject({ status: 'SUCCEEDED', providerRef: 'pi_3QxModule' });
+    await expect(plugin.parseCallback(sign('whsec_wrong'))).rejects.toThrow(
+      /Invalid Stripe webhook/,
+    );
   });
 
   it('does not register the Stripe plugin when Stripe is not configured', async () => {
