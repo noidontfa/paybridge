@@ -6,6 +6,11 @@
 export abstract class DomainError extends Error {
   abstract readonly code: string;
 
+  /** Machine-readable fields for the HTTP error body (for example an id). */
+  get details(): Readonly<Record<string, unknown>> | undefined {
+    return undefined;
+  }
+
   constructor(message: string) {
     super(message);
     this.name = new.target.name;
@@ -43,4 +48,30 @@ export class InvalidExpiryError extends InvalidInputError {
 
 export class InvalidUpstreamReferenceError extends InvalidInputError {
   readonly code = 'INVALID_UPSTREAM_REFERENCE';
+}
+
+/** An Idempotency-Key was sent again with a different request body. */
+export class IdempotencyKeyReusedError extends DomainError {
+  readonly code = 'IDEMPOTENCY_KEY_REUSED';
+
+  constructor(readonly idempotencyKey: string) {
+    super(
+      'This Idempotency-Key was already used with a different request body',
+    );
+  }
+}
+
+/** A Payment with this upstream reference already exists. */
+export class UpstreamReferenceExistsError extends DomainError {
+  readonly code = 'UPSTREAM_REFERENCE_EXISTS';
+
+  constructor(readonly paymentId: string) {
+    super(
+      `A Payment with this upstream reference already exists: ${paymentId}`,
+    );
+  }
+
+  override get details(): Readonly<Record<string, unknown>> {
+    return { paymentId: this.paymentId };
+  }
 }

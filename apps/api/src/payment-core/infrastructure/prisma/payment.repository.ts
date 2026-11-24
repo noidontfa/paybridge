@@ -120,6 +120,17 @@ export class PrismaPaymentRepository {
     );
     return rows.map((row) => row.id);
   }
+
+  /** The id of the Payment with this Upstream Reference, if any. */
+  async findIdByUpstreamReference(
+    merchantOrderId: string,
+  ): Promise<string | null> {
+    const row = await this.ctx.db.payment.findUnique({
+      where: { merchantOrderId },
+      select: { id: true },
+    });
+    return row?.id ?? null;
+  }
 }
 
 /**

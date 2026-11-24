@@ -3,6 +3,8 @@ import type { Payment } from '../domain/payment.js';
 import {
   CreatePayment,
   type CreatePaymentInput,
+  type CreatePaymentOptions,
+  type CreatePaymentResult,
 } from './use-cases/create-payment.js';
 import { GetPayment } from './use-cases/get-payment.js';
 
@@ -19,8 +21,11 @@ export class PaymentService {
     @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
   ) {}
 
-  createPayment(input: CreatePaymentInput): Promise<Payment> {
-    return this.createPaymentUseCase.execute(input);
+  createPayment(
+    input: CreatePaymentInput,
+    options?: CreatePaymentOptions,
+  ): Promise<CreatePaymentResult> {
+    return this.createPaymentUseCase.execute(input, options);
   }
 
   /** Read only: no writes, no row lock. Unknown id: `PaymentNotFoundError`. */

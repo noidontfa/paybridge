@@ -80,7 +80,7 @@ describe('PaymentService.createPayment', () => {
     const expiresAt = new Date('2026-05-01T12:00:00.000Z');
     const input = request({ expiresAt });
 
-    const created = await service.createPayment(input);
+    const { payment: created } = await service.createPayment(input);
 
     expect(created).toMatchObject({
       status: 'PENDING',
@@ -99,13 +99,13 @@ describe('PaymentService.createPayment', () => {
   });
 
   it('defaults the expiry to 30 minutes after creation', async () => {
-    const created = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(request());
 
     expect(created.expiresAt).toEqual(new Date('2026-05-01T10:30:00.000Z'));
   });
 
   it('writes one PaymentCreated outbox event and no attempt', async () => {
-    const created = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(request());
 
     const events = await repos.outbox.listForPayment(created.id);
     expect(events).toHaveLength(1);
@@ -126,7 +126,7 @@ describe('PaymentService.createPayment', () => {
   });
 
   it('records the creation in the status trail', async () => {
-    const created = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(request());
 
     expect(
       await repos.statusTransitions.listForEntity('PAYMENT', created.id),
@@ -141,7 +141,7 @@ describe('PaymentService.createPayment', () => {
 
     await expect(
       service.createPayment({ ...input, amount: '99000' }),
-    ).rejects.toMatchObject({ code: 'P2002' });
+    ).rejects.toMatchObject({ code: 'UPSTREAM_REFERENCE_EXISTS' });
 
     expect(await storedRowCounts()).toEqual({
       payments: 1,

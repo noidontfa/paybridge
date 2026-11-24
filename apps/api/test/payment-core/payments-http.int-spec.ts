@@ -120,13 +120,68 @@ describe('POST /api/payments', () => {
     expect(await prisma.payment.count()).toBe(0);
   });
 
-  it('409 for a duplicate upstream reference', async () => {
+  it('409 with the existing Payment id for a duplicate upstream reference', async () => {
     const payload = body();
-    await post(payload).expect(201);
+    const first = await post(payload).expect(201);
 
     const res = await post(payload).expect(409);
 
-    expect(res.body.statusCode).toBe(409);
+    expect(res.body).toMatchObject({
+      statusCode: 409,
+      code: 'UPSTREAM_REFERENCE_EXISTS',
+      details: { paymentId: first.body.id },
+    });
     expect(await prisma.payment.count()).toBe(1);
+  });
+});
+
+describe('POST /api/payments with Idempotency-Key', () => {
+  function postWithKey(payload: object, key: string) {
+    return post(payload).set('Idempotency-Key', key);
+  }
+
+  it('replays the stored 201 response for the same key and body', async () => {
+    const payload = body();
+    const first = await postWithKey(payload, 'key-1').expect(201);
+
+    const second = await postWithKey(payload, 'key-1').expect(201);
+
+    expect(second.body).toEqual(first.body);
+    expect(second.headers['idempotent-replayed']).toBe('true');
+    expect(first.headers['idempotent-replayed']).toBeUndefined();
+    expect(await prisma.payment.count()).toBe(1);
+  });
+
+  it('422 for the same key with a different body', async () => {
+    const payload = body();
+    await postWithKey(payload, 'key-1').expect(201);
+
+    const res = await postWithKey({ ...payload, amount: '99000' }, 'key-1');
+
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+    expect(await prisma.payment.count()).toBe(1);
+  });
+
+  it('409 with the existing Payment id for a new key and an existing upstream reference', async () => {
+    const payload = body();
+    const first = await postWithKey(payload, 'key-1').expect(201);
+
+    const res = await postWithKey(payload, 'key-2').expect(409);
+
+    expect(res.body).toMatchObject({
+      code: 'UPSTREAM_REFERENCE_EXISTS',
+      details: { paymentId: first.body.id },
+    });
+  });
+
+  it.each([
+    ['empty', ''],
+    ['longer than 255 characters', 'k'.repeat(256)],
+  ])('400 for an %s key, nothing stored', async (_label, key) => {
+    const res = await postWithKey(body(), key).expect(400);
+
+    expect(JSON.stringify(res.body.message)).toMatch(/Idempotency-Key/);
+    expect(await prisma.payment.count()).toBe(0);
   });
 });

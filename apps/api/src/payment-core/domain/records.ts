@@ -97,9 +97,14 @@ export interface NewIdempotencyRecord {
   readonly responseBody: unknown;
   readonly paymentId: string | null;
   readonly expiresAt: Date;
+  /** Default: the database clock. Pass the injected Clock's time. */
+  readonly createdAt?: Date;
 }
 
-export interface IdempotencyRecord extends NewIdempotencyRecord {
+export interface IdempotencyRecord extends Omit<
+  NewIdempotencyRecord,
+  'createdAt'
+> {
   readonly createdAt: Date;
 }
 

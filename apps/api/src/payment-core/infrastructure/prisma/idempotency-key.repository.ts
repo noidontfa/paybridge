@@ -17,11 +17,19 @@ export class PrismaIdempotencyKeyRepository {
         responseBody: record.responseBody as object,
         paymentId: record.paymentId,
         expiresAt: record.expiresAt,
+        ...(record.createdAt && { createdAt: record.createdAt }),
       },
     });
   }
 
   async find(key: string): Promise<IdempotencyRecord | null> {
     return this.ctx.db.idempotencyKey.findUnique({ where: { key } });
+  }
+
+  /** Deletes the record for `key` if it expired at or before `now`. */
+  async deleteIfExpired(key: string, now: Date): Promise<void> {
+    await this.ctx.db.idempotencyKey.deleteMany({
+      where: { key, expiresAt: { lte: now } },
+    });
   }
 }

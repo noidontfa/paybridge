@@ -31,8 +31,13 @@ export function toHttp(error: unknown): unknown {
   if (!(error instanceof DomainError)) return error;
   const status = DOMAIN_ERROR_STATUS[error.code];
   if (status === undefined) return error;
+  const details = error.details;
   return new HttpException(
-    { message: error.message, code: error.code },
+    {
+      message: error.message,
+      code: error.code,
+      ...(details !== undefined && { details }),
+    },
     status,
     { cause: error },
   );

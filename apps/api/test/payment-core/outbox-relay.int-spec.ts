@@ -67,7 +67,7 @@ beforeEach(async () => {
 });
 
 async function createPayment(): Promise<string> {
-  const payment = await service.createPayment({
+  const { payment } = await service.createPayment({
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${crypto.randomUUID()}`,
