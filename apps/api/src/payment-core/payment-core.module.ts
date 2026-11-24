@@ -29,6 +29,10 @@ import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
 import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
+import { WebhookInboxSweepProcessor } from './reliability/processors/webhook-inbox-sweep.processor.js';
+import { AlertSink, LoggerAlertSink } from './reliability/alert.js';
+import { WebhookInboxSweep } from './reliability/webhook-inbox-sweep.js';
+import { WebhookInboxSweepScheduler } from './reliability/webhook-inbox-sweep.scheduler.js';
 import { RetentionProcessor } from './reliability/processors/retention.processor.js';
 import { RetentionCleanup } from './reliability/retention.js';
 import { RetentionScheduler } from './reliability/retention.scheduler.js';
@@ -52,6 +56,7 @@ import {
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
+    { provide: AlertSink, useClass: LoggerAlertSink },
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
@@ -76,6 +81,9 @@ import {
     RetentionScheduler,
     StartAttempt,
     WebhookInboxProcessor,
+    WebhookInboxSweep,
+    WebhookInboxSweepProcessor,
+    WebhookInboxSweepScheduler,
     WebhookIntake,
   ],
   exports: [Clock, PaymentService, QueueModule, TransactionRunner],

@@ -15,6 +15,8 @@ export const QUEUES = {
   expirySweep: 'core-expiry-sweep',
   /** Status queries for one attempt (browser return). Job id: the attempt id. */
   attemptStatusQuery: 'core-attempt-status-query',
+  /** Runs of the webhook inbox sweep, produced by its job scheduler. */
+  webhookInboxSweep: 'core-webhook-inbox-sweep',
   /** Runs of the retention cleanup, produced by its job scheduler. */
   retention: 'core-retention',
 } as const;
