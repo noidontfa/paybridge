@@ -82,6 +82,16 @@ function fakeRegistration<P extends FakeGatewayPlugin>(
         },
       },
     ],
+    ignoredCallbacks: [
+      {
+        situation: 'an event type the plugin does not handle',
+        build: (plugin) =>
+          plugin.signedCallback({
+            ignored: true,
+            eventType: 'customer.created',
+          }),
+      },
+    ],
     invalidCallbacks: [
       {
         problem: 'signed with another secret',
@@ -139,6 +149,7 @@ class ExpiringFakeGatewayPlugin extends FakeGatewayPlugin {
 
   override async parseCallback(input: CallbackInput): Promise<CallbackResult> {
     const result = await super.parseCallback(input);
+    if (result.ignored) return result;
     return this.expiredAtProvider.has(result.attemptKey)
       ? { ...result, status: 'EXPIRED' as NormalizedStatus }
       : result;
@@ -210,5 +221,29 @@ describe('the contract suite rejects broken plugins', () => {
     expect(failures.map((f) => f.error)).toContainEqual(
       expect.stringContaining('OutcomeUnknown'),
     );
+  });
+
+  it('fails an ignored callback that the plugin handles instead', async () => {
+    const registration = fakeRegistration(
+      'bad ignored fake',
+      () => new FakeGatewayPlugin(),
+    );
+    registration.ignoredCallbacks = [
+      {
+        situation: 'a handled callback registered as ignored',
+        build: (plugin, { attemptKey }) =>
+          plugin.signedCallback({
+            attemptKey,
+            status: 'SUCCEEDED',
+            amount: '150000',
+          }),
+      },
+    ];
+
+    const failures = await failingContractChecks(registration);
+
+    expect(failures.map((f) => f.name)).toEqual([
+      'callback: a handled callback registered as ignored -> ignored with a 2xx acknowledgement',
+    ]);
   });
 });

@@ -60,6 +60,12 @@ export interface ContractInvalidCallback<P> {
   readonly build: Arrange<P, CallbackInput>;
 }
 
+/** A verified callback the plugin must ignore: acknowledged, never applied. */
+export interface ContractIgnoredCallback<P> {
+  readonly situation: string;
+  readonly build: Arrange<P, CallbackInput>;
+}
+
 export interface GatewayContractRegistration<
   P extends PaymentGateway = PaymentGateway,
 > {
@@ -71,6 +77,8 @@ export interface GatewayContractRegistration<
   outcomes: ContractOutcome<P>[];
   /** Must cover every operation error category. */
   errors: ContractError<P>[];
+  /** Authentic callbacks that are irrelevant to PayBridge. Optional. */
+  ignoredCallbacks?: ContractIgnoredCallback<P>[];
   /** Provider-specific invalid callbacks, on top of the suite's tampered body. */
   invalidCallbacks: ContractInvalidCallback<P>[];
 }
@@ -189,6 +197,10 @@ export function gatewayContractChecks<P extends PaymentGateway>(
       async (plugin) => {
         const input = await outcome.callback(plugin, context);
         const result = await plugin.parseCallback(input);
+        expect(result.ignored, 'callback was ignored, not handled').not.toBe(
+          true,
+        );
+        if (result.ignored) return;
         expectNormalisedStatus(result.status, outcome.expected);
         expectAmount(result.amount);
         expect(result.attemptKey, 'attemptKey derived from provider data').toBe(
@@ -234,6 +246,24 @@ export function gatewayContractChecks<P extends PaymentGateway>(
           }
         });
         expectGatewayError(error, scenario.category);
+      },
+    );
+  }
+
+  for (const ignored of registration.ignoredCallbacks ?? []) {
+    check(
+      `callback: ${ignored.situation} -> ignored with a 2xx acknowledgement`,
+      async (plugin) => {
+        const result = await plugin.parseCallback(
+          await ignored.build(plugin, context),
+        );
+        expect(result.ignored, 'plugin ignored the callback').toBe(true);
+        expectAck(result.ack);
+        expect(
+          result.ack.httpStatus,
+          'ack is a 2xx response',
+        ).toBeGreaterThanOrEqual(200);
+        expect(result.ack.httpStatus).toBeLessThan(300);
       },
     );
   }

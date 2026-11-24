@@ -201,6 +201,40 @@ describe('a valid callback', () => {
   });
 });
 
+describe('an ignored callback', () => {
+  const ignored = () =>
+    fake.signedCallback({ ignored: true, eventType: 'customer.created' });
+
+  it('gets the plugin acknowledgement and stores and dispatches nothing', async () => {
+    const res = await post(ignored()).expect(200);
+
+    expect(res.body).toEqual({ ok: true });
+    expect(await inboxRows()).toHaveLength(0);
+    expect(queue.added).toHaveLength(0);
+  });
+
+  it('logs at debug level with the gateway id', async () => {
+    const debug = vi
+      .spyOn(Logger.prototype, 'debug')
+      .mockImplementation(() => {});
+    try {
+      await post(ignored()).expect(200);
+      expect(JSON.stringify(debug.mock.calls)).toContain('fake');
+    } finally {
+      debug.mockRestore();
+    }
+  });
+
+  it('is still InvalidCallback when the signature is wrong', async () => {
+    const callback = ignored();
+    await post({
+      ...callback,
+      headers: { ...callback.headers, 'x-fake-signature': 'forged' },
+    }).expect(400);
+    expect(await inboxRows()).toHaveLength(0);
+  });
+});
+
 describe('an invalid callback', () => {
   it('gets the error acknowledgement and stores nothing', async () => {
     const callback = fake.signedCallback(payload());
