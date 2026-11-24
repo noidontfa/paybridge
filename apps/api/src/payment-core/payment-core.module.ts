@@ -12,6 +12,7 @@ import { ProcessWebhook } from './application/workers/process-webhook.js';
 import { Clock, SystemClock } from './domain/clock.js';
 import { HandleBrowserReturn } from './application/use-cases/handle-browser-return.js';
 import { RequeryAttempt } from './application/workers/requery-attempt.js';
+import { AttemptInitiateProcessor } from './reliability/processors/attempt-initiate.processor.js';
 import { AttemptStatusQueryProcessor } from './reliability/processors/attempt-status-query.processor.js';
 import { AttemptsController } from './http/attempts.controller.js';
 import { BrowserReturnController } from './http/browser-return.controller.js';
@@ -29,6 +30,10 @@ import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
 import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
+import { ReviewRequeryProcessor } from './reliability/processors/review-requery.processor.js';
+import { ReviewRequerySweepProcessor } from './reliability/processors/review-requery-sweep.processor.js';
+import { ReviewRequerySweep } from './reliability/review-requery-sweep.js';
+import { ReviewRequerySweepScheduler } from './reliability/review-requery-sweep.scheduler.js';
 import { WebhookInboxSweepProcessor } from './reliability/processors/webhook-inbox-sweep.processor.js';
 import { AlertSink, LoggerAlertSink } from './reliability/alert.js';
 import { WebhookInboxSweep } from './reliability/webhook-inbox-sweep.js';
@@ -65,6 +70,7 @@ import {
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
+    AttemptInitiateProcessor,
     providerQueryRateLimitProvider,
     AttemptStatusQueryProcessor,
     BestEffortCancel,
@@ -85,6 +91,10 @@ import {
     RetentionProcessor,
     RequeryAttempt,
     RetentionScheduler,
+    ReviewRequeryProcessor,
+    ReviewRequerySweep,
+    ReviewRequerySweepProcessor,
+    ReviewRequerySweepScheduler,
     StartAttempt,
     WebhookInboxProcessor,
     WebhookInboxSweep,

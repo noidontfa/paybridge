@@ -79,6 +79,13 @@ export async function applyProviderOutcome(
       ? { providerRef: outcome.providerRef }
       : {};
   const reason = cause.reason ?? outcome.rawCode ?? null;
+  // A review closed by a clear answer no longer owes the customer a refund
+  // (ticket 28); the review reason stays as history.
+  const leavingReview = attempt.status === 'REQUIRES_REVIEW';
+  const resolvedData: Omit<PaymentTransactionChanges, 'status'> = {
+    ...providerData,
+    ...(leavingReview ? { refundRequired: false } : {}),
+  };
 
   let updated = attempt;
   let paymentChanged = false;
@@ -91,7 +98,7 @@ export async function applyProviderOutcome(
         attempt,
         'SUCCEEDED',
         { ...cause, reason },
-        providerData,
+        resolvedData,
       );
       await succeedPayment(repos, payment, updated, cause);
       paymentChanged = true;
@@ -108,7 +115,7 @@ export async function applyProviderOutcome(
         attempt,
         'FAILED',
         { ...cause, reason },
-        providerData,
+        resolvedData,
       );
       break;
     case 'review':

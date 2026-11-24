@@ -1,10 +1,18 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { Clock } from '../../domain/clock.js';
+import type { Payment } from '../../domain/payment.js';
+import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
+import { isReviewRequeryEligible } from '../../domain/rules/review-requery.js';
 import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { GatewayNotFoundError, type QueryResult } from '../../port/index.js';
+import {
+  GatewayNotFoundError,
+  isGatewayError,
+  type GatewayError,
+  type QueryResult,
+} from '../../port/index.js';
 import {
   applyProviderOutcome,
   type AppliedProviderOutcome,
@@ -18,7 +26,17 @@ import { BestEffortCancel } from '../best-effort-cancel.js';
  * - `not-found`: the provider has no such transaction; the attempt is left
  *   as it is (expiry decides what that means, ticket 24).
  */
-export type RequeryAttemptResult = 'applied' | 'skipped' | 'not-found';
+export type RequeryAttemptResult =
+  'applied' | 'skipped' | 'not-found' | 'unchanged';
+
+/**
+ * A query only reads, so it is safe to repeat: a retryable error is retried,
+ * and so is `OutcomeUnknown` (its `retryable` flag only forbids re-sending a
+ * write). Any other gateway error ends the job with the attempt unchanged.
+ */
+function retriesQuery(error: GatewayError): boolean {
+  return error.retryable || error.category === 'OutcomeUnknown';
+}
 
 /**
  * Status query worker service (spec: Use cases, `requeryAttempt`), run for
@@ -31,8 +49,9 @@ export type RequeryAttemptResult = 'applied' | 'skipped' | 'not-found';
  *    `applyProviderOutcome`, the same rules as webhooks.
  * 4. After commit, best-effort cancel of attempts cancelled in step 3.
  *
- * Other gateway errors propagate so the queue retries the job (ticket 22
- * refines the categories).
+ * Error categories (ticket 22): `GatewayUnavailable` and `OutcomeUnknown`
+ * propagate so the queue retries the job; `NotFound` and other non-retryable
+ * errors are logged. A failed query never changes the attempt.
  */
 @Injectable()
 export class RequeryAttempt {
@@ -46,13 +65,36 @@ export class RequeryAttempt {
   ) {}
 
   async execute(attemptId: string): Promise<RequeryAttemptResult> {
+    return this.requery(attemptId, (attempt) => isOpenAttempt(attempt.status));
+  }
+
+  /**
+   * Re-query of an attempt in an automatic review (ticket 28): the same
+   * query and `applyProviderOutcome` path, for an attempt in
+   * `REQUIRES_REVIEW` whose reason is re-queried and whose review opened less
+   * than 72 hours ago. Eligibility is checked again under the Payment lock,
+   * so an attempt an operator or a webhook resolved meanwhile is left alone.
+   * A clear success promotes, a clear failure fails the attempt, anything
+   * else leaves it in review for the next run.
+   */
+  async executeReview(attemptId: string): Promise<RequeryAttemptResult> {
+    const eligible = (attempt: PaymentTransaction): boolean =>
+      isReviewRequeryEligible(attempt, this.clock.now());
+    return this.requery(attemptId, eligible, eligible);
+  }
+
+  private async requery(
+    attemptId: string,
+    eligible: (attempt: PaymentTransaction) => boolean,
+    recheckUnderLock?: (attempt: PaymentTransaction) => boolean,
+  ): Promise<RequeryAttemptResult> {
     const repos = this.runner.repositories;
     const paymentId = isUuid(attemptId)
       ? await repos.payments.findPaymentIdByAttemptId(attemptId)
       : null;
     const payment = paymentId ? await repos.payments.findById(paymentId) : null;
     const attempt = payment?.attempts.find((a) => a.id === attemptId);
-    if (!payment || !attempt || !isOpenAttempt(attempt.status)) {
+    if (!payment || !attempt || !eligible(attempt)) {
       return 'skipped';
     }
 
@@ -69,6 +111,15 @@ export class RequeryAttempt {
         );
         return 'not-found';
       }
+      if (isGatewayError(error) && !retriesQuery(error)) {
+        // E.g. a rejection of a read: nothing to retry, attempt unchanged.
+        this.logger.error(
+          `Status query of attempt ${attempt.id} failed for good (${error.category}): ${error.message}`,
+        );
+        return 'unchanged';
+      }
+      // GatewayUnavailable and OutcomeUnknown (and unexpected errors): the
+      // attempt is untouched and the queue retries the job.
       throw error;
     }
     await repos.gatewayRawResponses.record({
@@ -77,7 +128,13 @@ export class RequeryAttempt {
       payload: result.rawPayload,
     });
 
-    const applied = await this.apply(payment.id, attempt.id, result);
+    const applied = await this.apply(
+      payment.id,
+      attempt.id,
+      result,
+      recheckUnderLock,
+    );
+    if (!applied) return 'skipped';
     if (applied.cancelledAttempts.length > 0) {
       await this.cancels.cancel(applied.cancelledAttempts);
     }
@@ -88,10 +145,19 @@ export class RequeryAttempt {
     paymentId: string,
     attemptId: string,
     outcome: QueryResult,
-  ): Promise<AppliedProviderOutcome> {
+    recheck?: (attempt: PaymentTransaction) => boolean,
+  ): Promise<AppliedProviderOutcome | null> {
     return this.runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(paymentId);
+      const locked: Payment | null =
+        await repos.payments.findForUpdate(paymentId);
       if (!locked) throw new Error(`Payment ${paymentId} vanished`);
+      // The state may have moved since the unlocked read: review re-queries
+      // check again. Other queries do not: a late success must never be
+      // dropped (ticket 21).
+      if (recheck) {
+        const current = locked.attempts.find((a) => a.id === attemptId);
+        if (!current || !recheck(current)) return null;
+      }
       return applyProviderOutcome(repos, {
         payment: locked,
         attemptId,

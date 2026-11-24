@@ -1,5 +1,9 @@
 import type { NormalizedOutcome } from '../../port/index.js';
-import type { PaymentStatus, AttemptStatus } from '../statuses.js';
+import type {
+  AttemptStatus,
+  PaymentStatus,
+  ReviewReason,
+} from '../statuses.js';
 import { decideOutcome, type OutcomeSubject } from './apply-outcome.js';
 
 const ATTEMPT = 'attempt-1';
@@ -10,6 +14,7 @@ function subject(
     paymentStatus?: PaymentStatus;
     others?: AttemptStatus[];
     amount?: string;
+    reviewReason?: ReviewReason;
   } = {},
 ): OutcomeSubject {
   return {
@@ -22,7 +27,11 @@ function subject(
           id: `other-${i}`,
           status,
         })),
-        { id: ATTEMPT, status: attemptStatus },
+        {
+          id: ATTEMPT,
+          status: attemptStatus,
+          reviewReason: options.reviewReason ?? null,
+        },
       ],
     },
     attemptId: ATTEMPT,
@@ -233,17 +242,80 @@ describe('decideOutcome: late success on a closed attempt', () => {
   });
 });
 
-describe('decideOutcome: results this rule leaves to later tickets', () => {
-  it.each([success(), failure])(
-    'a clear result on an attempt in review (review exit, tickets 28/29) changes nothing here',
-    (outcome) => {
-      expect(decideOutcome(subject('REQUIRES_REVIEW'), outcome)).toEqual({
-        kind: 'no-change',
-        reason: 'not-handled',
+describe('decideOutcome: review exit (ticket 28)', () => {
+  const review = (
+    reviewReason: ReviewReason,
+    options: { paymentStatus?: PaymentStatus; others?: AttemptStatus[] } = {},
+  ) => subject('REQUIRES_REVIEW', { reviewReason, ...options });
+
+  it.each(['AMBIGUOUS_PROVIDER_STATUS', 'AMOUNT_MISMATCH'] as const)(
+    'a clear success with the right amount promotes a %s review',
+    (reason) => {
+      expect(decideOutcome(review(reason), success())).toEqual({
+        kind: 'succeed',
       });
     },
   );
 
+  it.each(['AMBIGUOUS_PROVIDER_STATUS', 'AMOUNT_MISMATCH'] as const)(
+    'a clear failure fails a %s review',
+    (reason) => {
+      expect(decideOutcome(review(reason), failure)).toEqual({ kind: 'fail' });
+    },
+  );
+
+  it.each([pending, success('1'), success(null)])(
+    'an unclear or still-mismatched answer leaves the review open',
+    (outcome) => {
+      expect(decideOutcome(review('AMOUNT_MISMATCH'), outcome)).toEqual({
+        kind: 'no-change',
+        reason: 'still-in-review',
+      });
+    },
+  );
+
+  it('an unclear answer on a review leaves it as it is', () => {
+    expect(decideOutcome(review('AMOUNT_MISMATCH'), ambiguous)).toEqual({
+      kind: 'no-change',
+      reason: 'already-applied',
+    });
+  });
+
+  it('a success that is unsafe now (Payment closed) leaves the review open', () => {
+    expect(
+      decideOutcome(
+        review('AMBIGUOUS_PROVIDER_STATUS', { paymentStatus: 'CANCELLED' }),
+        success(),
+      ),
+    ).toEqual({ kind: 'no-change', reason: 'still-in-review' });
+  });
+
+  it('a success when another attempt already succeeded leaves the review open', () => {
+    expect(
+      decideOutcome(
+        review('AMBIGUOUS_PROVIDER_STATUS', {
+          paymentStatus: 'SUCCEEDED',
+          others: ['SUCCEEDED'],
+        }),
+        success(),
+      ),
+    ).toEqual({ kind: 'no-change', reason: 'still-in-review' });
+  });
+
+  it.each(['LATE_SUCCESS_ON_CLOSED_PAYMENT', 'DUPLICATE_SUCCESS'] as const)(
+    'a %s review is never resolved by a result',
+    (reason) => {
+      for (const outcome of [success(), failure]) {
+        expect(decideOutcome(review(reason), outcome)).toEqual({
+          kind: 'no-change',
+          reason: 'not-handled',
+        });
+      }
+    },
+  );
+});
+
+describe('decideOutcome: results this rule leaves to later tickets', () => {
   it.each(['EXPIRED', 'CANCELLED'] as const)(
     'a failure on a %s attempt keeps the closed status',
     (status) => {
