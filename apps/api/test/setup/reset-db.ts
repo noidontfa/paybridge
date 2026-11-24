@@ -1,8 +1,19 @@
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 
+/** PostgreSQL SQLSTATE for "deadlock detected". */
+const DEADLOCK_DETECTED = '40P01';
+const MAX_ATTEMPTS = 5;
+
 /**
  * Empties every `core_*` table, keeping the schema. Call it in `beforeEach`.
  * Tables are discovered from the catalog, so new tables need no change here.
+ *
+ * A booted PaymentCoreModule runs BullMQ sweep jobs (expiry, webhook inbox,
+ * review re-query, retention) in the background, and they read and write these
+ * tables while a test resets them. TRUNCATE takes ACCESS EXCLUSIVE locks one
+ * table at a time, so a sweep transaction holding a lock on a later table can
+ * deadlock with it; PostgreSQL then aborts one side. When TRUNCATE is the one
+ * aborted, nothing was emptied, so it is simply retried.
  */
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
@@ -10,5 +21,23 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
     WHERE schemaname = 'public' AND tablename LIKE 'core\\_%'`;
   if (tables.length === 0) return;
   const list = tables.map((t) => `"public"."${t.tablename}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE ${list} RESTART IDENTITY CASCADE`);
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `TRUNCATE ${list} RESTART IDENTITY CASCADE`,
+      );
+      return;
+    } catch (error) {
+      if (attempt >= MAX_ATTEMPTS || !isDeadlock(error)) throw error;
+      await new Promise((r) => setTimeout(r, 20 * attempt));
+    }
+  }
+}
+
+function isDeadlock(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const meta = (error as { meta?: { code?: unknown } }).meta;
+  return (
+    meta?.code === DEADLOCK_DETECTED || error.message.includes(DEADLOCK_DETECTED)
+  );
 }
