@@ -342,6 +342,22 @@ function expectAmount(amount: string | null): void {
   );
 }
 
+function expectClientParams(nextAction: InitiateResult['nextAction']): void {
+  if (nextAction.type !== 'CLIENT_SDK' || nextAction.clientParams === undefined)
+    return;
+  const params: unknown = nextAction.clientParams;
+  expect(
+    params !== null && typeof params === 'object' && !Array.isArray(params),
+    'clientParams is an object of string values',
+  ).toBe(true);
+  for (const [key, value] of Object.entries(params as object)) {
+    expect(
+      typeof value,
+      `clientParams.${key} is a string, not ${typeof value}`,
+    ).toBe('string');
+  }
+}
+
 function expectInitiateResult(result: InitiateResult): void {
   const field = NEXT_ACTION_FIELD[result.nextAction?.type];
   expect(field, `unknown next action ${result.nextAction?.type}`).toBeDefined();
@@ -349,6 +365,7 @@ function expectInitiateResult(result: InitiateResult): void {
     (result.nextAction as unknown as Record<string, unknown>)[field],
     `next action ${result.nextAction.type} has its ${field}`,
   ).toBeTruthy();
+  expectClientParams(result.nextAction);
   expect(result.providerMetadata).toBeTypeOf('object');
   expect(
     JSON.parse(JSON.stringify(result.providerMetadata)),

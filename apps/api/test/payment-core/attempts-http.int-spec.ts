@@ -83,6 +83,35 @@ describe('POST /api/payments/:paymentId/attempts', () => {
     });
   });
 
+  it('returns clientParams of a CLIENT_SDK next action unchanged, and GET shows the same', async () => {
+    const paymentId = await createPayment();
+    const nextAction = {
+      type: 'CLIENT_SDK',
+      token: 'secret_1',
+      clientParams: {
+        publishableKey: 'pk_test_1',
+        returnUrl: 'https://shop.example/return',
+      },
+    } as const;
+    fake.scriptInitiate({
+      nextAction,
+      providerMetadata: {},
+      rawPayload: {},
+    });
+
+    const res = await startAttempt(paymentId, BODY).expect(201);
+
+    expect(res.body.attempt.nextAction).toEqual(nextAction);
+    const stored = await prisma.paymentTransaction.findUnique({
+      where: { id: res.body.attempt.id },
+    });
+    expect(stored?.nextAction).toEqual(nextAction);
+    const detail = await request(app.getHttpServer())
+      .get(`/api/payments/${paymentId}`)
+      .expect(200);
+    expect(detail.body.attempts[0].nextAction).toEqual(nextAction);
+  });
+
   it('201 with a FAILED attempt when the gateway rejects it', async () => {
     const paymentId = await createPayment();
     fake.scriptInitiate(new GatewayRejectedError('declined'));
