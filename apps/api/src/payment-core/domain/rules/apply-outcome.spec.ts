@@ -143,17 +143,97 @@ describe('decideOutcome: repeats are no-ops', () => {
   });
 });
 
-describe('decideOutcome: results this rule leaves to later tickets', () => {
-  it.each(['FAILED', 'EXPIRED', 'CANCELLED'] as const)(
-    'a success on a %s attempt (late success, ticket 21) changes nothing here',
+describe('decideOutcome: late success on a closed attempt', () => {
+  const closed = ['FAILED', 'EXPIRED', 'CANCELLED'] as const;
+
+  it.each(closed)(
+    'a %s attempt on a PENDING Payment with no success and the right amount is promoted',
     (status) => {
       expect(decideOutcome(subject(status), success())).toEqual({
-        kind: 'no-change',
-        reason: 'not-handled',
+        kind: 'succeed',
+      });
+      expect(
+        decideOutcome(subject(status, { others: ['PENDING'] }), success()),
+      ).toEqual({ kind: 'succeed' });
+    },
+  );
+
+  it.each(closed)(
+    'a %s attempt succeeding with another amount goes to review (AMOUNT_MISMATCH)',
+    (status) => {
+      expect(decideOutcome(subject(status), success('1'))).toEqual({
+        kind: 'review',
+        reason: 'AMOUNT_MISMATCH',
+      });
+      expect(decideOutcome(subject(status), success(null))).toEqual({
+        kind: 'review',
+        reason: 'AMOUNT_MISMATCH',
       });
     },
   );
 
+  it.each(closed)(
+    'a %s attempt on a PENDING Payment with another succeeded attempt goes to review (DUPLICATE_SUCCESS)',
+    (status) => {
+      expect(
+        decideOutcome(subject(status, { others: ['SUCCEEDED'] }), success()),
+      ).toEqual({ kind: 'review', reason: 'DUPLICATE_SUCCESS' });
+    },
+  );
+
+  it.each(
+    closed.flatMap((a) =>
+      (['EXPIRED', 'CANCELLED'] as const).map((p) => [a, p] as const),
+    ),
+  )(
+    'a %s attempt on an %s Payment goes to review (LATE_SUCCESS_ON_CLOSED_PAYMENT), never promoted',
+    (status, paymentStatus) => {
+      expect(
+        decideOutcome(subject(status, { paymentStatus }), success()),
+      ).toEqual({ kind: 'review', reason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT' });
+      // The amount does not matter on a closed Payment.
+      expect(
+        decideOutcome(subject(status, { paymentStatus }), success('1')),
+      ).toEqual({ kind: 'review', reason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT' });
+    },
+  );
+
+  it.each(closed)(
+    'a %s attempt on a SUCCEEDED Payment goes to review (DUPLICATE_SUCCESS)',
+    (status) => {
+      expect(
+        decideOutcome(
+          subject(status, {
+            paymentStatus: 'SUCCEEDED',
+            others: ['SUCCEEDED'],
+          }),
+          success(),
+        ),
+      ).toEqual({ kind: 'review', reason: 'DUPLICATE_SUCCESS' });
+    },
+  );
+
+  it('an attempt cancelled by a late promotion that then succeeds goes to review', () => {
+    expect(
+      decideOutcome(
+        subject('CANCELLED', {
+          paymentStatus: 'SUCCEEDED',
+          others: ['SUCCEEDED'],
+        }),
+        success(),
+      ),
+    ).toEqual({ kind: 'review', reason: 'DUPLICATE_SUCCESS' });
+  });
+
+  it('a repeat of a late success already in review changes nothing', () => {
+    expect(decideOutcome(subject('REQUIRES_REVIEW'), success())).toEqual({
+      kind: 'no-change',
+      reason: 'not-handled',
+    });
+  });
+});
+
+describe('decideOutcome: results this rule leaves to later tickets', () => {
   it.each([success(), failure])(
     'a clear result on an attempt in review (review exit, tickets 28/29) changes nothing here',
     (outcome) => {
