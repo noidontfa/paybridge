@@ -35,8 +35,11 @@ export interface ContractOutcome<P> {
   readonly expected: NormalizedStatus;
   /** Makes the provider answer the next `query` with this situation. */
   readonly arrangeQuery: Arrange<P>;
-  /** An authentic provider callback that reports this situation. */
-  readonly callback: Arrange<P, CallbackInput>;
+  /**
+   * An authentic provider callback that reports this situation. Omit it when
+   * the provider reports the situation through `query` only.
+   */
+  readonly callback?: Arrange<P, CallbackInput>;
 }
 
 /** Error categories reported by `initiate`, `query` or `cancel`. */
@@ -192,10 +195,13 @@ export function gatewayContractChecks<P extends PaymentGateway>(
       },
     );
 
+    const { callback } = outcome;
+    if (!callback) continue;
+
     check(
       `callback: ${outcome.situation} -> ${outcome.expected} with the success acknowledgement`,
       async (plugin) => {
-        const input = await outcome.callback(plugin, context);
+        const input = await callback(plugin, context);
         const result = await plugin.parseCallback(input);
         expect(result.ignored, 'callback was ignored, not handled').not.toBe(
           true,
@@ -271,9 +277,9 @@ export function gatewayContractChecks<P extends PaymentGateway>(
   check(
     'callback: a tampered body -> InvalidCallback with an error acknowledgement',
     async (plugin) => {
-      const [first] = registration.outcomes;
-      expect(first, 'at least one outcome is registered').toBeDefined();
-      const authentic = await first.callback(plugin, context);
+      const first = registration.outcomes.find((o) => o.callback);
+      expect(first?.callback, 'an outcome with a callback').toBeDefined();
+      const authentic = await first!.callback!(plugin, context);
       const rawBody = Uint8Array.from(authentic.rawBody);
       rawBody[Math.floor(rawBody.length / 2)] ^= 0x01;
       await expectInvalidCallback(

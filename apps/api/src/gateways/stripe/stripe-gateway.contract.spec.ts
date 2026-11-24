@@ -124,7 +124,7 @@ const outcome = (
   situation: string,
   expected: NormalizedStatus,
   fixture: string,
-  eventType: string,
+  eventType: string | undefined,
   eventFixture = fixture,
 ): ContractOutcome<ReplayStripeGateway> => ({
   situation,
@@ -132,8 +132,12 @@ const outcome = (
   arrangeQuery: (plugin) => {
     plugin.http.respond(200, `payment-intent.${fixture}`);
   },
-  callback: (_plugin, { attemptKey }) =>
-    webhook(eventType, eventFixture, attemptKey),
+  ...(eventType && {
+    callback: (
+      _plugin: ReplayStripeGateway,
+      { attemptKey }: { attemptKey: string },
+    ) => webhook(eventType, eventFixture, attemptKey),
+  }),
 });
 
 const registration: GatewayContractRegistration<ReplayStripeGateway> = {
@@ -169,7 +173,7 @@ const registration: GatewayContractRegistration<ReplayStripeGateway> = {
       'the payment awaits capture',
       'REQUIRES_REVIEW',
       'requires-capture',
-      'payment_intent.amount_capturable_updated',
+      undefined,
     ),
   ],
   errors: [
@@ -219,6 +223,15 @@ const registration: GatewayContractRegistration<ReplayStripeGateway> = {
       situation: 'an event type the plugin does not handle',
       build: (_plugin, { attemptKey }) =>
         webhook('charge.succeeded', 'succeeded', attemptKey),
+    },
+    {
+      situation: 'a PaymentIntent that now awaits capture',
+      build: (_plugin, { attemptKey }) =>
+        webhook(
+          'payment_intent.amount_capturable_updated',
+          'requires-capture',
+          attemptKey,
+        ),
     },
     {
       situation: 'a PaymentIntent with no attempt key',

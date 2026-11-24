@@ -44,7 +44,6 @@ const EVENT_STATUS_MAP: Readonly<Record<string, NormalizedStatus | undefined>> =
   'payment_intent.payment_failed': 'PENDING',
   'payment_intent.processing': 'PENDING',
   'payment_intent.canceled': 'FAILED',
-  'payment_intent.amount_capturable_updated': 'REQUIRES_REVIEW',
 };
 
 type Operation = 'initiate' | 'query' | 'cancel';
