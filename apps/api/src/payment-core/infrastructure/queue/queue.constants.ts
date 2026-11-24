@@ -13,6 +13,8 @@ export const QUEUES = {
   paymentExpiry: 'core-payment-expiry',
   /** Runs of the expiry sweep, produced by its job scheduler. */
   expirySweep: 'core-expiry-sweep',
+  /** Status queries for one attempt (browser return). Job id: the attempt id. */
+  attemptStatusQuery: 'core-attempt-status-query',
   /** Runs of the retention cleanup, produced by its job scheduler. */
   retention: 'core-retention',
 } as const;
@@ -33,6 +35,8 @@ function rowJobId(kind: string, id: string): string {
 }
 
 export const jobIds = {
+  /** A per-attempt job (status query): the attempt id. */
+  attempt: (attemptId: string): string => rowJobId('attempt', attemptId),
   /** An outbox event job: the outbox row id. */
   outboxEvent: (outboxRowId: string): string => rowJobId('outbox', outboxRowId),
   /** A per-Payment job (e.g. expiry): the payment id, one job per queue. */

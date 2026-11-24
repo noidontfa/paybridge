@@ -9,6 +9,10 @@ import {
 import { CancelPayment } from './use-cases/cancel-payment.js';
 import { GetPayment } from './use-cases/get-payment.js';
 import {
+  HandleBrowserReturn,
+  type BrowserReturnInput,
+} from './use-cases/handle-browser-return.js';
+import {
   StartAttempt,
   type StartAttemptInput,
   type StartAttemptResult,
@@ -26,8 +30,15 @@ export class PaymentService {
     @Inject(CancelPayment) private readonly cancelPaymentUseCase: CancelPayment,
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
     @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
+    @Inject(HandleBrowserReturn)
+    private readonly handleBrowserReturnUseCase: HandleBrowserReturn,
     @Inject(StartAttempt) private readonly startAttemptUseCase: StartAttempt,
   ) {}
+
+  /** Customer came back from the gateway: no writes, queues a status query. */
+  handleBrowserReturn(input: BrowserReturnInput): Promise<Payment> {
+    return this.handleBrowserReturnUseCase.execute(input);
+  }
 
   /** Merchant cancel. No-op on CANCELLED; SUCCEEDED/EXPIRED: `PaymentNotPendingError`. */
   cancelPayment(paymentId: string): Promise<Payment> {
