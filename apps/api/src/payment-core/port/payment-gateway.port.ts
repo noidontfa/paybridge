@@ -85,11 +85,30 @@ export interface CallbackInput {
   readonly query: HeaderValues;
 }
 
-export interface CallbackResult extends NormalizedOutcome {
+/**
+ * What `parseCallback` returns for a verified callback: an outcome for Core to
+ * apply, or a notice that the callback is irrelevant.
+ */
+export type CallbackResult = HandledCallback | IgnoredCallback;
+
+export interface HandledCallback extends NormalizedOutcome {
+  readonly ignored?: false;
   /** Derived by the plugin from provider data. */
   readonly attemptKey: string;
   readonly providerRef?: string;
   readonly providerEventId?: string;
+  /** The success acknowledgement, in the provider's format. */
+  readonly ack: CallbackAck;
+}
+
+/**
+ * A verified callback PayBridge has no use for: an event type the plugin does
+ * not handle, or a provider object PayBridge did not create. Core sends `ack`
+ * and stores nothing. Unverified callbacks are never ignored: they throw
+ * `InvalidCallbackError`.
+ */
+export interface IgnoredCallback {
+  readonly ignored: true;
   /** The success acknowledgement, in the provider's format. */
   readonly ack: CallbackAck;
 }

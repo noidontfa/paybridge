@@ -36,6 +36,12 @@ export interface FakeCallbackPayload {
   eventId?: string;
 }
 
+/** The JSON body of a fake provider callback that PayBridge has no use for. */
+export interface FakeIgnoredPayload {
+  ignored: true;
+  eventType?: string;
+}
+
 export interface FakeGatewayOptions {
   gatewayId?: string;
   supportsCancel?: boolean;
@@ -104,7 +110,9 @@ export class FakeGatewayPlugin implements PaymentGateway {
   }
 
   /** Builds a callback request this plugin will accept as authentic. */
-  signedCallback(payload: FakeCallbackPayload): CallbackInput {
+  signedCallback(
+    payload: FakeCallbackPayload | FakeIgnoredPayload,
+  ): CallbackInput {
     const rawBody = new TextEncoder().encode(JSON.stringify(payload));
     return {
       rawBody,
@@ -163,7 +171,7 @@ export class FakeGatewayPlugin implements PaymentGateway {
         ERROR_ACK,
       );
     }
-    let payload: Partial<FakeCallbackPayload>;
+    let payload: Partial<FakeCallbackPayload> & { ignored?: boolean };
     try {
       payload = JSON.parse(new TextDecoder().decode(input.rawBody));
     } catch {
@@ -172,6 +180,7 @@ export class FakeGatewayPlugin implements PaymentGateway {
         ERROR_ACK,
       );
     }
+    if (payload.ignored === true) return { ignored: true, ack: SUCCESS_ACK };
     if (
       typeof payload.attemptKey !== 'string' ||
       !NORMALIZED_STATUSES.includes(payload.status as NormalizedStatus)

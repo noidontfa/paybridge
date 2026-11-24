@@ -74,6 +74,11 @@ export class WebhookIntake {
       throw error;
     }
 
+    if (parsed.ignored) {
+      this.logger.debug(`Ignored ${callback.gatewayId} callback`);
+      return parsed.ack;
+    }
+
     const providerEventId = parsed.providerEventId || null;
     const { entry, duplicate } =
       await this.runner.repositories.webhookInbox.record({
