@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { Payment } from '../domain/payment.js';
 import {
   CreatePayment,
   type CreatePaymentInput,
   type CreatePaymentOptions,
   type CreatePaymentResult,
 } from './use-cases/create-payment.js';
+import { GetPayment } from './use-cases/get-payment.js';
 
 /**
  * The API use cases of Payment Core (spec: Application services). A thin
@@ -16,6 +18,7 @@ import {
 export class PaymentService {
   constructor(
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
+    @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
   ) {}
 
   createPayment(
@@ -23,5 +26,10 @@ export class PaymentService {
     options?: CreatePaymentOptions,
   ): Promise<CreatePaymentResult> {
     return this.createPaymentUseCase.execute(input, options);
+  }
+
+  /** Read only: no writes, no row lock. Unknown id: `PaymentNotFoundError`. */
+  getPayment(paymentId: string): Promise<Payment> {
+    return this.getPaymentUseCase.execute(paymentId);
   }
 }

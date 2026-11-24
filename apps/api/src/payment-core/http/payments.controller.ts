@@ -1,10 +1,21 @@
-import { Body, Controller, Headers, Inject, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Inject,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnprocessableEntityResponse,
@@ -13,6 +24,10 @@ import type { Response } from 'express';
 import { ErrorResponseDto } from '../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PaymentService } from '../application/payment.service.js';
+import {
+  PaymentDetailResponseDto,
+  toPaymentDetailResponse,
+} from './payment-detail-response.dto.js';
 import { PaymentResponseDto } from './payment-response.dto.js';
 import {
   type CreatePaymentBody,
@@ -64,5 +79,17 @@ export class PaymentsController {
     res.status(result.status);
     if (result.replayed) res.setHeader(IDEMPOTENT_REPLAYED_HEADER, 'true');
     return result.body;
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a Payment with all its attempts' })
+  @ApiOkResponse({ type: PaymentDetailResponseDto })
+  @ApiNotFoundResponse({
+    type: ErrorResponseDto,
+    description: 'No Payment has this id',
+  })
+  async get(@Param('id') id: string): Promise<PaymentDetailResponseDto> {
+    const payment = await this.payments.getPayment(id);
+    return toPaymentDetailResponse(payment);
   }
 }
