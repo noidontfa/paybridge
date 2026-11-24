@@ -95,15 +95,17 @@ describe('POST /api/payments/:paymentId/attempts', () => {
     });
   });
 
-  it('409 while another attempt is open', async () => {
+  it('switches gateway on the same route: a second attempt cancels the open one', async () => {
     const paymentId = await createPayment();
-    await startAttempt(paymentId, BODY).expect(201);
+    const first = await startAttempt(paymentId, BODY).expect(201);
 
-    const res = await startAttempt(paymentId, BODY).expect(409);
+    const res = await startAttempt(paymentId, BODY).expect(201);
 
-    expect(res.body).toMatchObject({
-      message: expect.stringContaining('open attempt'),
+    expect(res.body.attempt.status).toBe('PENDING');
+    const old = await prisma.paymentTransaction.findUnique({
+      where: { id: first.body.attempt.id },
     });
+    expect(old?.status).toBe('CANCELLED');
   });
 
   it('409 when the Payment is not PENDING', async () => {
