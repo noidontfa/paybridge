@@ -20,7 +20,10 @@ import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
-import { GatewayUnavailableError } from '../../src/payment-core/port/index.js';
+import {
+  GatewayUnavailableError,
+  OutcomeUnknownError,
+} from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 
@@ -147,10 +150,9 @@ describe('cancelPayment', () => {
 
   it('cancels a CREATED attempt too', async () => {
     const payment = await createPayment();
-    alpha.scriptInitiate(new GatewayUnavailableError('down'));
-    await expect(start(payment, 'alpha')).rejects.toBeInstanceOf(
-      GatewayUnavailableError,
-    );
+    // Leaves the attempt CREATED (ticket 22); the queued query runs later.
+    alpha.scriptInitiate(new OutcomeUnknownError('timeout'));
+    await start(payment, 'alpha');
 
     const result = await service.cancelPayment(payment.id);
 

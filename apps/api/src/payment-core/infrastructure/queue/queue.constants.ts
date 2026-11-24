@@ -13,6 +13,8 @@ export const QUEUES = {
   paymentExpiry: 'core-payment-expiry',
   /** Runs of the expiry sweep, produced by its job scheduler. */
   expirySweep: 'core-expiry-sweep',
+  /** Retries of `initiate` for an attempt left `CREATED` by an outage. Job id: the attempt id. */
+  attemptInitiate: 'core-attempt-initiate',
   /** Status queries for one attempt (browser return). Job id: the attempt id. */
   attemptStatusQuery: 'core-attempt-status-query',
   /** Runs of the webhook inbox sweep, produced by its job scheduler. */

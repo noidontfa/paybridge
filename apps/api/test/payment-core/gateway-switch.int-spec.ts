@@ -16,6 +16,7 @@ import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js
 import {
   GatewayRejectedError,
   GatewayUnavailableError,
+  OutcomeUnknownError,
   type CancelInput,
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
@@ -126,10 +127,9 @@ describe('Gateway switch: the local cancel', () => {
 
   it('cancels a CREATED attempt', async () => {
     const payment = await createPayment();
-    alpha.scriptInitiate(new GatewayUnavailableError('down'));
-    await expect(start(payment, 'alpha')).rejects.toBeInstanceOf(
-      GatewayUnavailableError,
-    );
+    // Leaves the attempt CREATED (ticket 22); the queued query runs later.
+    alpha.scriptInitiate(new OutcomeUnknownError('timeout'));
+    await start(payment, 'alpha');
     const [created] = (await repos.payments.findById(payment.id))!.attempts;
     expect(created?.status).toBe('CREATED');
 

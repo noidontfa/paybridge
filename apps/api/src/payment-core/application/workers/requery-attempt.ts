@@ -4,7 +4,12 @@ import { Clock } from '../../domain/clock.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { GatewayNotFoundError, type QueryResult } from '../../port/index.js';
+import {
+  GatewayNotFoundError,
+  isGatewayError,
+  type GatewayError,
+  type QueryResult,
+} from '../../port/index.js';
 import {
   applyProviderOutcome,
   type AppliedProviderOutcome,
@@ -18,7 +23,17 @@ import { BestEffortCancel } from '../best-effort-cancel.js';
  * - `not-found`: the provider has no such transaction; the attempt is left
  *   as it is (expiry decides what that means, ticket 24).
  */
-export type RequeryAttemptResult = 'applied' | 'skipped' | 'not-found';
+export type RequeryAttemptResult =
+  'applied' | 'skipped' | 'not-found' | 'unchanged';
+
+/**
+ * A query only reads, so it is safe to repeat: a retryable error is retried,
+ * and so is `OutcomeUnknown` (its `retryable` flag only forbids re-sending a
+ * write). Any other gateway error ends the job with the attempt unchanged.
+ */
+function retriesQuery(error: GatewayError): boolean {
+  return error.retryable || error.category === 'OutcomeUnknown';
+}
 
 /**
  * Status query worker service (spec: Use cases, `requeryAttempt`), run for
@@ -31,8 +46,9 @@ export type RequeryAttemptResult = 'applied' | 'skipped' | 'not-found';
  *    `applyProviderOutcome`, the same rules as webhooks.
  * 4. After commit, best-effort cancel of attempts cancelled in step 3.
  *
- * Other gateway errors propagate so the queue retries the job (ticket 22
- * refines the categories).
+ * Error categories (ticket 22): `GatewayUnavailable` and `OutcomeUnknown`
+ * propagate so the queue retries the job; `NotFound` and other non-retryable
+ * errors are logged. A failed query never changes the attempt.
  */
 @Injectable()
 export class RequeryAttempt {
@@ -69,6 +85,15 @@ export class RequeryAttempt {
         );
         return 'not-found';
       }
+      if (isGatewayError(error) && !retriesQuery(error)) {
+        // E.g. a rejection of a read: nothing to retry, attempt unchanged.
+        this.logger.error(
+          `Status query of attempt ${attempt.id} failed for good (${error.category}): ${error.message}`,
+        );
+        return 'unchanged';
+      }
+      // GatewayUnavailable and OutcomeUnknown (and unexpected errors): the
+      // attempt is untouched and the queue retries the job.
       throw error;
     }
     await repos.gatewayRawResponses.record({
