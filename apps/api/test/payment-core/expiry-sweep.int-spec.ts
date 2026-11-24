@@ -139,6 +139,25 @@ describe('ExpirySweep', () => {
     expect(await queuedIds()).toEqual(ids.slice(0, BATCH_SIZE).sort());
   });
 
+  it('skips Payments with an attempt in review, so they cannot starve newer expired ones', async () => {
+    for (let i = 10; i > 10 - BATCH_SIZE; i--) {
+      const stuck = await payment(minutes(-i));
+      await moduleRef.get(TransactionRunner).run((tx) =>
+        tx.payments.createAttempt({
+          id: newId(),
+          paymentId: stuck,
+          gatewayId: 'fake',
+          status: 'REQUIRES_REVIEW',
+        }),
+      );
+    }
+    const due = await payment(minutes(-1));
+
+    await expect(sweep.run()).resolves.toEqual({ queued: 1 });
+
+    expect(await queuedIds()).toEqual([due]);
+  });
+
   it('changes no state when Redis is unavailable, and the next run queues the same Payments', async () => {
     const ids = [await payment(minutes(-2)), await payment(minutes(-1))];
     const before = await prisma.payment.findMany({ orderBy: { id: 'asc' } });
