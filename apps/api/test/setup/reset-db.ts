@@ -38,7 +38,6 @@ function isDeadlock(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const meta = (error as { meta?: { code?: unknown } }).meta;
   return (
-    meta?.code === DEADLOCK_DETECTED ||
-    error.message.includes(DEADLOCK_DETECTED)
+    meta?.code === DEADLOCK_DETECTED || error.message.includes(DEADLOCK_DETECTED)
   );
 }
