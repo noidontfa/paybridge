@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "payment_intent_unexpected_state",
+    "message": "You cannot cancel this PaymentIntent because it has a status of canceled.",
+    "doc_url": "https://stripe.com/docs/error-codes"
+  }
+}

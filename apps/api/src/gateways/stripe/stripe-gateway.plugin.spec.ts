@@ -214,6 +214,26 @@ describe('StripeGatewayPlugin', () => {
       expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
     });
 
+    it('retrieves the PaymentIntent when the error body does not carry it', async () => {
+      http.respond(400, 'error.unexpected-state-no-payment-intent');
+      http.respond(200, 'payment-intent.canceled');
+
+      const result = await cancel();
+
+      expect(http.requests[1]).toMatchObject({
+        method: 'GET',
+        path: `/v1/payment_intents/${PI_ID}`,
+      });
+      expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
+    });
+
+    it('rejects when the error body is bare and the PaymentIntent succeeded', async () => {
+      http.respond(400, 'error.unexpected-state-no-payment-intent');
+      http.respond(200, 'payment-intent.succeeded');
+
+      await expect(cancel()).rejects.toBeInstanceOf(GatewayRejectedError);
+    });
+
     it('rejects when the PaymentIntent already succeeded', async () => {
       http.respond(400, 'error.unexpected-state-succeeded');
 

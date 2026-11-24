@@ -151,8 +151,13 @@ export class StripeGatewayPlugin implements PaymentGateway {
           idempotencyKey: `${input.attemptKey}:cancel`,
         });
       } catch (error) {
-        const already = alreadyCancelled(error);
-        if (already) return already;
+        if (!isUnexpectedState(error)) throw error;
+        // Stripe says the state forbids cancelling. That is fine if it is
+        // already canceled; the error body may omit the PaymentIntent, so
+        // confirm with a retrieve.
+        const current =
+          error.payment_intent ?? (await this.stripe.paymentIntents.retrieve(paymentIntentId));
+        if (current.status === 'canceled') return current;
         throw error;
       }
     });
@@ -244,16 +249,11 @@ function withoutClientSecret(intent: Stripe.PaymentIntent): unknown {
   return rest;
 }
 
-/** The PaymentIntent from a "cannot cancel, already canceled" Stripe error. */
-function alreadyCancelled(error: unknown): Stripe.PaymentIntent | undefined {
-  if (
+function isUnexpectedState(error: unknown): error is Stripe.errors.StripeInvalidRequestError {
+  return (
     error instanceof Stripe.errors.StripeInvalidRequestError &&
-    error.code === 'payment_intent_unexpected_state' &&
-    error.payment_intent?.status === 'canceled'
-  ) {
-    return error.payment_intent;
-  }
-  return undefined;
+    error.code === 'payment_intent_unexpected_state'
+  );
 }
 
 function translateError(error: unknown, operation: Operation): Error {
