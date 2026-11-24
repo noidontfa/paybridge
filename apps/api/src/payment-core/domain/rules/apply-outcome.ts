@@ -13,7 +13,10 @@ import { isOpenAttempt } from './attempt-transitions.js';
 /** The parts of the locked Payment aggregate the rule reads. */
 export interface OutcomeSubject {
   readonly payment: Pick<Payment, 'status' | 'amount' | 'currency'> & {
-    readonly attempts: readonly Pick<PaymentTransaction, 'id' | 'status'>[];
+    readonly attempts: readonly (Pick<PaymentTransaction, 'id' | 'status'> & {
+      /** Needed only to decide results on an attempt in review. */
+      readonly reviewReason?: ReviewReason | null;
+    })[];
   };
   /** The attempt the provider reported on (its Attempt Key). */
   readonly attemptId: string;
@@ -26,8 +29,12 @@ export interface OutcomeSubject {
  * - `no-change`: nothing moves. `still-pending`: the provider has no final
  *   answer yet. `already-applied`: a repeat of the state the attempt is in.
  *   `already-closed`: a failure for an attempt Core already closed.
- *   `not-handled`: a result this rule does not decide yet (a result on an
- *   attempt already in review: review exit, tickets 28/29).
+ *   `still-in-review`: an attempt in an automatically re-queried review got
+ *   no clear answer (pending, unclear, or a success that is still a
+ *   mismatch or otherwise unsafe): it stays in review.
+ *   `not-handled`: a result this rule does not decide: a result on an attempt
+ *   in review whose reason is not re-queried (`LATE_SUCCESS_ON_CLOSED_PAYMENT`,
+ *   `DUPLICATE_SUCCESS`; those wait for an operator, ticket 29).
  */
 export type OutcomeDecision =
   | { readonly kind: 'succeed' }
@@ -36,7 +43,11 @@ export type OutcomeDecision =
   | {
       readonly kind: 'no-change';
       readonly reason:
-        'still-pending' | 'already-applied' | 'already-closed' | 'not-handled';
+        | 'still-pending'
+        | 'already-applied'
+        | 'already-closed'
+        | 'still-in-review'
+        | 'not-handled';
     };
 
 const noChange = (
@@ -58,7 +69,14 @@ export function decideOutcome(
 
   if (!isOpenAttempt(attempt.status)) {
     // REQUIRES_REVIEW, FAILED, EXPIRED, CANCELLED.
-    if (attempt.status === 'REQUIRES_REVIEW') return noChange('not-handled');
+    if (attempt.status === 'REQUIRES_REVIEW') {
+      return decideReviewExit(
+        payment,
+        attemptId,
+        attempt.reviewReason,
+        outcome,
+      );
+    }
     // Late success (FAILED, EXPIRED, CANCELLED): promoted only when safe,
     // else review. Never dropped.
     if (outcome.status === 'SUCCEEDED') {
@@ -77,6 +95,35 @@ export function decideOutcome(
     case 'SUCCEEDED':
       return decideSuccess(payment, attemptId, outcome.amount);
   }
+}
+
+/** Reasons whose review is re-queried and closed by a clear provider answer. */
+export const REQUERIED_REVIEW_REASONS: readonly ReviewReason[] = [
+  'AMBIGUOUS_PROVIDER_STATUS',
+  'AMOUNT_MISMATCH',
+];
+
+/**
+ * Review exit by a clear provider answer (ticket 28). A clear success goes
+ * through the normal success rule (so it promotes only when safe), a clear
+ * failure fails the attempt. Anything else, including a success that would
+ * itself need review, leaves the attempt in review under its own reason.
+ */
+function decideReviewExit(
+  payment: OutcomeSubject['payment'],
+  attemptId: string,
+  reviewReason: ReviewReason | null | undefined,
+  outcome: NormalizedOutcome,
+): OutcomeDecision {
+  if (!reviewReason || !REQUERIED_REVIEW_REASONS.includes(reviewReason)) {
+    return noChange('not-handled');
+  }
+  if (outcome.status === 'FAILED') return { kind: 'fail' };
+  if (outcome.status === 'SUCCEEDED') {
+    const decision = decideSuccess(payment, attemptId, outcome.amount);
+    return decision.kind === 'succeed' ? decision : noChange('still-in-review');
+  }
+  return noChange('still-in-review');
 }
 
 function decideSuccess(

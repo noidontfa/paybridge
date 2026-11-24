@@ -17,6 +17,10 @@ export const QUEUES = {
   attemptInitiate: 'core-attempt-initiate',
   /** Status queries for one attempt (browser return). Job id: the attempt id. */
   attemptStatusQuery: 'core-attempt-status-query',
+  /** Automatic re-queries of attempts in review. Job id: the attempt id. */
+  reviewRequery: 'core-review-requery',
+  /** Runs of the review re-query sweep, produced by its job scheduler. */
+  reviewRequerySweep: 'core-review-requery-sweep',
   /** Runs of the webhook inbox sweep, produced by its job scheduler. */
   webhookInboxSweep: 'core-webhook-inbox-sweep',
   /** Runs of the retention cleanup, produced by its job scheduler. */
