@@ -1,8 +1,10 @@
+import Stripe from 'stripe';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   GatewayNotFoundError,
   GatewayRejectedError,
   GatewayUnavailableError,
+  InvalidCallbackError,
   OutcomeUnknownError,
   type InitiateInput,
 } from '../../payment-core/port/index.js';
@@ -10,6 +12,7 @@ import { FixtureHttpClient } from './fixture-http-client.js';
 import { StripeGatewayPlugin } from './stripe-gateway.plugin.js';
 
 const ATTEMPT_KEY = '0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b';
+const WEBHOOK_SECRET = 'whsec_test_fixture';
 const PI_ID = 'pi_3QxTest1AbCdEfGh0aBcDeFg';
 
 const initiateInput: InitiateInput = {
@@ -30,6 +33,7 @@ describe('StripeGatewayPlugin', () => {
     plugin = new StripeGatewayPlugin({
       secretKey: 'sk_test_fixture',
       publishableKey: 'pk_test_fixture',
+      webhookSecret: WEBHOOK_SECRET,
       httpClient: http,
       maxNetworkRetries: 0,
     });
@@ -284,6 +288,149 @@ describe('StripeGatewayPlugin', () => {
       await expect(
         plugin.query({ attemptKey: ATTEMPT_KEY, providerMetadata: {} }),
       ).rejects.toBeInstanceOf(GatewayUnavailableError);
+    });
+  });
+  describe('parseCallback', () => {
+    const stripe = new Stripe('sk_test_fixture');
+    const EVENT_ID = 'evt_1QxTestEvent';
+
+    function event(
+      type: string,
+      object: Record<string, unknown> = {},
+      livemode = false,
+    ): Record<string, unknown> {
+      return {
+        id: EVENT_ID,
+        object: 'event',
+        type,
+        livemode,
+        data: {
+          object: {
+            id: PI_ID,
+            object: 'payment_intent',
+            amount: 150000,
+            amount_received: 0,
+            livemode,
+            metadata: { attemptKey: ATTEMPT_KEY },
+            ...object,
+          },
+        },
+      };
+    }
+
+    function signed(
+      payload: Record<string, unknown> | string,
+      options: { secret?: string; timestamp?: number } = {},
+    ) {
+      const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const header = stripe.webhooks.generateTestHeaderString({
+        payload: body,
+        secret: options.secret ?? WEBHOOK_SECRET,
+        ...(options.timestamp === undefined ? {} : { timestamp: options.timestamp }),
+      });
+      return {
+        rawBody: new TextEncoder().encode(body),
+        headers: { 'stripe-signature': header },
+        query: {},
+      };
+    }
+
+    const ACK = { httpStatus: 200, body: '' };
+
+    it('maps payment_intent.succeeded to SUCCEEDED with amount_received', async () => {
+      const result = await plugin.parseCallback(
+        signed(event('payment_intent.succeeded', { amount_received: 149000 })),
+      );
+
+      expect(result).toEqual({
+        attemptKey: ATTEMPT_KEY,
+        status: 'SUCCEEDED',
+        amount: '149000',
+        rawCode: 'payment_intent.succeeded',
+        providerRef: PI_ID,
+        providerEventId: EVENT_ID,
+        ack: ACK,
+      });
+    });
+
+    it.each([
+      ['payment_intent.payment_failed', 'PENDING'],
+      ['payment_intent.processing', 'PENDING'],
+      ['payment_intent.canceled', 'FAILED'],
+    ])('maps %s to %s', async (type, status) => {
+      const result = await plugin.parseCallback(signed(event(type)));
+
+      expect(result).toMatchObject({
+        attemptKey: ATTEMPT_KEY,
+        status,
+        amount: null,
+        providerRef: PI_ID,
+        providerEventId: EVENT_ID,
+        ack: ACK,
+      });
+    });
+
+    it.each([
+      ['a missing header', () => ({ ...signed(event('payment_intent.succeeded')), headers: {} })],
+      [
+        'a bad signature',
+        () => signed(event('payment_intent.succeeded'), { secret: 'whsec_other' }),
+      ],
+      [
+        'a stale timestamp',
+        () =>
+          signed(event('payment_intent.succeeded'), {
+            timestamp: Math.floor(Date.now() / 1000) - 301,
+          }),
+      ],
+      ['an unparseable body', () => signed('not json')],
+    ])('rejects %s with a 400 acknowledgement', async (_name, build) => {
+      const error = await plugin.parseCallback(build()).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(InvalidCallbackError);
+      expect((error as InvalidCallbackError).ack).toEqual({ httpStatus: 400, body: '' });
+    });
+
+    it('verifies over the exact raw bytes', async () => {
+      const callback = signed(event('payment_intent.succeeded'));
+      const tampered = {
+        ...callback,
+        rawBody: new TextEncoder().encode(
+          new TextDecoder().decode(callback.rawBody).replace('150000', '1'),
+        ),
+      };
+
+      await expect(plugin.parseCallback(tampered)).rejects.toBeInstanceOf(
+        InvalidCallbackError,
+      );
+    });
+
+    it.each([
+      ['another event type', event('charge.succeeded')],
+      ['a missing attemptKey', event('payment_intent.succeeded', { metadata: {} })],
+      [
+        'a non-UUID attemptKey',
+        event('payment_intent.succeeded', { metadata: { attemptKey: 'order-7' } }),
+      ],
+      ['a live-mode event on test keys', event('payment_intent.succeeded', {}, true)],
+    ])('ignores %s', async (_name, payload) => {
+      await expect(plugin.parseCallback(signed(payload))).resolves.toEqual({
+        ignored: true,
+        ack: ACK,
+      });
+    });
+
+    it('ignores a test-mode event on live keys', async () => {
+      const live = new StripeGatewayPlugin({
+        secretKey: 'sk_live_fixture',
+        publishableKey: 'pk_live_fixture',
+        webhookSecret: WEBHOOK_SECRET,
+        httpClient: http,
+      });
+
+      await expect(
+        live.parseCallback(signed(event('payment_intent.succeeded'))),
+      ).resolves.toEqual({ ignored: true, ack: ACK });
     });
   });
 });

@@ -3,6 +3,7 @@ import {
   GatewayNotFoundError,
   GatewayRejectedError,
   GatewayUnavailableError,
+  InvalidCallbackError,
   OutcomeUnknownError,
   type CallbackInput,
   type CallbackResult,
@@ -25,11 +26,25 @@ export const STRIPE_API_VERSION = '2026-11-18.endive';
 export interface StripeGatewayOptions {
   readonly secretKey: string;
   readonly publishableKey: string;
+  /** Signing secret of the webhook endpoint (`whsec_…`). */
+  readonly webhookSecret: string;
   /** Replaces the SDK's HTTP layer; tests use it to replay recorded responses. */
   readonly httpClient?: Stripe.HttpClient;
   /** Network retries performed by the SDK, reusing the idempotency key. Default 2. */
   readonly maxNetworkRetries?: number;
 }
+
+const WEBHOOK_TOLERANCE_SECONDS = 300;
+const SUCCESS_ACK = { httpStatus: 200, body: '' } as const;
+const ERROR_ACK = { httpStatus: 400, body: '' } as const;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const EVENT_STATUS_MAP: Readonly<Record<string, NormalizedStatus | undefined>> = {
+  'payment_intent.succeeded': 'SUCCEEDED',
+  'payment_intent.payment_failed': 'PENDING',
+  'payment_intent.processing': 'PENDING',
+  'payment_intent.canceled': 'FAILED',
+};
 
 type Operation = 'initiate' | 'query' | 'cancel';
 
@@ -54,9 +69,13 @@ export class StripeGatewayPlugin implements PaymentGateway {
 
   private readonly stripe: Stripe;
   private readonly publishableKey: string;
+  private readonly webhookSecret: string;
+  private readonly livemode: boolean;
 
   constructor(options: StripeGatewayOptions) {
     this.publishableKey = options.publishableKey;
+    this.webhookSecret = options.webhookSecret;
+    this.livemode = /^(sk|rk)_live_/.test(options.secretKey);
     this.stripe = new Stripe(options.secretKey, {
       apiVersion: STRIPE_API_VERSION,
       maxNetworkRetries: options.maxNetworkRetries ?? 2,
@@ -132,10 +151,49 @@ export class StripeGatewayPlugin implements PaymentGateway {
     return { rawPayload: withoutClientSecret(intent) };
   };
 
-  parseCallback(_input: CallbackInput): Promise<CallbackResult> {
-    return Promise.reject(
-      new Error('Stripe webhook parsing is implemented by ticket 05'),
-    );
+  async parseCallback(input: CallbackInput): Promise<CallbackResult> {
+    const event = this.verify(input);
+    const status = EVENT_STATUS_MAP[event.type];
+    if (status === undefined || event.livemode !== this.livemode) {
+      return { ignored: true, ack: SUCCESS_ACK };
+    }
+    const intent = event.data.object as Stripe.PaymentIntent;
+    const attemptKey = intent.metadata?.['attemptKey'];
+    if (attemptKey === undefined || !UUID.test(attemptKey)) {
+      return { ignored: true, ack: SUCCESS_ACK };
+    }
+    return {
+      attemptKey,
+      status,
+      amount:
+        event.type === 'payment_intent.succeeded'
+          ? String(intent.amount_received)
+          : null,
+      rawCode: event.type,
+      providerRef: intent.id,
+      providerEventId: event.id,
+      ack: SUCCESS_ACK,
+    };
+  }
+
+  /** Checks the signature over the raw bytes before anything is read. */
+  private verify(input: CallbackInput): Stripe.Event {
+    const header = input.headers['stripe-signature'];
+    const signature = Array.isArray(header) ? header[0] : header;
+    if (typeof signature !== 'string' || signature === '') {
+      throw new InvalidCallbackError('Missing Stripe-Signature header', ERROR_ACK);
+    }
+    try {
+      return this.stripe.webhooks.constructEvent(
+        Buffer.from(input.rawBody),
+        signature,
+        this.webhookSecret,
+        WEBHOOK_TOLERANCE_SECONDS,
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new InvalidCallbackError(`Invalid Stripe webhook: ${reason}`, ERROR_ACK);
+    }
   }
 
   private async searchByAttemptKey(attemptKey: string): Promise<Stripe.PaymentIntent> {
