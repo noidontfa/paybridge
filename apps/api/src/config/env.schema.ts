@@ -32,6 +32,17 @@ export const envSchema = z.object({
     .default('paybridge'),
   /** Most Payments the expiry sweep queues per run (it runs every minute). */
   EXPIRY_SWEEP_BATCH_SIZE: z.coerce.number().int().positive().default(100),
+  /** Outbox relay poll loop. Unset => enabled everywhere except test. */
+  OUTBOX_RELAY_ENABLED: z.stringbool().optional(),
+  /** Pause between outbox relay polls, in milliseconds. */
+  OUTBOX_RELAY_POLL_INTERVAL_MS: z.coerce.number().int().min(10).default(1000),
+  /** Outbox rows read per query by the relay. */
+  OUTBOX_RELAY_BATCH_SIZE: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .default(100),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -53,4 +64,10 @@ export function resolveSwaggerEnabled(
   env: Pick<Env, 'NODE_ENV' | 'SWAGGER_ENABLED'>,
 ): boolean {
   return env.SWAGGER_ENABLED ?? !isProduction(env);
+}
+
+export function resolveOutboxRelayEnabled(
+  env: Pick<Env, 'NODE_ENV' | 'OUTBOX_RELAY_ENABLED'>,
+): boolean {
+  return env.OUTBOX_RELAY_ENABLED ?? env.NODE_ENV !== 'test';
 }
