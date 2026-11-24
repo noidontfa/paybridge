@@ -4,6 +4,7 @@ import {
   CreatePayment,
   type CreatePaymentInput,
 } from './use-cases/create-payment.js';
+import { GetPayment } from './use-cases/get-payment.js';
 import {
   StartAttempt,
   type StartAttemptInput,
@@ -20,11 +21,17 @@ import {
 export class PaymentService {
   constructor(
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
+    @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
     @Inject(StartAttempt) private readonly startAttemptUseCase: StartAttempt,
   ) {}
 
   createPayment(input: CreatePaymentInput): Promise<Payment> {
     return this.createPaymentUseCase.execute(input);
+  }
+
+  /** Read only: no writes, no row lock. Unknown id: `PaymentNotFoundError`. */
+  getPayment(paymentId: string): Promise<Payment> {
+    return this.getPaymentUseCase.execute(paymentId);
   }
 
   startAttempt(input: StartAttemptInput): Promise<StartAttemptResult> {
