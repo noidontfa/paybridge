@@ -68,7 +68,8 @@ TEST_DATABASE_NAME=paybridge_test_mine pnpm test:int
 
 Helpers in `apps/api/test/setup/`: `createTestPrismaClient()` (client on the test database) and
 `resetDatabase(prisma)` (truncates every `core_*` table; call it in `beforeEach`). Test files run
-one at a time because they share the database.
+one at a time because they share the database. Queue tests use the compose Redis with
+`QUEUE_PREFIX` set to the test database name, so parallel runs do not share BullMQ keys.
 
 Run production locally: `pnpm build && pnpm --filter @paybridge/api start:prod`.
 
@@ -87,13 +88,15 @@ are loaded for `NODE_ENV` (default `development`), first match wins:
 | `apps/api/.env.production.example` | Template. In production inject real env vars/secrets |
 | `apps/api/.env.example`            | Reference of every variable                          |
 
-| Variable          | Default                                       | Notes                                 |
-| ----------------- | --------------------------------------------- | ------------------------------------- |
-| `NODE_ENV`        | `development`                                 | `development` / `production` / `test` |
-| `PORT`            | `3000`                                        |                                       |
-| `DATABASE_URL`    | _required_                                    | PostgreSQL connection string          |
-| `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                       |
-| `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                       |
+| Variable          | Default                                       | Notes                                     |
+| ----------------- | --------------------------------------------- | ----------------------------------------- |
+| `NODE_ENV`        | `development`                                 | `development` / `production` / `test`     |
+| `PORT`            | `3000`                                        |                                           |
+| `DATABASE_URL`    | _required_                                    | PostgreSQL connection string              |
+| `REDIS_URL`       | _required_                                    | Redis for BullMQ (`redis://`/`rediss://`) |
+| `QUEUE_PREFIX`    | `paybridge`                                   | Prefix of every BullMQ key, no `:`        |
+| `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                           |
+| `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                           |
 
 ## Conventions
 
