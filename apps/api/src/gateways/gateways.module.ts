@@ -52,6 +52,7 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
           plugins.push(
             new StripeGatewayPlugin({
               secretKey: stripe.secretKey,
+              webhookSecret: stripe.webhookSecret,
               publishableKey: stripe.publishableKey,
               ...(httpClient ? { httpClient } : {}),
             }),
