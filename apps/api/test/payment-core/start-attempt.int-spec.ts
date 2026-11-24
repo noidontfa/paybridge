@@ -70,13 +70,16 @@ beforeEach(async () => {
   await resetDatabase(prisma);
 });
 
-function createPayment(overrides: Record<string, unknown> = {}) {
-  return service.createPayment({
+async function createPayment(
+  overrides: Record<string, unknown> = {},
+): Promise<Payment> {
+  const { payment } = await service.createPayment({
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
     ...overrides,
   });
+  return payment;
 }
 
 function start(payment: Payment, overrides: Record<string, unknown> = {}) {
