@@ -244,9 +244,8 @@ describe('status query (RequeryAttempt)', () => {
 
   it('leaves the attempt alone when the provider has no such transaction', async () => {
     const { attemptId } = await pendingAttempt();
-    const { GatewayNotFoundError } = await import(
-      '../../src/payment-core/port/index.js'
-    );
+    const { GatewayNotFoundError } =
+      await import('../../src/payment-core/port/index.js');
     fake.scriptQuery(new GatewayNotFoundError('no such order'));
     expect(await requery.execute(attemptId)).toBe('not-found');
     expect((await attemptRow(attemptId)).status).toBe('PENDING');

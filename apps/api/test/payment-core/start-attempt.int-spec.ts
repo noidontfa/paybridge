@@ -20,7 +20,6 @@ import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   GatewayRejectedError,
-  GatewayUnavailableError,
   type InitiateInput,
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
@@ -413,17 +412,5 @@ describe('PaymentService.startAttempt: state changed during the gateway call', (
 
     expect(result.payment.status).toBe('CANCELLED');
     expect(result.attempt.status).toBe('CREATED');
-  });
-});
-
-describe('PaymentService.startAttempt: other gateway errors (ticket 22)', () => {
-  it('leaves the attempt CREATED and passes the error on', async () => {
-    const payment = await createPayment();
-    const outage = new GatewayUnavailableError('provider down');
-    fake.scriptInitiate(outage);
-
-    await expect(start(payment)).rejects.toBe(outage);
-    const stored = await repos.payments.findById(payment.id);
-    expect(stored?.attempts.map((a) => a.status)).toEqual(['CREATED']);
   });
 });

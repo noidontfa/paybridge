@@ -146,7 +146,9 @@ describe('PROCESSING rows', () => {
 
   it('does not touch a row locked more recently', async () => {
     const id = await storeUnprocessable();
-    const lockedAt = new Date(NOW.getTime() - WEBHOOK_INBOX_LOCK_TIMEOUT_MS + 1);
+    const lockedAt = new Date(
+      NOW.getTime() - WEBHOOK_INBOX_LOCK_TIMEOUT_MS + 1,
+    );
     await prisma.webhookInbox.update({
       where: { id },
       data: { status: 'PROCESSING', attempts: 1, lockedAt },

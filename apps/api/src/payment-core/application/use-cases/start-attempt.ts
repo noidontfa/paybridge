@@ -1,4 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 import { Clock } from '../../domain/clock.js';
 import {
   AttemptInReviewError,
@@ -24,8 +26,11 @@ import {
 } from '../../gateway-manager/gateway-manager.js';
 import type { Repositories } from '../../infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { QUEUES, jobIds } from '../../infrastructure/queue/queue.constants.js';
 import {
   GatewayRejectedError,
+  GatewayUnavailableError,
+  OutcomeUnknownError,
   type GatewayCurrency,
   type InitiateResult,
   type PaymentGateway,
@@ -35,6 +40,39 @@ import {
   type CancellableAttempt,
 } from '../best-effort-cancel.js';
 import { recordAttemptTransition } from '../record-attempt-transition.js';
+import {
+  QUERY_ATTEMPT_JOB,
+  QUERY_ATTEMPT_JOB_OPTIONS,
+  type QueryAttemptJobData,
+} from './handle-browser-return.js';
+
+/** BullMQ job name for retrying `initiate` of a `CREATED` attempt. */
+export const INITIATE_ATTEMPT_JOB = 'initiate-attempt';
+
+/**
+ * What the retry needs that is not stored on the attempt row (the return URL
+ * and the description are request data, not Payment data).
+ */
+export interface InitiateAttemptJobData {
+  readonly attemptId: string;
+  readonly returnUrl: string;
+  readonly description?: string;
+}
+
+/**
+ * Bounded retry of `initiate` after a `GatewayUnavailable`: 5 tries in all,
+ * exponential backoff from 5 s. Removed when finished so nothing piles up;
+ * if every try fails the attempt stays `CREATED` and expiry closes it.
+ */
+export const INITIATE_ATTEMPT_JOB_OPTIONS = {
+  attempts: 5,
+  backoff: { type: 'exponential', delay: 5_000 },
+  removeOnComplete: true,
+  removeOnFail: true,
+} as const;
+
+/** The status query waits a little: the provider may still be working. */
+const UNKNOWN_OUTCOME_QUERY_DELAY_MS = 5_000;
 
 export interface StartAttemptInput {
   readonly paymentId: string;
@@ -55,6 +93,12 @@ export interface StartAttemptResult {
 
 /** What `initiate` produced, as far as this use case decides on it. */
 type InitiateOutcome =
+  | RecordableOutcome
+  | { readonly kind: 'unavailable'; readonly error: GatewayUnavailableError }
+  | { readonly kind: 'unknown'; readonly error: OutcomeUnknownError };
+
+/** The outcomes that change the attempt status. */
+type RecordableOutcome =
   | { readonly kind: 'accepted'; readonly result: InitiateResult }
   | { readonly kind: 'rejected'; readonly error: GatewayRejectedError };
 
@@ -80,11 +124,15 @@ const SYSTEM = 'system';
  */
 @Injectable()
 export class StartAttempt {
+  private readonly logger = new Logger(StartAttempt.name);
+
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(GatewayManager) private readonly gateways: GatewayManager,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
+    @InjectQueue(QUEUES.attemptInitiate) private readonly initiateQueue: Queue,
+    @InjectQueue(QUEUES.attemptStatusQuery) private readonly queryQueue: Queue,
   ) {}
 
   async execute(input: StartAttemptInput): Promise<StartAttemptResult> {
@@ -94,10 +142,110 @@ export class StartAttempt {
     const providerCancel = this.cancels.cancel(switchedFrom);
     try {
       const outcome = await this.initiate(plugin, payment, attempt, input);
+      if (outcome.kind === 'unavailable' || outcome.kind === 'unknown') {
+        // The attempt stays CREATED (ticket 22): never a failure.
+        await this.scheduleFollowUp(outcome.kind, attempt.id, input);
+        return await this.unchanged(payment.id, attempt.id);
+      }
       return await this.recordOutcome(payment.id, attempt.id, outcome);
     } finally {
       await providerCancel;
     }
+  }
+
+  /**
+   * Worker side of the initiate retry (`GatewayUnavailable`). Calls the same
+   * `initiate` with the same attempt key. `GatewayUnavailable` is rethrown so
+   * the queue retries it with backoff, up to its attempt limit.
+   * `skipped` means the attempt is no longer `CREATED` (cancelled, expired or
+   * already recorded).
+   */
+  async retryInitiate(
+    data: InitiateAttemptJobData,
+  ): Promise<'recorded' | 'skipped' | 'query-scheduled'> {
+    const repos = this.runner.repositories;
+    const paymentId = await repos.payments.findPaymentIdByAttemptId(
+      data.attemptId,
+    );
+    const payment = paymentId ? await repos.payments.findById(paymentId) : null;
+    const attempt = payment?.attempts.find((a) => a.id === data.attemptId);
+    if (
+      !payment ||
+      !attempt ||
+      payment.status !== 'PENDING' ||
+      attempt.status !== 'CREATED'
+    ) {
+      return 'skipped';
+    }
+    const input: StartAttemptInput = {
+      paymentId: payment.id,
+      gatewayId: attempt.gatewayId,
+      returnUrl: data.returnUrl,
+      ...(data.description !== undefined && { description: data.description }),
+    };
+    const outcome = await this.initiate(
+      this.resolveGateway(attempt.gatewayId),
+      payment,
+      attempt,
+      input,
+    );
+    if (outcome.kind === 'unavailable') throw outcome.error;
+    if (outcome.kind === 'unknown') {
+      await this.scheduleFollowUp('unknown', attempt.id, input);
+      return 'query-scheduled';
+    }
+    await this.recordOutcome(payment.id, attempt.id, outcome);
+    return 'recorded';
+  }
+
+  /**
+   * Queues what the error category calls for. Best-effort: if Redis is down
+   * the attempt is still `CREATED` and a webhook or the expiry settles it.
+   */
+  private async scheduleFollowUp(
+    kind: 'unavailable' | 'unknown',
+    attemptId: string,
+    input: StartAttemptInput,
+  ): Promise<void> {
+    try {
+      if (kind === 'unavailable') {
+        const data: InitiateAttemptJobData = {
+          attemptId,
+          returnUrl: input.returnUrl,
+          ...(input.description !== undefined && {
+            description: input.description,
+          }),
+        };
+        await this.initiateQueue.add(INITIATE_ATTEMPT_JOB, data, {
+          jobId: jobIds.attempt(attemptId),
+          ...INITIATE_ATTEMPT_JOB_OPTIONS,
+        });
+      } else {
+        const data: QueryAttemptJobData = { attemptId };
+        await this.queryQueue.add(QUERY_ATTEMPT_JOB, data, {
+          jobId: jobIds.attempt(attemptId),
+          ...QUERY_ATTEMPT_JOB_OPTIONS,
+          delay: UNKNOWN_OUTCOME_QUERY_DELAY_MS,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Could not queue follow-up (${kind}) for attempt ${attemptId}: ${String(error)}`,
+      );
+    }
+  }
+
+  /** The Payment and the attempt as stored, nothing changed. */
+  private async unchanged(
+    paymentId: string,
+    attemptId: string,
+  ): Promise<StartAttemptResult> {
+    const payment = await this.runner.repositories.payments.findById(paymentId);
+    const attempt = payment?.attempts.find((a) => a.id === attemptId);
+    if (!payment || !attempt) {
+      throw new Error(`Attempt ${attemptId} vanished from ${paymentId}`);
+    }
+    return { payment, attempt };
   }
 
   private resolveGateway(gatewayId: string): PaymentGateway {
@@ -188,8 +336,14 @@ export class StartAttempt {
       if (error instanceof GatewayRejectedError) {
         return { kind: 'rejected', error };
       }
-      // GatewayUnavailable and OutcomeUnknown: ticket 22. The attempt stays
-      // CREATED.
+      // Both leave the attempt CREATED; the caller schedules the follow-up.
+      // The category and the retryable flag decide, never the provider.
+      if (error instanceof GatewayUnavailableError && error.retryable) {
+        return { kind: 'unavailable', error };
+      }
+      if (error instanceof OutcomeUnknownError) {
+        return { kind: 'unknown', error };
+      }
       throw error;
     }
   }
@@ -198,7 +352,7 @@ export class StartAttempt {
   private recordOutcome(
     paymentId: string,
     attemptId: string,
-    outcome: InitiateOutcome,
+    outcome: RecordableOutcome,
   ): Promise<StartAttemptResult> {
     return this.runner.run(async (repos) => {
       const payment = await repos.payments.findForUpdate(paymentId);
