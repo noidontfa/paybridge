@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "secret_key_required",
+    "message": "The provided key does not have the required permissions.",
+    "doc_url": "https://stripe.com/docs/error-codes"
+  }
+}
