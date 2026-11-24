@@ -31,7 +31,10 @@ import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,
 } from './payment-detail-response.dto.js';
-import { PaymentResponseDto } from './payment-response.dto.js';
+import {
+  PaymentResponseDto,
+  snapshotToPaymentResponse,
+} from './payment-response.dto.js';
 import {
   type CreatePaymentBody,
   CreatePaymentBodyDto,
@@ -81,7 +84,7 @@ export class PaymentsController {
     const result = await this.payments.createPayment(body, { idempotencyKey });
     res.status(result.status);
     if (result.replayed) res.setHeader(IDEMPOTENT_REPLAYED_HEADER, 'true');
-    return result.body;
+    return snapshotToPaymentResponse(result.snapshot);
   }
 
   @Post(':id/cancel')

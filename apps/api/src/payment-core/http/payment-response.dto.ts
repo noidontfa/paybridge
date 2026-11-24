@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { PaymentSnapshot } from '../application/use-cases/create-payment.js';
 import type { Payment } from '../domain/payment.js';
 import { PAYMENT_STATUSES, type PaymentStatus } from '../domain/statuses.js';
 
@@ -24,6 +25,13 @@ export class PaymentResponseDto {
 
   @ApiProperty({ format: 'date-time' })
   createdAt: string;
+}
+
+/** Maps a stored create-time snapshot (idempotent replay) to the response. */
+export function snapshotToPaymentResponse(
+  snapshot: PaymentSnapshot,
+): PaymentResponseDto {
+  return { ...snapshot, status: snapshot.status as PaymentStatus };
 }
 
 export function toPaymentResponse(payment: Payment): PaymentResponseDto {
