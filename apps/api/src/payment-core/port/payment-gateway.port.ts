@@ -12,6 +12,12 @@ export interface PaymentGateway {
   /** Constant identifier, e.g. `vnpay`. Stored on each PaymentTransaction. */
   readonly gatewayId: string;
   readonly capabilities: GatewayCapabilities;
+  /**
+   * Lower-case names of the callback request headers Core stores in the
+   * webhook inbox (what the plugin needs to re-verify and replay a callback).
+   * Every other header is dropped. Absent means none are stored.
+   */
+  readonly callbackHeaders?: readonly string[];
 
   initiate(input: InitiateInput): Promise<InitiateResult>;
   query(input: QueryInput): Promise<QueryResult>;
