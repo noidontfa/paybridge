@@ -24,6 +24,12 @@ export interface QrCodeNextAction {
 export interface ClientSdkNextAction {
   readonly type: 'CLIENT_SDK';
   readonly token: string;
+  /**
+   * Provider-neutral string parameters the client SDK needs (for example a
+   * publishable key or a return URL). Core stores and returns them without
+   * interpreting them.
+   */
+  readonly clientParams?: Readonly<Record<string, string>>;
 }
 
 export interface VoucherNextAction {

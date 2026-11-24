@@ -29,7 +29,7 @@ export class AttemptDetailResponseDto {
     type: 'object',
     additionalProperties: true,
     description:
-      'What the customer must do next (REDIRECT, QR_CODE, CLIENT_SDK, ...), when present',
+      'What the customer must do next (REDIRECT, QR_CODE, CLIENT_SDK, ...), when present. A CLIENT_SDK action may carry clientParams, an optional string-to-string map for the client SDK, returned unchanged',
     example: { type: 'REDIRECT', url: 'https://gateway.example/pay/abc' },
   })
   nextAction?: NextAction;

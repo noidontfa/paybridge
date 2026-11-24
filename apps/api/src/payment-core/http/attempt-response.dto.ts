@@ -32,7 +32,7 @@ export class StartedAttemptResponseDto {
     additionalProperties: true,
     nullable: true,
     description:
-      'What the customer does next: { type: REDIRECT, url } | { type: QR_CODE, payload } | { type: CLIENT_SDK, token } | { type: VOUCHER, details }. Null unless the attempt is PENDING after the gateway accepted it.',
+      'What the customer does next: { type: REDIRECT, url } | { type: QR_CODE, payload } | { type: CLIENT_SDK, token, clientParams? } (clientParams: optional string-to-string map the client SDK needs, passed through unchanged) | { type: VOUCHER, details }. Null unless the attempt is PENDING after the gateway accepted it.',
   })
   nextAction: NextAction | null;
 
