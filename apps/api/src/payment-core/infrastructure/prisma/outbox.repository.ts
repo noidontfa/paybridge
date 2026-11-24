@@ -51,4 +51,15 @@ export class PrismaOutboxRepository {
       data: { publishedAt },
     });
   }
+
+  /**
+   * Retention: deletes rows published at or before `cutoff`. Unpublished
+   * rows (`published_at IS NULL`) never match, so pending work is never lost.
+   */
+  async deletePublishedBefore(cutoff: Date): Promise<number> {
+    const { count } = await this.ctx.db.outboxEvent.deleteMany({
+      where: { publishedAt: { not: null, lte: cutoff } },
+    });
+    return count;
+  }
 }

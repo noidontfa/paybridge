@@ -13,6 +13,8 @@ export const QUEUES = {
   paymentExpiry: 'core-payment-expiry',
   /** Runs of the expiry sweep, produced by its job scheduler. */
   expirySweep: 'core-expiry-sweep',
+  /** Runs of the retention cleanup, produced by its job scheduler. */
+  retention: 'core-retention',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
