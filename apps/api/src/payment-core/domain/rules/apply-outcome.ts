@@ -26,8 +26,8 @@ export interface OutcomeSubject {
  * - `no-change`: nothing moves. `still-pending`: the provider has no final
  *   answer yet. `already-applied`: a repeat of the state the attempt is in.
  *   `already-closed`: a failure for an attempt Core already closed.
- *   `not-handled`: a result this rule does not decide yet (late success:
- *   ticket 21; review exit: tickets 28/29).
+ *   `not-handled`: a result this rule does not decide yet (a result on an
+ *   attempt already in review: review exit, tickets 28/29).
  */
 export type OutcomeDecision =
   | { readonly kind: 'succeed' }
@@ -59,7 +59,11 @@ export function decideOutcome(
   if (!isOpenAttempt(attempt.status)) {
     // REQUIRES_REVIEW, FAILED, EXPIRED, CANCELLED.
     if (attempt.status === 'REQUIRES_REVIEW') return noChange('not-handled');
-    if (outcome.status === 'SUCCEEDED') return noChange('not-handled');
+    // Late success (FAILED, EXPIRED, CANCELLED): promoted only when safe,
+    // else review. Never dropped.
+    if (outcome.status === 'SUCCEEDED') {
+      return decideSuccess(payment, attemptId, outcome.amount);
+    }
     return noChange('already-closed');
   }
 
