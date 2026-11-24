@@ -1,3 +1,4 @@
+import { Logger, type LoggerService } from '@nestjs/common';
 import Stripe from 'stripe';
 import {
   GatewayNotFoundError,
@@ -32,6 +33,8 @@ export interface StripeGatewayOptions {
   readonly httpClient?: Stripe.HttpClient;
   /** Network retries performed by the SDK, reusing the idempotency key. Default 2. */
   readonly maxNetworkRetries?: number;
+  /** Receives warnings; defaults to a Nest `Logger`. */
+  readonly logger?: Pick<LoggerService, 'warn'>;
 }
 
 const WEBHOOK_TOLERANCE_SECONDS = 300;
@@ -71,10 +74,12 @@ export class StripeGatewayPlugin implements PaymentGateway {
   private readonly publishableKey: string;
   private readonly webhookSecret: string;
   private readonly livemode: boolean;
+  private readonly logger: Pick<LoggerService, 'warn'>;
 
   constructor(options: StripeGatewayOptions) {
     this.publishableKey = options.publishableKey;
     this.webhookSecret = options.webhookSecret;
+    this.logger = options.logger ?? new Logger(StripeGatewayPlugin.name);
     this.livemode = /^(sk|rk)_live_/.test(options.secretKey);
     this.stripe = new Stripe(options.secretKey, {
       apiVersion: STRIPE_API_VERSION,
@@ -141,10 +146,13 @@ export class StripeGatewayPlugin implements PaymentGateway {
   }
 
   readonly cancel = async (input: CancelInput): Promise<CancelResult> => {
-    const paymentIntentId = input.providerMetadata['paymentIntentId'];
-    if (typeof paymentIntentId !== 'string') {
-      throw new GatewayNotFoundError('No PaymentIntent id to cancel');
-    }
+    const knownId = input.providerMetadata['paymentIntentId'];
+    // An `initiate` that ended in OutcomeUnknown left no id; look the
+    // PaymentIntent up by attempt key, as `query` does, so expiry can cancel it.
+    const paymentIntentId =
+      typeof knownId === 'string'
+        ? knownId
+        : (await this.call('query', () => this.searchByAttemptKey(input.attemptKey))).id;
     const intent = await this.call('cancel', async () => {
       try {
         return await this.stripe.paymentIntents.cancel(paymentIntentId, undefined, {
@@ -217,6 +225,11 @@ export class StripeGatewayPlugin implements PaymentGateway {
     const newest = [...data].sort((a, b) => b.created - a.created)[0];
     if (!newest) {
       throw new GatewayNotFoundError(`No PaymentIntent for attempt ${attemptKey}`);
+    }
+    if (data.length > 1) {
+      this.logger.warn(
+        `Search found ${data.length} PaymentIntents for attempt ${attemptKey}; using the newest (${newest.id})`,
+      );
     }
     return newest;
   }
