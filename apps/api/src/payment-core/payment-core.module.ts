@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
+import { CancelPayment } from './application/use-cases/cancel-payment.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
 import { GetPayment } from './application/use-cases/get-payment.js';
 import { StartAttempt } from './application/use-cases/start-attempt.js';
@@ -24,6 +25,9 @@ import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
 import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
+import { RetentionProcessor } from './reliability/processors/retention.processor.js';
+import { RetentionCleanup } from './reliability/retention.js';
+import { RetentionScheduler } from './reliability/retention.scheduler.js';
 import {
   OutboxRelay,
   outboxRelayOptionsProvider,
@@ -44,6 +48,7 @@ import {
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
     BestEffortCancel,
+    CancelPayment,
     CreatePayment,
     ExpirePayment,
     ExpirySweep,
@@ -54,6 +59,9 @@ import {
     PaymentExpiryProcessor,
     PaymentService,
     ProcessWebhook,
+    RetentionCleanup,
+    RetentionProcessor,
+    RetentionScheduler,
     StartAttempt,
     WebhookInboxProcessor,
     WebhookIntake,

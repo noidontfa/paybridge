@@ -6,6 +6,7 @@ import {
   type CreatePaymentOptions,
   type CreatePaymentResult,
 } from './use-cases/create-payment.js';
+import { CancelPayment } from './use-cases/cancel-payment.js';
 import { GetPayment } from './use-cases/get-payment.js';
 import {
   StartAttempt,
@@ -22,10 +23,16 @@ import {
 @Injectable()
 export class PaymentService {
   constructor(
+    @Inject(CancelPayment) private readonly cancelPaymentUseCase: CancelPayment,
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
     @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
     @Inject(StartAttempt) private readonly startAttemptUseCase: StartAttempt,
   ) {}
+
+  /** Merchant cancel. No-op on CANCELLED; SUCCEEDED/EXPIRED: `PaymentNotPendingError`. */
+  cancelPayment(paymentId: string): Promise<Payment> {
+    return this.cancelPaymentUseCase.execute(paymentId);
+  }
 
   createPayment(
     input: CreatePaymentInput,
