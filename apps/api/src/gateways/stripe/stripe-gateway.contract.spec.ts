@@ -217,6 +217,38 @@ const registration: GatewayContractRegistration<ReplayStripeGateway> = {
         plugin.http.respond(404, 'error.resource-missing');
       },
     },
+    {
+      situation: 'Stripe answers 500 to the cancel',
+      operation: 'cancel',
+      category: 'OutcomeUnknown',
+      arrange: (plugin) => {
+        plugin.http.respond(500, 'error.api-500');
+      },
+    },
+    {
+      situation: 'the connection drops during the cancel',
+      operation: 'cancel',
+      category: 'OutcomeUnknown',
+      arrange: (plugin) => {
+        plugin.http.failWith(new Error('socket hang up'));
+      },
+    },
+    {
+      situation: 'Stripe has no PaymentIntent to cancel',
+      operation: 'cancel',
+      category: 'NotFound',
+      arrange: (plugin) => {
+        plugin.http.respond(404, 'error.resource-missing');
+      },
+    },
+    {
+      situation: 'the PaymentIntent already succeeded and cannot be cancelled',
+      operation: 'cancel',
+      category: 'GatewayRejected',
+      arrange: (plugin) => {
+        plugin.http.respond(400, 'error.unexpected-state-succeeded');
+      },
+    },
   ],
   ignoredCallbacks: [
     {

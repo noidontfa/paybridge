@@ -42,16 +42,19 @@ const SUCCESS_ACK = { httpStatus: 200, body: '' } as const;
 const ERROR_ACK = { httpStatus: 400, body: '' } as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const EVENT_STATUS_MAP: Readonly<Record<string, NormalizedStatus | undefined>> = {
-  'payment_intent.succeeded': 'SUCCEEDED',
-  'payment_intent.payment_failed': 'PENDING',
-  'payment_intent.processing': 'PENDING',
-  'payment_intent.canceled': 'FAILED',
-};
+const EVENT_STATUS_MAP: Readonly<Record<string, NormalizedStatus | undefined>> =
+  {
+    'payment_intent.succeeded': 'SUCCEEDED',
+    'payment_intent.payment_failed': 'PENDING',
+    'payment_intent.processing': 'PENDING',
+    'payment_intent.canceled': 'FAILED',
+  };
 
-type Operation = 'initiate' | 'query' | 'cancel';
+type StripeOperation = 'initiate' | 'query' | 'cancel';
 
-const STATUS_MAP: Readonly<Record<Stripe.PaymentIntent.Status, NormalizedStatus>> = {
+const STATUS_MAP: Readonly<
+  Record<Stripe.PaymentIntent.Status, NormalizedStatus>
+> = {
   succeeded: 'SUCCEEDED',
   canceled: 'FAILED',
   requires_payment_method: 'PENDING',
@@ -90,7 +93,7 @@ export class StripeGatewayPlugin implements PaymentGateway {
 
   async initiate(input: InitiateInput): Promise<InitiateResult> {
     const amount = toIntegerAmount(input.amount);
-    const intent = await this.call('initiate', () =>
+    const intent = await this.translatingErrors('initiate', () =>
       this.stripe.paymentIntents.create(
         {
           amount,
@@ -131,14 +134,14 @@ export class StripeGatewayPlugin implements PaymentGateway {
 
   async query(input: QueryInput): Promise<QueryResult> {
     const paymentIntentId = input.providerMetadata['paymentIntentId'];
-    const intent = await this.call('query', () =>
+    const intent = await this.translatingErrors('query', () =>
       typeof paymentIntentId === 'string'
         ? this.stripe.paymentIntents.retrieve(paymentIntentId)
         : this.searchByAttemptKey(input.attemptKey),
     );
     return {
       status: STATUS_MAP[intent.status],
-      amount: intent.status === 'succeeded' ? String(intent.amount_received) : null,
+      amount: intent.status === 'succeeded' ? receivedAmount(intent) : null,
       rawCode: intent.status,
       providerRef: intent.id,
       rawPayload: withoutClientSecret(intent),
@@ -152,19 +155,28 @@ export class StripeGatewayPlugin implements PaymentGateway {
     const paymentIntentId =
       typeof knownId === 'string'
         ? knownId
-        : (await this.call('query', () => this.searchByAttemptKey(input.attemptKey))).id;
-    const intent = await this.call('cancel', async () => {
+        : (
+            await this.translatingErrors('query', () =>
+              this.searchByAttemptKey(input.attemptKey),
+            )
+          ).id;
+    const intent = await this.translatingErrors('cancel', async () => {
       try {
-        return await this.stripe.paymentIntents.cancel(paymentIntentId, undefined, {
-          idempotencyKey: `${input.attemptKey}:cancel`,
-        });
+        return await this.stripe.paymentIntents.cancel(
+          paymentIntentId,
+          undefined,
+          {
+            idempotencyKey: `${input.attemptKey}:cancel`,
+          },
+        );
       } catch (error) {
         if (!isUnexpectedState(error)) throw error;
         // Stripe says the state forbids cancelling. That is fine if it is
         // already canceled; the error body may omit the PaymentIntent, so
         // confirm with a retrieve.
         const current =
-          error.payment_intent ?? (await this.stripe.paymentIntents.retrieve(paymentIntentId));
+          error.payment_intent ??
+          (await this.stripe.paymentIntents.retrieve(paymentIntentId));
         if (current.status === 'canceled') return current;
         throw error;
       }
@@ -188,7 +200,7 @@ export class StripeGatewayPlugin implements PaymentGateway {
       status,
       amount:
         event.type === 'payment_intent.succeeded'
-          ? String(intent.amount_received)
+          ? receivedAmount(intent)
           : null,
       rawCode: event.type,
       providerRef: intent.id,
@@ -202,7 +214,10 @@ export class StripeGatewayPlugin implements PaymentGateway {
     const header = input.headers['stripe-signature'];
     const signature = Array.isArray(header) ? header[0] : header;
     if (typeof signature !== 'string' || signature === '') {
-      throw new InvalidCallbackError('Missing Stripe-Signature header', ERROR_ACK);
+      throw new InvalidCallbackError(
+        'Missing Stripe-Signature header',
+        ERROR_ACK,
+      );
     }
     try {
       return this.stripe.webhooks.constructEvent(
@@ -213,18 +228,25 @@ export class StripeGatewayPlugin implements PaymentGateway {
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      throw new InvalidCallbackError(`Invalid Stripe webhook: ${reason}`, ERROR_ACK);
+      throw new InvalidCallbackError(
+        `Invalid Stripe webhook: ${reason}`,
+        ERROR_ACK,
+      );
     }
   }
 
-  private async searchByAttemptKey(attemptKey: string): Promise<Stripe.PaymentIntent> {
+  private async searchByAttemptKey(
+    attemptKey: string,
+  ): Promise<Stripe.PaymentIntent> {
     const escaped = attemptKey.replaceAll("'", "\\'");
     const { data } = await this.stripe.paymentIntents.search({
       query: `metadata['attemptKey']:'${escaped}'`,
     });
     const newest = [...data].sort((a, b) => b.created - a.created)[0];
     if (!newest) {
-      throw new GatewayNotFoundError(`No PaymentIntent for attempt ${attemptKey}`);
+      throw new GatewayNotFoundError(
+        `No PaymentIntent for attempt ${attemptKey}`,
+      );
     }
     if (data.length > 1) {
       this.logger.warn(
@@ -239,7 +261,10 @@ export class StripeGatewayPlugin implements PaymentGateway {
    * `initiate` and `cancel` may have reached Stripe, so a lost answer is an
    * unknown outcome; a `query` is safe to retry.
    */
-  private async call<T>(operation: Operation, run: () => Promise<T>): Promise<T> {
+  private async translatingErrors<T>(
+    operation: StripeOperation,
+    run: () => Promise<T>,
+  ): Promise<T> {
     try {
       return await run();
     } catch (error) {
@@ -252,9 +277,16 @@ function toIntegerAmount(amount: string): number {
   const match = /^(\d+)(?:\.0+)?$/.exec(amount);
   const value = match?.[1] === undefined ? Number.NaN : Number(match[1]);
   if (!Number.isSafeInteger(value)) {
-    throw new GatewayRejectedError(`VND amount must be a whole number: ${amount}`);
+    throw new GatewayRejectedError(
+      `VND amount must be a whole number: ${amount}`,
+    );
   }
   return value;
+}
+
+/** Core's amount string for what Stripe actually collected (whole dong). */
+function receivedAmount(intent: Stripe.PaymentIntent): string {
+  return String(intent.amount_received);
 }
 
 function withoutClientSecret(intent: Stripe.PaymentIntent): unknown {
@@ -262,14 +294,16 @@ function withoutClientSecret(intent: Stripe.PaymentIntent): unknown {
   return rest;
 }
 
-function isUnexpectedState(error: unknown): error is Stripe.errors.StripeInvalidRequestError {
+function isUnexpectedState(
+  error: unknown,
+): error is Stripe.errors.StripeInvalidRequestError {
   return (
     error instanceof Stripe.errors.StripeInvalidRequestError &&
     error.code === 'payment_intent_unexpected_state'
   );
 }
 
-function translateError(error: unknown, operation: Operation): Error {
+function translateError(error: unknown, operation: StripeOperation): Error {
   const { errors } = Stripe;
   if (error instanceof GatewayNotFoundError) return error;
   if (
