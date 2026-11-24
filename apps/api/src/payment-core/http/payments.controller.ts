@@ -3,8 +3,11 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Inject,
   Param,
+  ParseUUIDPipe,
   Post,
   Res,
 } from '@nestjs/common';
@@ -79,6 +82,25 @@ export class PaymentsController {
     res.status(result.status);
     if (result.replayed) res.setHeader(IDEMPOTENT_REPLAYED_HEADER, 'true');
     return result.body;
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel a Payment (merchant withdraws the order)',
+    description:
+      'Cancels a PENDING Payment and its open attempts. Repeating it on a CANCELLED Payment succeeds.',
+  })
+  @ApiOkResponse({ type: PaymentDetailResponseDto })
+  @ApiNotFoundResponse({ type: ErrorResponseDto })
+  @ApiConflictResponse({
+    type: ErrorResponseDto,
+    description: 'The Payment is SUCCEEDED or EXPIRED',
+  })
+  async cancel(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<PaymentDetailResponseDto> {
+    return toPaymentDetailResponse(await this.payments.cancelPayment(id));
   }
 
   @Get(':id')
