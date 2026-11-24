@@ -35,6 +35,10 @@ import { AlertSink, LoggerAlertSink } from './reliability/alert.js';
 import { WebhookInboxSweep } from './reliability/webhook-inbox-sweep.js';
 import { WebhookInboxSweepScheduler } from './reliability/webhook-inbox-sweep.scheduler.js';
 import { RetentionProcessor } from './reliability/processors/retention.processor.js';
+import {
+  ProviderQueryRateLimiter,
+  providerQueryRateLimitProvider,
+} from './reliability/provider-query-rate-limiter.js';
 import { RetentionCleanup } from './reliability/retention.js';
 import { RetentionScheduler } from './reliability/retention.scheduler.js';
 import {
@@ -63,6 +67,7 @@ import {
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
     AttemptInitiateProcessor,
+    providerQueryRateLimitProvider,
     AttemptStatusQueryProcessor,
     BestEffortCancel,
     CancelPayment,
@@ -77,6 +82,7 @@ import {
     PaymentExpiryProcessor,
     PaymentService,
     ProcessWebhook,
+    ProviderQueryRateLimiter,
     RetentionCleanup,
     RetentionProcessor,
     RequeryAttempt,

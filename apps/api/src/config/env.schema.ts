@@ -32,6 +32,8 @@ export const envSchema = z.object({
     .default('paybridge'),
   /** Most Payments the expiry sweep queues per run (it runs every minute). */
   EXPIRY_SWEEP_BATCH_SIZE: z.coerce.number().int().positive().default(100),
+  /** Most provider queries per second the expiry worker makes. */
+  EXPIRY_QUERY_RATE_PER_SECOND: z.coerce.number().int().min(1).default(5),
   /** Outbox relay poll loop. Unset => enabled everywhere except test. */
   OUTBOX_RELAY_ENABLED: z.stringbool().optional(),
   /** Pause between outbox relay polls, in milliseconds. */
