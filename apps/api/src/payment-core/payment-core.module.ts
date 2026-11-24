@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
+import { CancelPayment } from './application/use-cases/cancel-payment.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
 import { GetPayment } from './application/use-cases/get-payment.js';
 import { StartAttempt } from './application/use-cases/start-attempt.js';
@@ -45,6 +46,7 @@ import {
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
     BestEffortCancel,
+    CancelPayment,
     CreatePayment,
     ExpirePayment,
     ExpirySweep,
