@@ -21,6 +21,15 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .regex(/^postgres(ql)?:\/\//, 'must be a PostgreSQL connection string'),
+  /** BullMQ connection (dispatch only; PostgreSQL is the source of truth). */
+  REDIS_URL: z
+    .string()
+    .regex(/^rediss?:\/\//, 'must be a Redis connection string'),
+  /** Prefix of every BullMQ key in Redis. BullMQ forbids `:` in it. */
+  QUEUE_PREFIX: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/, 'letters, digits, _ and - only')
+    .default('paybridge'),
 });
 
 export type Env = z.infer<typeof envSchema>;

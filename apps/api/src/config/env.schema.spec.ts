@@ -5,17 +5,19 @@ import {
 } from './env.schema.js';
 
 const DATABASE_URL = 'postgresql://u:p@localhost:5432/db';
+const REDIS_URL = 'redis://localhost:6379';
+const required = { DATABASE_URL, REDIS_URL };
 
 describe('envSchema', () => {
   it('applies defaults', () => {
-    const env = envSchema.parse({ DATABASE_URL });
+    const env = envSchema.parse(required);
     expect(env.NODE_ENV).toBe('development');
     expect(env.PORT).toBe(3000);
   });
 
   it('coerces PORT and booleans', () => {
     const env = envSchema.parse({
-      DATABASE_URL,
+      ...required,
       PORT: '8080',
       SWAGGER_ENABLED: 'false',
     });
@@ -24,18 +26,38 @@ describe('envSchema', () => {
   });
 
   it('requires a PostgreSQL DATABASE_URL', () => {
-    expect(envSchema.safeParse({}).success).toBe(false);
+    expect(envSchema.safeParse({ REDIS_URL }).success).toBe(false);
     expect(
-      envSchema.safeParse({ DATABASE_URL: 'mysql://localhost/db' }).success,
+      envSchema.safeParse({ REDIS_URL, DATABASE_URL: 'mysql://localhost/db' })
+        .success,
+    ).toBe(false);
+  });
+
+  it('requires a Redis REDIS_URL', () => {
+    expect(envSchema.safeParse({ DATABASE_URL }).success).toBe(false);
+    expect(
+      envSchema.safeParse({ DATABASE_URL, REDIS_URL: 'http://localhost:6379' })
+        .success,
+    ).toBe(false);
+    expect(
+      envSchema.safeParse({ DATABASE_URL, REDIS_URL: 'rediss://cache:6380/1' })
+        .success,
+    ).toBe(true);
+  });
+
+  it('defaults the queue prefix and rejects one containing a colon', () => {
+    expect(envSchema.parse(required).QUEUE_PREFIX).toBe('paybridge');
+    expect(
+      envSchema.safeParse({ ...required, QUEUE_PREFIX: 'a:b' }).success,
     ).toBe(false);
   });
 
   it('rejects unknown NODE_ENV / LOG_LEVEL', () => {
     expect(
-      envSchema.safeParse({ DATABASE_URL, NODE_ENV: 'staging' }).success,
+      envSchema.safeParse({ ...required, NODE_ENV: 'staging' }).success,
     ).toBe(false);
     expect(
-      envSchema.safeParse({ DATABASE_URL, LOG_LEVEL: 'loud' }).success,
+      envSchema.safeParse({ ...required, LOG_LEVEL: 'loud' }).success,
     ).toBe(false);
   });
 });
