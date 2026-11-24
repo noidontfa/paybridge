@@ -10,7 +10,11 @@ import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
 import { ProcessWebhook } from './application/workers/process-webhook.js';
 import { Clock, SystemClock } from './domain/clock.js';
+import { HandleBrowserReturn } from './application/use-cases/handle-browser-return.js';
+import { RequeryAttempt } from './application/workers/requery-attempt.js';
+import { AttemptStatusQueryProcessor } from './reliability/processors/attempt-status-query.processor.js';
 import { AttemptsController } from './http/attempts.controller.js';
+import { BrowserReturnController } from './http/browser-return.controller.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
 import { PaymentsController } from './http/payments.controller.js';
 import { WebhooksController } from './http/webhooks.controller.js';
@@ -40,13 +44,19 @@ import {
  */
 @Module({
   imports: [QueueModule],
-  controllers: [AttemptsController, PaymentsController, WebhooksController],
+  controllers: [
+    AttemptsController,
+    BrowserReturnController,
+    PaymentsController,
+    WebhooksController,
+  ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
+    AttemptStatusQueryProcessor,
     BestEffortCancel,
     CancelPayment,
     CreatePayment,
@@ -55,12 +65,14 @@ import {
     ExpirySweepProcessor,
     ExpirySweepScheduler,
     GetPayment,
+    HandleBrowserReturn,
     OutboxRelay,
     PaymentExpiryProcessor,
     PaymentService,
     ProcessWebhook,
     RetentionCleanup,
     RetentionProcessor,
+    RequeryAttempt,
     RetentionScheduler,
     StartAttempt,
     WebhookInboxProcessor,
