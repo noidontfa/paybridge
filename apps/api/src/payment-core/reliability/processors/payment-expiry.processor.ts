@@ -13,8 +13,8 @@ import {
 
 /**
  * Worker of the expiry queue: runs `ExpirePayment` for each Payment the sweep
- * queued. Concurrency 1 (BullMQ default); ticket 24 adds the provider-query
- * rate limit for Payments with attempts.
+ * queued. Concurrency 1 (BullMQ default). The provider-query rate limit lives
+ * in `ProviderQueryRateLimiter`, which `ExpirePayment` uses before each query.
  */
 @Processor(QUEUES.paymentExpiry)
 export class PaymentExpiryProcessor extends WorkerHost {
