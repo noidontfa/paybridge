@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
 import { GetPayment } from './application/use-cases/get-payment.js';
@@ -40,6 +41,7 @@ import {
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
+    BestEffortCancel,
     CreatePayment,
     ExpirePayment,
     ExpirySweep,

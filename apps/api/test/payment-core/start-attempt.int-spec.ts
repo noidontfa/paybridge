@@ -7,7 +7,6 @@ import { PaymentService } from '../../src/payment-core/application/payment.servi
 import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import {
   AttemptInReviewError,
-  OpenAttemptExistsError,
   PaymentExpiryPassedError,
   PaymentNotFoundError,
   PaymentNotPendingError,
@@ -324,23 +323,7 @@ describe('PaymentService.startAttempt: rejected before the gateway call', () => 
     expect(await prisma.paymentTransaction.count()).toBe(0);
   });
 
-  it.each(['CREATED', 'PENDING'] as const)(
-    'rejects a new attempt while another is %s (until the gateway switch)',
-    async (status) => {
-      const payment = await createPayment();
-      const first = await start(payment);
-      await prisma.paymentTransaction.update({
-        where: { id: first.attempt.id },
-        data: { status },
-      });
-
-      await expect(start(payment)).rejects.toBeInstanceOf(
-        OpenAttemptExistsError,
-      );
-      expect(fake.calls.initiate).toHaveLength(1);
-      expect(await prisma.paymentTransaction.count()).toBe(1);
-    },
-  );
+  // An open attempt no longer blocks: see gateway-switch.int-spec.ts.
 
   it('rejects a new attempt while an attempt is in review', async () => {
     const payment = await createPayment();
