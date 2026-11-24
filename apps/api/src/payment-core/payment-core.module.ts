@@ -23,6 +23,9 @@ import { ExpirySweep } from './reliability/expiry-sweep.js';
 import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
+import { RetentionProcessor } from './reliability/processors/retention.processor.js';
+import { RetentionCleanup } from './reliability/retention.js';
+import { RetentionScheduler } from './reliability/retention.scheduler.js';
 import {
   OutboxRelay,
   outboxRelayOptionsProvider,
@@ -53,6 +56,9 @@ import {
     OutboxRelay,
     PaymentExpiryProcessor,
     PaymentService,
+    RetentionCleanup,
+    RetentionProcessor,
+    RetentionScheduler,
     StartAttempt,
     WebhookIntake,
   ],

@@ -210,6 +210,8 @@ describe('createPayment idempotency atomicity', () => {
             find: (key) => txRepos.idempotencyKeys.find(key),
             deleteIfExpired: (key, now) =>
               txRepos.idempotencyKeys.deleteIfExpired(key, now),
+            deleteExpiredBefore: (cutoff) =>
+              txRepos.idempotencyKeys.deleteExpiredBefore(cutoff),
             create: () => Promise.reject(new Error('key store down')),
           },
         }),

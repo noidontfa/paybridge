@@ -59,4 +59,15 @@ export class PrismaWebhookInboxRepository {
     const row = await this.ctx.db.webhookInbox.findUnique({ where: { id } });
     return row ? toEntry(row) : null;
   }
+
+  /**
+   * Retention: deletes rows received at or before `cutoff`, except `FAILED`
+   * rows, which are never deleted automatically.
+   */
+  async deleteReceivedBefore(cutoff: Date): Promise<number> {
+    const { count } = await this.ctx.db.webhookInbox.deleteMany({
+      where: { receivedAt: { lte: cutoff }, status: { not: 'FAILED' } },
+    });
+    return count;
+  }
 }
