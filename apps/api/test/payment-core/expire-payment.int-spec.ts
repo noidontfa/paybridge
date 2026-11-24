@@ -59,12 +59,13 @@ beforeEach(async () => {
   await resetDatabase(prisma);
 });
 
-function createPayment(): Promise<Payment> {
-  return payments.createPayment({
+async function createPayment(): Promise<Payment> {
+  const { payment } = await payments.createPayment({
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
+  return payment;
 }
 
 function providerCalls(): number {
