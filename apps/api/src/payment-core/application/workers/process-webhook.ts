@@ -3,7 +3,11 @@ import { Clock } from '../../domain/clock.js';
 import type { WebhookInboxEntry } from '../../domain/records.js';
 import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import type { CallbackResult, HeaderValues } from '../../port/index.js';
+import type {
+  CallbackResult,
+  HandledCallback,
+  HeaderValues,
+} from '../../port/index.js';
 import {
   applyProviderOutcome,
   type AppliedProviderOutcome,
@@ -65,6 +69,10 @@ export class ProcessWebhook {
     let applied: AppliedProviderOutcome;
     try {
       const callback = await this.parse(entry);
+      if (callback.ignored) {
+        await inbox.markProcessed(entry.id, this.clock.now());
+        return 'processed';
+      }
       applied = await this.apply(entry, callback);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -92,7 +100,7 @@ export class ProcessWebhook {
 
   private apply(
     entry: WebhookInboxEntry,
-    callback: CallbackResult,
+    callback: HandledCallback,
   ): Promise<AppliedProviderOutcome> {
     const attemptKey = callback.attemptKey;
     return this.runner.run(async (repos) => {

@@ -117,6 +117,32 @@ const transitions = (entityId: string) =>
     orderBy: { createdAt: 'asc' },
   });
 
+describe('a stored row that re-parses as ignored', () => {
+  it('is marked PROCESSED with no state change and no error', async () => {
+    const { payment, attemptId } = await pendingAttempt();
+    const callback = fake.signedCallback({ ignored: true });
+    const { entry } = await repos.webhookInbox.record({
+      gatewayId: fake.gatewayId,
+      dedupeKey: newId(),
+      rawBody: callback.rawBody,
+      headers: callback.headers,
+      query: callback.query,
+    });
+
+    expect(await worker.execute(entry.id)).toBe('processed');
+
+    expect(await inboxRow(entry.id)).toMatchObject({
+      status: 'PROCESSED',
+      processedAt: NOW,
+      lockedAt: null,
+      lastError: null,
+    });
+    expect((await attemptRow(attemptId)).status).toBe('PENDING');
+    expect((await paymentRow(payment.id)).status).toBe('PENDING');
+    expect(await events(payment.id)).toEqual(['PaymentCreated']);
+  });
+});
+
 describe('a success with the Payment amount', () => {
   it('moves the attempt and the Payment to SUCCEEDED, writes PaymentSucceeded and marks the row PROCESSED', async () => {
     const { payment, attemptId } = await pendingAttempt();
