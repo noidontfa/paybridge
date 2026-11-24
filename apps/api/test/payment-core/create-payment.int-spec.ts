@@ -10,6 +10,8 @@ import {
   UnsupportedCurrencyError,
 } from '../../src/payment-core/domain/errors.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
+import { GatewaysModule } from '../../src/gateways/gateways.module.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import {
   PrismaTransactionRunner,
@@ -22,6 +24,12 @@ import { createTestPrismaClient } from '../setup/test-prisma.js';
 // createPayment through PaymentService against the migrated test database.
 
 const NOW = new Date('2026-05-01T10:00:00.000Z');
+const coreImports = [
+  AppConfigModule,
+  PrismaModule,
+  GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+  PaymentCoreModule,
+];
 const prisma = createTestPrismaClient();
 const clock = new FakeClock(NOW);
 let moduleRef: TestingModule;
@@ -30,7 +38,7 @@ let repos: Repositories;
 
 beforeAll(async () => {
   moduleRef = await Test.createTestingModule({
-    imports: [AppConfigModule, PrismaModule, PaymentCoreModule],
+    imports: coreImports,
   })
     .overrideProvider(Clock)
     .useValue(clock)
@@ -200,7 +208,7 @@ describe('createPayment atomicity', () => {
 
   it('stores neither the Payment nor the event when the outbox write fails', async () => {
     const failing = await Test.createTestingModule({
-      imports: [AppConfigModule, PrismaModule, PaymentCoreModule],
+      imports: coreImports,
     })
       .overrideProvider(TransactionRunner)
       .useValue(new FailingOutboxRunner())

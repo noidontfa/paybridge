@@ -57,6 +57,7 @@ interface Calls {
 export class FakeGatewayPlugin implements PaymentGateway {
   readonly gatewayId: string;
   readonly capabilities: GatewayCapabilities;
+  readonly callbackHeaders = ['content-type', SIGNATURE_HEADER] as const;
   readonly cancel?: (input: CancelInput) => Promise<CancelResult>;
   readonly calls: Calls = emptyCalls();
 

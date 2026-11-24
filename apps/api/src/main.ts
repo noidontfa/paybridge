@@ -11,6 +11,8 @@ async function bootstrap() {
   // bufferLogs: hold bootstrap logs until pino is attached, so nothing is lost.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    // Keep the exact request bytes (req.rawBody) for webhook signature checks.
+    rawBody: true,
   });
   const logger = app.get(Logger);
   app.useLogger(logger);
