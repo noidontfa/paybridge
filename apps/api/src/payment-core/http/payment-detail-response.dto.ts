@@ -15,7 +15,7 @@ import type { NextAction } from '../port/index.js';
  * One attempt as `GET /payments/:id` returns it. Raw gateway responses,
  * provider metadata and the provider reference stay internal.
  */
-export class AttemptResponseDto {
+export class AttemptDetailResponseDto {
   @ApiProperty({ format: 'uuid', description: 'The Attempt Key' })
   id: string;
 
@@ -76,13 +76,13 @@ export class PaymentDetailResponseDto {
   @ApiProperty({ format: 'date-time' })
   updatedAt: string;
 
-  @ApiProperty({ type: [AttemptResponseDto] })
-  attempts: AttemptResponseDto[];
+  @ApiProperty({ type: [AttemptDetailResponseDto] })
+  attempts: AttemptDetailResponseDto[];
 }
 
-export function toAttemptResponse(
+export function toAttemptDetailResponse(
   attempt: PaymentTransaction,
-): AttemptResponseDto {
+): AttemptDetailResponseDto {
   return {
     id: attempt.id,
     gatewayId: attempt.gatewayId,
@@ -110,6 +110,6 @@ export function toPaymentDetailResponse(
     expiresAt: payment.expiresAt.toISOString(),
     createdAt: payment.createdAt.toISOString(),
     updatedAt: payment.updatedAt.toISOString(),
-    attempts: payment.attempts.map(toAttemptResponse),
+    attempts: payment.attempts.map(toAttemptDetailResponse),
   };
 }
