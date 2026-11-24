@@ -61,6 +61,41 @@ export class PrismaWebhookInboxRepository {
   }
 
   /**
+   * Claims a `RECEIVED` or `FAILED` row for processing: sets `PROCESSING`,
+   * the lock time, and counts one more processing try in `attempts`. Returns
+   * null when the row is missing, already `PROCESSED`, or being processed
+   * (`PROCESSING`), so a duplicate job does nothing.
+   */
+  async claim(id: string, now: Date): Promise<WebhookInboxEntry | null> {
+    const { count } = await this.ctx.db.webhookInbox.updateMany({
+      where: { id, status: { in: ['RECEIVED', 'FAILED'] } },
+      data: { status: 'PROCESSING', lockedAt: now, attempts: { increment: 1 } },
+    });
+    return count === 0 ? null : this.findById(id);
+  }
+
+  /** Marks a row done. Use the transaction that applied its change. */
+  async markProcessed(id: string, now: Date): Promise<void> {
+    await this.ctx.db.webhookInbox.update({
+      where: { id },
+      data: {
+        status: 'PROCESSED',
+        processedAt: now,
+        lockedAt: null,
+        lastError: null,
+      },
+    });
+  }
+
+  /** Marks a row failed with the error, for the inbox sweep to retry. */
+  async markFailed(id: string, error: string): Promise<void> {
+    await this.ctx.db.webhookInbox.update({
+      where: { id },
+      data: { status: 'FAILED', lockedAt: null, lastError: error },
+    });
+  }
+
+  /**
    * Retention: deletes rows received at or before `cutoff`, except `FAILED`
    * rows, which are never deleted automatically.
    */

@@ -8,6 +8,7 @@ import { GetPayment } from './application/use-cases/get-payment.js';
 import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
+import { ProcessWebhook } from './application/workers/process-webhook.js';
 import { Clock, SystemClock } from './domain/clock.js';
 import { AttemptsController } from './http/attempts.controller.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
@@ -23,6 +24,7 @@ import { ExpirySweep } from './reliability/expiry-sweep.js';
 import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
 import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
+import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
 import { RetentionProcessor } from './reliability/processors/retention.processor.js';
 import { RetentionCleanup } from './reliability/retention.js';
 import { RetentionScheduler } from './reliability/retention.scheduler.js';
@@ -56,10 +58,12 @@ import {
     OutboxRelay,
     PaymentExpiryProcessor,
     PaymentService,
+    ProcessWebhook,
     RetentionCleanup,
     RetentionProcessor,
     RetentionScheduler,
     StartAttempt,
+    WebhookInboxProcessor,
     WebhookIntake,
   ],
   exports: [Clock, PaymentService, QueueModule, TransactionRunner],

@@ -15,6 +15,16 @@ import {
 /** BullMQ job name for processing one stored callback (ticket 19 consumes it). */
 export const PROCESS_WEBHOOK_JOB = 'process-webhook';
 
+/**
+ * The inbox row, not BullMQ, holds the processing state (ADR 0002): the job is
+ * removed when it ends, so the inbox sweep can dispatch the row again under
+ * the same job id.
+ */
+export const PROCESS_WEBHOOK_JOB_OPTIONS = {
+  removeOnComplete: true,
+  removeOnFail: true,
+} as const;
+
 export interface ProcessWebhookJobData {
   readonly inboxId: string;
 }
@@ -89,7 +99,10 @@ export class WebhookIntake {
   private dispatch(inboxId: string): void {
     const data: ProcessWebhookJobData = { inboxId };
     void this.queue
-      .add(PROCESS_WEBHOOK_JOB, data, { jobId: jobIds.webhookInbox(inboxId) })
+      .add(PROCESS_WEBHOOK_JOB, data, {
+        jobId: jobIds.webhookInbox(inboxId),
+        ...PROCESS_WEBHOOK_JOB_OPTIONS,
+      })
       .catch((error: unknown) => {
         this.logger.error(
           `Could not dispatch webhook inbox row ${inboxId}: ${String(error)}`,
