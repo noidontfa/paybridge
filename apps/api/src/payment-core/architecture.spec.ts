@@ -102,3 +102,34 @@ describe('repositories hide the database client', () => {
     ]);
   });
 });
+
+/** Application files that import from the HTTP layer. */
+export function applicationImportsOfHttp(
+  sources: readonly { path: string; text: string }[],
+): string[] {
+  const importsHttp = /from\s+['"](?:\.\.?\/)+http\/[^'"]*['"]/;
+  return sources
+    .filter(
+      (f) =>
+        f.path.startsWith('payment-core/application/') &&
+        importsHttp.test(f.text),
+    )
+    .map((f) => f.path);
+}
+
+describe('application does not depend on http', () => {
+  it('no application module imports from payment-core/http', () => {
+    expect(applicationImportsOfHttp(files)).toEqual([]);
+  });
+
+  it('flags an application file that imports the HTTP layer', () => {
+    expect(
+      applicationImportsOfHttp([
+        {
+          path: 'payment-core/application/use-cases/x.ts',
+          text: "import { y } from '../../http/y.js';",
+        },
+      ]),
+    ).toEqual(['payment-core/application/use-cases/x.ts']);
+  });
+});

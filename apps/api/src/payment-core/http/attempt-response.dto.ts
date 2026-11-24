@@ -9,10 +9,12 @@ import {
 } from './payment-response.dto.js';
 
 /**
- * A PaymentTransaction (attempt) as the HTTP API returns it. Provider
+ * A PaymentTransaction (attempt) as `POST /payments/:id/attempts` returns it
+ * (with the next action for the customer). `GET /payments/:id` uses the
+ * different `AttemptDetailResponseDto`. Provider
  * metadata is internal and never returned.
  */
-export class AttemptResponseDto {
+export class StartedAttemptResponseDto {
   @ApiProperty({ format: 'uuid', description: 'The Attempt Key.' })
   id: string;
 
@@ -43,16 +45,16 @@ export class AttemptResponseDto {
 
 /** Response of `POST /payments/:id/attempts`. */
 export class StartAttemptResponseDto {
-  @ApiProperty({ type: AttemptResponseDto })
-  attempt: AttemptResponseDto;
+  @ApiProperty({ type: StartedAttemptResponseDto })
+  attempt: StartedAttemptResponseDto;
 
   @ApiProperty({ type: PaymentResponseDto })
   payment: PaymentResponseDto;
 }
 
-export function toAttemptResponse(
+export function toStartedAttemptResponse(
   attempt: PaymentTransaction,
-): AttemptResponseDto {
+): StartedAttemptResponseDto {
   return {
     id: attempt.id,
     gatewayId: attempt.gatewayId,
@@ -68,7 +70,7 @@ export function toStartAttemptResponse(
   result: StartAttemptResult,
 ): StartAttemptResponseDto {
   return {
-    attempt: toAttemptResponse(result.attempt),
+    attempt: toStartedAttemptResponse(result.attempt),
     payment: toPaymentResponse(result.payment),
   };
 }

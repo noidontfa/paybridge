@@ -213,6 +213,26 @@ describe('ExpirePayment with open attempts', () => {
     ).toMatchObject([{ operation: 'query' }, { operation: 'cancel' }]);
   });
 
+  it('expires a Payment whose open attempt is still CREATED, closing that attempt as CANCELLED', async () => {
+    const payment = await createPayment();
+    const attemptId = await addAttempt(payment.id, 'CREATED');
+    clock.set(DEADLINE);
+
+    await expect(expirePayment.execute(payment.id)).resolves.toBe('expired');
+
+    const after = await repos.payments.findById(payment.id);
+    expect(after?.status).toBe('EXPIRED');
+    expect(after?.attempts[0]?.status).toBe('CANCELLED');
+    expect(
+      await repos.statusTransitions.listForEntity(
+        'PAYMENT_TRANSACTION',
+        attemptId,
+      ),
+    ).toMatchObject([
+      { fromStatus: 'CREATED', toStatus: 'CANCELLED', trigger: 'expiry' },
+    ]);
+  });
+
   it('applies a payment confirmed just before the deadline as a success, not an expiry', async () => {
     const payment = await createPayment();
     const attemptId = await addAttempt(payment.id, 'PENDING');

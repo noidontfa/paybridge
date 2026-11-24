@@ -79,7 +79,7 @@ describe('createPayment with an Idempotency-Key', () => {
 
     expect(first).toMatchObject({ status: 201, replayed: false });
     expect(second).toMatchObject({ status: 201, replayed: true });
-    expect(second.body).toEqual(first.body);
+    expect(second.snapshot).toEqual(first.snapshot);
     expect(second.payment.id).toBe(first.payment.id);
     expect(await counts()).toEqual({ payments: 1, outbox: 1, keys: 1 });
   });
@@ -94,8 +94,8 @@ describe('createPayment with an Idempotency-Key', () => {
 
     const second = await service.createPayment(input, { idempotencyKey: 'k1' });
 
-    expect(second.body).toEqual(first.body);
-    expect(second.body).toMatchObject({ status: 'PENDING' });
+    expect(second.snapshot).toEqual(first.snapshot);
+    expect(second.snapshot).toMatchObject({ status: 'PENDING' });
   });
 
   it('rejects the same key with a different body (422) and stores nothing new', async () => {
@@ -143,7 +143,7 @@ describe('createPayment with an Idempotency-Key', () => {
       key: 'k1',
       requestHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       responseStatus: 201,
-      responseBody: result.body,
+      responseBody: result.snapshot,
       paymentId: result.payment.id,
       createdAt: NOW,
       expiresAt: new Date('2026-05-02T10:00:00.000Z'),
@@ -174,7 +174,7 @@ describe('createPayment with an Idempotency-Key', () => {
     const ids = new Set(results.map((r) => r.payment.id));
     expect(ids.size).toBe(1);
     expect(results.filter((r) => !r.replayed)).toHaveLength(1);
-    for (const r of results) expect(r.body).toEqual(results[0]!.body);
+    for (const r of results) expect(r.snapshot).toEqual(results[0]!.snapshot);
     expect(await counts()).toEqual({ payments: 1, outbox: 1, keys: 1 });
   });
 

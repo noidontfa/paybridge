@@ -169,6 +169,11 @@ export class PrismaPaymentRepository {
  * The expiry sweep's query. `'PENDING'` is a literal, not a parameter, so the
  * planner can match it to the partial index `core_payments_pending_expiry_idx`
  * (status, expires_at) WHERE status = 'PENDING'. Exported for the index test.
+ *
+ * Payments with an attempt in `REQUIRES_REVIEW` are left out: the expiry
+ * worker never expires them (the attempt may hold money), so listing them
+ * would fill the batch every minute and starve newer expired Payments. They
+ * are found again once the review resolves.
  */
 export function expiredPendingPaymentsQuery(
   now: Date,
@@ -177,6 +182,9 @@ export function expiredPendingPaymentsQuery(
   return Prisma.sql`
     SELECT id FROM core_payments
     WHERE status = 'PENDING' AND expires_at <= ${now}
+      AND NOT EXISTS (
+        SELECT 1 FROM core_payment_transactions t
+        WHERE t.payment_id = core_payments.id AND t.status = 'REQUIRES_REVIEW')
     ORDER BY expires_at
     LIMIT ${limit}`;
 }

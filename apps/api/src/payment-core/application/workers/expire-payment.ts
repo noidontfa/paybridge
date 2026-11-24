@@ -184,11 +184,18 @@ export class ExpirePayment {
     }
 
     for (const attempt of stillOpen) {
-      const expired = await recordAttemptTransition(repos, attempt, 'EXPIRED', {
+      // The state table has no CREATED -> EXPIRED edge: an attempt the gateway
+      // never accepted is closed by its CREATED -> CANCELLED edge instead, so
+      // the Payment can still expire.
+      const to = attempt.status === 'CREATED' ? 'CANCELLED' : 'EXPIRED';
+      const closed = await recordAttemptTransition(repos, attempt, to, {
         ...EXPIRY_CAUSE,
-        reason: 'provider confirmed unpaid at deadline',
+        reason:
+          to === 'CANCELLED'
+            ? 'deadline passed before the gateway accepted the attempt'
+            : 'provider confirmed unpaid at deadline',
       });
-      toCancel.push(expired);
+      toCancel.push(closed);
     }
     await expirePayment(repos, payment);
     return { result: 'expired', toCancel };

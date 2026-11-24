@@ -13,7 +13,6 @@ import type { Payment } from '../../domain/payment.js';
 import { resolvePaymentExpiry } from '../../domain/payment-expiry.js';
 import type { IdempotencyRecord } from '../../domain/records.js';
 import { INITIAL_PAYMENT_STATUS } from '../../domain/rules/payment-transitions.js';
-import { toPaymentResponse } from '../../http/payment-response.dto.js';
 import type { Repositories } from '../../infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import { isUniqueViolation } from '../../infrastructure/prisma/unique-violation.js';
@@ -37,13 +36,28 @@ export interface CreatePaymentOptions {
   readonly idempotencyKey?: string;
 }
 
+/**
+ * The Payment as it was when the create request succeeded: the domain data
+ * stored with an idempotency key. It is JSON (dates as ISO strings); the HTTP
+ * layer maps it to the response body.
+ */
+export interface PaymentSnapshot {
+  readonly id: string;
+  readonly status: string;
+  readonly amount: string;
+  readonly currency: string;
+  readonly upstreamReference: string;
+  readonly expiresAt: string;
+  readonly createdAt: string;
+}
+
 export interface CreatePaymentResult {
   /** The Payment as stored now (on a replay, its current state). */
   readonly payment: Payment;
   /** HTTP status of the response, stored with the key. */
   readonly status: number;
-  /** The response body: the original one on a replay. */
-  readonly body: unknown;
+  /** The Payment as first created: the original one on a replay. */
+  readonly snapshot: PaymentSnapshot;
   /** True when this is the stored response of an earlier request. */
   readonly replayed: boolean;
 }
@@ -128,19 +142,19 @@ export class CreatePayment {
             expiresAt: payment.expiresAt.toISOString(),
           },
         });
-        const body = toPaymentResponse(payment);
+        const snapshot = toSnapshot(payment);
         if (key !== undefined) {
           await repos.idempotencyKeys.create({
             key,
             requestHash,
             responseStatus: CREATED,
-            responseBody: body,
+            responseBody: snapshot,
             paymentId: payment.id,
             createdAt: now,
             expiresAt: new Date(now.getTime() + IDEMPOTENCY_KEY_TTL_MS),
           });
         }
-        return { payment, status: CREATED, body, replayed: false };
+        return { payment, status: CREATED, snapshot, replayed: false };
       });
     } catch (error) {
       const lostRace =
@@ -178,10 +192,22 @@ export class CreatePayment {
     return {
       payment,
       status: record.responseStatus,
-      body: record.responseBody,
+      snapshot: record.responseBody as PaymentSnapshot,
       replayed: true,
     };
   }
+}
+
+function toSnapshot(payment: Payment): PaymentSnapshot {
+  return {
+    id: payment.id,
+    status: payment.status,
+    amount: payment.amount,
+    currency: payment.currency,
+    upstreamReference: payment.merchantOrderId,
+    expiresAt: payment.expiresAt.toISOString(),
+    createdAt: payment.createdAt.toISOString(),
+  };
 }
 
 function isLive(record: IdempotencyRecord, now: Date): boolean {
