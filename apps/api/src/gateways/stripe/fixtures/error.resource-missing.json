@@ -1,0 +1,9 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "resource_missing",
+    "message": "No such payment_intent: 'pi_3QxMissing'",
+    "doc_url": "https://stripe.com/docs/error-codes",
+    "param": "intent"
+  }
+}

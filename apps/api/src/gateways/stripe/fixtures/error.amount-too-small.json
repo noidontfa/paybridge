@@ -1,0 +1,9 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "amount_too_small",
+    "message": "Amount must convert to at least 50 cents.",
+    "doc_url": "https://stripe.com/docs/error-codes",
+    "param": "amount"
+  }
+}

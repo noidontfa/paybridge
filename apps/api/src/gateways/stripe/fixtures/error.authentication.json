@@ -1,0 +1,8 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "api_key_invalid",
+    "message": "Invalid API Key provided: sk_test_****",
+    "doc_url": "https://stripe.com/docs/error-codes"
+  }
+}
