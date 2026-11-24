@@ -2,7 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../../domain/clock.js';
 import {
   AttemptInReviewError,
-  OpenAttemptExistsError,
   PaymentExpiryPassedError,
   PaymentNotFoundError,
   PaymentNotPendingError,
@@ -31,6 +30,10 @@ import {
   type InitiateResult,
   type PaymentGateway,
 } from '../../port/index.js';
+import {
+  BestEffortCancel,
+  type CancellableAttempt,
+} from '../best-effort-cancel.js';
 import { recordAttemptTransition } from '../record-attempt-transition.js';
 
 export interface StartAttemptInput {
@@ -70,8 +73,10 @@ const SYSTEM = 'system';
  *    `PENDING` (provider reference, next action, metadata, raw response) or
  *    `FAILED` on a synchronous rejection.
  *
- * Gateway switch (ticket 16) extends step 1; the other gateway error
- * categories (ticket 22) extend step 2.
+ * Gateway switch (ticket 16): step 1 also cancels the open attempt, if any,
+ * in the same transaction, so at most one attempt is open. After that commit
+ * the old provider is asked to cancel, best-effort, alongside step 2. The
+ * other gateway error categories (ticket 22) extend step 2.
  */
 @Injectable()
 export class StartAttempt {
@@ -79,13 +84,20 @@ export class StartAttempt {
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(GatewayManager) private readonly gateways: GatewayManager,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
   async execute(input: StartAttemptInput): Promise<StartAttemptResult> {
     const plugin = this.resolveGateway(input.gatewayId);
-    const { payment, attempt } = await this.openAttempt(input);
-    const outcome = await this.initiate(plugin, payment, attempt, input);
-    return this.recordOutcome(payment.id, attempt.id, outcome);
+    const { payment, attempt, switchedFrom } = await this.openAttempt(input);
+    // After commit; never throws, so it cannot undo the local cancel.
+    const providerCancel = this.cancels.cancel(switchedFrom);
+    try {
+      const outcome = await this.initiate(plugin, payment, attempt, input);
+      return await this.recordOutcome(payment.id, attempt.id, outcome);
+    } finally {
+      await providerCancel;
+    }
   }
 
   private resolveGateway(gatewayId: string): PaymentGateway {
@@ -100,13 +112,28 @@ export class StartAttempt {
   }
 
   /** Step 1: one short transaction under the Payment lock. */
-  private openAttempt(
-    input: StartAttemptInput,
-  ): Promise<{ payment: Payment; attempt: PaymentTransaction }> {
+  private openAttempt(input: StartAttemptInput): Promise<{
+    payment: Payment;
+    attempt: PaymentTransaction;
+    /** Open attempts cancelled by this gateway switch (at most one). */
+    switchedFrom: CancellableAttempt[];
+  }> {
     return this.runner.run(async (repos) => {
       const payment = await repos.payments.findForUpdate(input.paymentId);
       if (!payment) throw new PaymentNotFoundError(input.paymentId);
       this.assertAcceptsAttempt(payment);
+
+      const switchedFrom: CancellableAttempt[] = [];
+      for (const open of payment.attempts.filter((a) =>
+        isOpenAttempt(a.status),
+      )) {
+        switchedFrom.push(
+          await recordAttemptTransition(repos, open, 'CANCELLED', {
+            trigger: 'gateway_switch',
+            actor: CUSTOMER,
+          }),
+        );
+      }
 
       const attempt = await repos.payments.createAttempt({
         id: newId(),
@@ -122,7 +149,7 @@ export class StartAttempt {
         trigger: 'start_attempt',
         actor: CUSTOMER,
       });
-      return { payment, attempt };
+      return { payment, attempt, switchedFrom };
     });
   }
 
@@ -137,9 +164,7 @@ export class StartAttempt {
       (a) => a.status === 'REQUIRES_REVIEW',
     );
     if (inReview) throw new AttemptInReviewError(payment.id, inReview.id);
-    // Until the gateway switch (ticket 16), an open attempt blocks a new one.
-    const open = payment.attempts.find((a) => isOpenAttempt(a.status));
-    if (open) throw new OpenAttemptExistsError(payment.id, open.id);
+    // An open attempt does not block: openAttempt cancels it (gateway switch).
   }
 
   /** Step 2: the gateway call, with no transaction open. */
