@@ -1,63 +1,204 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../../domain/clock.js';
 import type { Payment } from '../../domain/payment.js';
+import type { PaymentTransaction } from '../../domain/payment-transaction.js';
+import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
+import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import type { QueryResult } from '../../port/index.js';
+import { ProviderQueryRateLimiter } from '../../reliability/provider-query-rate-limiter.js';
+import { applyProviderOutcome } from '../apply-provider-outcome.js';
+import { BestEffortCancel } from '../best-effort-cancel.js';
+import { recordAttemptTransition } from '../record-attempt-transition.js';
 import type { Repositories } from '../../infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 
 /**
  * What one expiry job did:
- * - `expired`: the Payment had no attempt and is now `EXPIRED`.
- * - `has-attempts`: the Payment has attempts; closing it needs provider
- *   queries first, which is the attempt expiry's job (ticket 24). Nothing
- *   changed; the next sweep queues it again while it stays `PENDING`.
+ * - `expired`: the Payment is now `EXPIRED` (no open attempt, or every open
+ *   attempt was queried and the provider confirmed it unpaid).
+ * - `succeeded`: a provider answer showed a payment made before the deadline
+ *   and it was applied as a success; the Payment did not expire.
+ * - `unclear`: an answer was missing or unclear (provider error, not found,
+ *   review state, an attempt that appeared meanwhile). Nothing was closed;
+ *   the next sweep queues the Payment again while it stays `PENDING`.
  * - `not-due`, `not-pending`, `not-found`: nothing to do.
  */
 export type ExpirePaymentResult =
-  'expired' | 'has-attempts' | 'not-due' | 'not-pending' | 'not-found';
+  | 'expired'
+  | 'succeeded'
+  | 'unclear'
+  | 'not-due'
+  | 'not-pending'
+  | 'not-found';
+
+type Phase1 =
+  | { readonly kind: 'done'; readonly result: ExpirePaymentResult }
+  | { readonly kind: 'query'; readonly attempts: readonly PaymentTransaction[] };
+
+interface Answer {
+  readonly attempt: PaymentTransaction;
+  readonly result: QueryResult;
+}
+
+const EXPIRY_CAUSE = { trigger: 'expiry', actor: 'system' } as const;
 
 /**
  * Expiry worker application service (spec: Use cases, `expirePayment`). Runs
- * for one Payment queued by the expiry sweep. Locks the Payment and re-checks
- * it is still `PENDING` with a passed deadline, so a stale or duplicate job is
- * harmless.
+ * for one Payment queued by the expiry sweep.
  *
- * A Payment with no attempt expires here, in one transaction with its status
- * transition and `PaymentExpired` event, and no provider is asked.
+ * 1. Transaction 1 locks the Payment and re-checks it is still `PENDING` with
+ *    a passed deadline, so a stale or duplicate job is harmless. It reads the
+ *    open attempts and releases the lock. A Payment with no open attempt
+ *    expires here and no provider is asked.
+ * 2. With no transaction open, each open attempt is queried (rate limited)
+ *    and the raw response stored.
+ * 3. Transaction 2 locks the Payment again and re-checks it. Every answer goes
+ *    through `applyProviderOutcome`, so a payment made just before the
+ *    deadline is a success under the rules of tickets 19 and 21. The Payment
+ *    expires only if every attempt open at that point was queried and the
+ *    provider said it is not paid; those attempts move to `EXPIRED` and
+ *    `PaymentExpired` is written.
+ * 4. After commit, attempts closed by the job are cancelled best-effort.
  */
 @Injectable()
 export class ExpirePayment {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(Clock) private readonly clock: Clock,
+    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
+    @Inject(ProviderQueryRateLimiter)
+    private readonly limiter: ProviderQueryRateLimiter,
   ) {}
 
   async execute(paymentId: string): Promise<ExpirePaymentResult> {
-    const outcome = await this.runner.run(async (repos) => {
+    const first = await this.runner.run(async (repos): Promise<Phase1> => {
       const payment = await repos.payments.findForUpdate(paymentId);
-      if (!payment) return 'not-found';
-      if (payment.status !== 'PENDING') return 'not-pending';
-      if (payment.expiresAt.getTime() > this.clock.now().getTime()) {
-        return 'not-due';
+      if (!payment) return { kind: 'done', result: 'not-found' };
+      if (payment.status !== 'PENDING') {
+        return { kind: 'done', result: 'not-pending' };
       }
-      if (payment.attempts.length > 0) return 'has-attempts';
-      await expireWithoutAttempts(repos, payment);
-      return 'expired';
+      if (payment.expiresAt.getTime() > this.clock.now().getTime()) {
+        return { kind: 'done', result: 'not-due' };
+      }
+      // An attempt in review may hold money: never expire over it.
+      if (payment.attempts.some((a) => a.status === 'REQUIRES_REVIEW')) {
+        return { kind: 'done', result: 'unclear' };
+      }
+      const open = payment.attempts.filter((a) => isOpenAttempt(a.status));
+      if (open.length === 0) {
+        await expirePayment(repos, payment);
+        return { kind: 'done', result: 'expired' };
+      }
+      return { kind: 'query', attempts: open };
     });
-    if (outcome === 'has-attempts') return this.expireWithAttempts(paymentId);
-    return outcome;
+    if (first.kind === 'done') return first.result;
+    return this.expireWithAttempts(paymentId, first.attempts);
   }
 
-  /**
-   * Seam for ticket 24: query each open attempt with no transaction open, then
-   * lock again, re-check and close. Until then such Payments stay `PENDING`.
-   */
-  private expireWithAttempts(_paymentId: string): Promise<ExpirePaymentResult> {
-    return Promise.resolve('has-attempts');
+  private async expireWithAttempts(
+    paymentId: string,
+    open: readonly PaymentTransaction[],
+  ): Promise<ExpirePaymentResult> {
+    const answers = await this.queryAll(open);
+    const { result, toCancel } = await this.runner.run((repos) =>
+      this.close(repos, paymentId, answers),
+    );
+    if (toCancel.length > 0) await this.cancels.cancel(toCancel);
+    return result;
+  }
+
+  /** Queries each attempt with no transaction open; a failed query is skipped. */
+  private async queryAll(
+    open: readonly PaymentTransaction[],
+  ): Promise<Answer[]> {
+    const answers: Answer[] = [];
+    for (const attempt of open) {
+      try {
+        await this.limiter.acquire();
+        const result = await this.gateways.resolve(attempt.gatewayId).query({
+          attemptKey: attempt.id,
+          providerMetadata: attempt.providerMetadata ?? {},
+        });
+        await this.runner.repositories.gatewayRawResponses.record({
+          attemptId: attempt.id,
+          operation: 'query',
+          payload: result.rawPayload,
+        });
+        answers.push({ attempt, result });
+      } catch {
+        // Unavailable, unknown outcome or not found: not a confirmation of
+        // "unpaid". The Payment stays PENDING for the next sweep.
+      }
+    }
+    return answers;
+  }
+
+  private async close(
+    repos: Repositories,
+    paymentId: string,
+    answers: readonly Answer[],
+  ): Promise<{
+    result: ExpirePaymentResult;
+    toCancel: readonly PaymentTransaction[];
+  }> {
+    let payment = await repos.payments.findForUpdate(paymentId);
+    if (!payment) return { result: 'not-found', toCancel: [] };
+
+    const toCancel: PaymentTransaction[] = [];
+    let succeeded = false;
+    // Apply every answer under the current state: a success is never dropped,
+    // and a result on an attempt that changed follows the rules for it.
+    for (const { attempt, result } of answers) {
+      const applied = await applyProviderOutcome(repos, {
+        payment,
+        attemptId: attempt.id,
+        outcome: result,
+        cause: { ...EXPIRY_CAUSE },
+        now: this.clock.now(),
+      });
+      payment = applied.payment;
+      toCancel.push(...applied.cancelledAttempts);
+      if (applied.decision.kind === 'succeed') succeeded = true;
+    }
+    if (succeeded) return { result: 'succeeded', toCancel };
+
+    // Re-check after the queries; nothing is overwritten.
+    if (payment.status !== 'PENDING') return { result: 'not-pending', toCancel };
+    if (payment.expiresAt.getTime() > this.clock.now().getTime()) {
+      return { result: 'not-due', toCancel };
+    }
+    if (payment.attempts.some((a) => a.status === 'REQUIRES_REVIEW')) {
+      return { result: 'unclear', toCancel };
+    }
+    // Every attempt still open must have been queried and found unpaid
+    // (`PENDING`; a `FAILED` answer already closed its attempt above).
+    const unpaid = new Set(
+      answers
+        .filter((a) => a.result.status === 'PENDING')
+        .map((a) => a.attempt.id),
+    );
+    const stillOpen = payment.attempts.filter((a) => isOpenAttempt(a.status));
+    if (!stillOpen.every((a) => unpaid.has(a.id))) {
+      return { result: 'unclear', toCancel };
+    }
+
+    for (const attempt of stillOpen) {
+      const expired = await recordAttemptTransition(
+        repos,
+        attempt,
+        'EXPIRED',
+        { ...EXPIRY_CAUSE, reason: 'provider confirmed unpaid at deadline' },
+      );
+      toCancel.push(expired);
+    }
+    await expirePayment(repos, payment);
+    return { result: 'expired', toCancel };
   }
 }
 
-async function expireWithoutAttempts(
+async function expirePayment(
   repos: Repositories,
   payment: Payment,
 ): Promise<void> {
