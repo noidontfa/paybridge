@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PaymentService } from './application/payment.service.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
+import { GetPayment } from './application/use-cases/get-payment.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { Clock, SystemClock } from './domain/clock.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
@@ -26,6 +27,7 @@ import { QueueModule } from './infrastructure/queue/queue.module.js';
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     CreatePayment,
+    GetPayment,
     PaymentService,
     WebhookIntake,
   ],
