@@ -55,3 +55,7 @@ _Avoid_: Timeout, TTL
 **Late Success**:
 A PaymentGateway reporting that a PaymentTransaction has been paid after Core has already closed it or moved on from it.
 _Avoid_: Late callback, Duplicate payment
+
+**Ignored Callback**:
+A verified PaymentGateway callback that does not concern any PayBridge PaymentTransaction (an event type the plugin does not handle, or a provider object PayBridge did not create). Core acknowledges it with the plugin's acknowledgement and stores nothing.
+_Avoid_: Dropped webhook, Skipped event
