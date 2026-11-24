@@ -3,11 +3,19 @@ import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { PrismaModule } from './database/prisma.module.js';
+import { GatewaysModule } from './gateways/gateways.module.js';
 import { HealthModule } from './health/health.module.js';
 import { AppLoggerModule } from './logger/app-logger.module.js';
+import { GatewayManagerModule } from './payment-core/gateway-manager/gateway-manager.module.js';
 
 @Module({
-  imports: [AppConfigModule, AppLoggerModule, PrismaModule, HealthModule],
+  imports: [
+    AppConfigModule,
+    AppLoggerModule,
+    PrismaModule,
+    HealthModule,
+    GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+  ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })
 export class AppModule {}
