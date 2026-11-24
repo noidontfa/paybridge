@@ -5,6 +5,24 @@
     "typescript/no-explicit-any": "off",
     "typescript/no-floating-promises": "error"
   },
+  "overrides": [
+    {
+      "files": ["src/payment-core/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/gateways", "**/gateways/**"],
+                "message": "Payment Core must not import Gateway Plugin code. Depend on the PaymentGateway port; plugins are registered in the composition root (src/gateways/gateways.module.ts)."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "env": {
     "node": true
   }
