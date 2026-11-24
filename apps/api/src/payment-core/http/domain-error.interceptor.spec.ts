@@ -1,8 +1,10 @@
 import { HttpException } from '@nestjs/common';
 import {
   DomainError,
+  IdempotencyKeyReusedError,
   InvalidAmountError,
   PaymentNotFoundError,
+  UpstreamReferenceExistsError,
 } from '../domain/errors.js';
 import { toHttp } from './domain-error.interceptor.js';
 
@@ -26,6 +28,24 @@ describe('domain error -> HTTP mapping', () => {
     expect(
       (toHttp(new PaymentNotFoundError('p1')) as HttpException).getStatus(),
     ).toBe(404);
+  });
+
+  it('maps IdempotencyKeyReused to 422', () => {
+    expect(
+      (
+        toHttp(new IdempotencyKeyReusedError('k1')) as HttpException
+      ).getStatus(),
+    ).toBe(422);
+  });
+
+  it('maps UpstreamReferenceExists to 409 with the existing Payment id', () => {
+    const mapped = toHttp(new UpstreamReferenceExistsError('p1'));
+
+    expect((mapped as HttpException).getStatus()).toBe(409);
+    expect((mapped as HttpException).getResponse()).toMatchObject({
+      code: 'UPSTREAM_REFERENCE_EXISTS',
+      details: { paymentId: 'p1' },
+    });
   });
 
   it('leaves unmapped domain errors and other errors unchanged', () => {

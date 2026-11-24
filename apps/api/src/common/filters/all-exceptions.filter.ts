@@ -13,6 +13,10 @@ import type { ErrorResponseDto } from './error-response.dto.js';
 interface NormalizedError {
   status: number;
   message: string | string[];
+  /** Stable machine-readable code, when the exception body carries one. */
+  code?: string;
+  /** Machine-readable fields, when the exception body carries them. */
+  details?: Record<string, unknown>;
 }
 
 const INTERNAL_ERROR_MESSAGE = 'Internal server error';
@@ -38,7 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest();
     const response = ctx.getResponse();
 
-    const { status, message } = this.normalize(exception);
+    const { status, message, code, details } = this.normalize(exception);
 
     const body: ErrorResponseDto = {
       statusCode: status,
@@ -46,6 +50,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? toTitleCase(HttpStatus[status])
         : 'Unknown Error',
       message,
+      ...(code !== undefined && { code }),
+      ...(details !== undefined && { details }),
       path: httpAdapter.getRequestUrl(request),
       method: httpAdapter.getRequestMethod(request),
       timestamp: new Date().toISOString(),
@@ -59,12 +65,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private normalize(exception: unknown): NormalizedError {
     if (exception instanceof HttpException) {
       const res = exception.getResponse();
-      const message =
-        typeof res === 'string'
-          ? res
-          : ((res as { message?: string | string[] }).message ??
-            exception.message);
-      return { status: exception.getStatus(), message };
+      if (typeof res === 'string') {
+        return { status: exception.getStatus(), message: res };
+      }
+      const { message, code, details } = res as {
+        message?: string | string[];
+        code?: unknown;
+        details?: unknown;
+      };
+      return {
+        status: exception.getStatus(),
+        message: message ?? exception.message,
+        ...(typeof code === 'string' && { code }),
+        ...(isRecord(details) && { details }),
+      };
     }
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
@@ -131,6 +145,10 @@ function isClientHttpError(
     status < 500 &&
     typeof message === 'string'
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** BAD_REQUEST -> "Bad Request" */

@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Payment } from '../domain/payment.js';
 import {
   CreatePayment,
   type CreatePaymentInput,
+  type CreatePaymentOptions,
+  type CreatePaymentResult,
 } from './use-cases/create-payment.js';
 
 /**
@@ -17,7 +18,10 @@ export class PaymentService {
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
   ) {}
 
-  createPayment(input: CreatePaymentInput): Promise<Payment> {
-    return this.createPaymentUseCase.execute(input);
+  createPayment(
+    input: CreatePaymentInput,
+    options?: CreatePaymentOptions,
+  ): Promise<CreatePaymentResult> {
+    return this.createPaymentUseCase.execute(input, options);
   }
 }

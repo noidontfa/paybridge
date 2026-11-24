@@ -1,6 +1,7 @@
 import {
   type ArgumentsHost,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import type { HttpAdapterHost } from '@nestjs/core';
@@ -45,6 +46,33 @@ describe('AllExceptionsFilter', () => {
       requestId: 'req-1',
     });
     expect(typeof body.timestamp).toBe('string');
+  });
+
+  it('carries an HttpException body code and details into the envelope', () => {
+    const { filter, host, reply } = setup();
+    filter.catch(
+      new ConflictException({
+        message: 'exists',
+        code: 'UPSTREAM_REFERENCE_EXISTS',
+        details: { paymentId: 'p1' },
+      }),
+      host,
+    );
+
+    expect(reply.mock.calls[0][1]).toMatchObject({
+      statusCode: 409,
+      message: 'exists',
+      code: 'UPSTREAM_REFERENCE_EXISTS',
+      details: { paymentId: 'p1' },
+    });
+  });
+
+  it('omits code and details when the exception has none', () => {
+    const { filter, host, reply } = setup();
+    filter.catch(new ForbiddenException('nope'), host);
+
+    expect(reply.mock.calls[0][1]).not.toHaveProperty('code');
+    expect(reply.mock.calls[0][1]).not.toHaveProperty('details');
   });
 
   it('keeps array messages (validation errors)', () => {
