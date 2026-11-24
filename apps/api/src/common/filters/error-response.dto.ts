@@ -14,6 +14,20 @@ export class ErrorResponseDto {
   })
   message!: string | string[];
 
+  @ApiPropertyOptional({
+    description: 'Stable error code, for errors that have one',
+    example: 'UPSTREAM_REFERENCE_EXISTS',
+  })
+  code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Machine-readable fields of the error',
+    type: 'object',
+    additionalProperties: true,
+    example: { paymentId: '01a20c09-3825-732f-aa60-5531dd0db7cd' },
+  })
+  details?: Record<string, unknown>;
+
   @ApiProperty({ example: '/api/unknown' })
   path!: string;
 

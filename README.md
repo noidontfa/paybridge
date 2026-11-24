@@ -7,7 +7,7 @@ Payment platform backend. Turborepo + pnpm monorepo, NestJS 12, Prisma 7, Postgr
 ```
 apps/
   api/                      NestJS application (@paybridge/api)
-    prisma/schema.prisma    Prisma schema (migrations live in prisma/migrations)
+    prisma/schema.prisma    Prisma schema: Payment Core `core_*` tables (migrations in prisma/migrations)
     prisma.config.ts        Prisma CLI config (loads the same .env files as Nest)
     src/
       config/               env loading + zod validation (fails fast on bad env)
@@ -18,7 +18,7 @@ apps/
       swagger.ts            OpenAPI setup
 packages/
   typescript-config/        shared tsconfig presets
-docker-compose.yml          PostgreSQL 17 + Redis 7 for local development
+docker-compose.yml          PostgreSQL 18 + Redis 7 for local development
 ```
 
 ## Requirements
@@ -47,10 +47,29 @@ pnpm dev                # generates the Prisma client, then starts the API with 
 | `pnpm build`                       | Generate Prisma client + compile to `dist/`     |
 | `pnpm lint` / `pnpm typecheck`     | oxlint (type-aware) / `tsc --noEmit`            |
 | `pnpm test` / `pnpm test:e2e`      | Vitest unit / e2e (e2e mocks the database)      |
+| `pnpm test:int`                    | Vitest integration tests on real PostgreSQL     |
 | `pnpm db:migrate`                  | `prisma migrate dev` (create + apply migration) |
 | `pnpm db:deploy`                   | `prisma migrate deploy` (CI / production)       |
 | `pnpm db:studio`                   | Prisma Studio                                   |
 | `pnpm docker:up` / `down` / `logs` | Manage PostgreSQL and Redis                     |
+
+### Integration tests
+
+`pnpm test:int` runs `apps/api/test/**/*.int-spec.ts` against the docker compose PostgreSQL
+(`pnpm docker:up` first). Before the run, the global setup drops and recreates the test
+database and applies every migration with `prisma migrate deploy`, so each run also proves the
+migrations apply to an empty database. Server and credentials come from `DATABASE_URL` in
+`apps/api/.env.test`; the database name is `TEST_DATABASE_NAME` (default `paybridge_test`; it
+must contain `test`). Use a different name per parallel run:
+
+```bash
+TEST_DATABASE_NAME=paybridge_test_mine pnpm test:int
+```
+
+Helpers in `apps/api/test/setup/`: `createTestPrismaClient()` (client on the test database) and
+`resetDatabase(prisma)` (truncates every `core_*` table; call it in `beforeEach`). Test files run
+one at a time because they share the database. Queue tests use the compose Redis with
+`QUEUE_PREFIX` set to the test database name, so parallel runs do not share BullMQ keys.
 
 Run production locally: `pnpm build && pnpm --filter @paybridge/api start:prod`.
 
@@ -69,13 +88,15 @@ are loaded for `NODE_ENV` (default `development`), first match wins:
 | `apps/api/.env.production.example` | Template. In production inject real env vars/secrets |
 | `apps/api/.env.example`            | Reference of every variable                          |
 
-| Variable          | Default                                       | Notes                                 |
-| ----------------- | --------------------------------------------- | ------------------------------------- |
-| `NODE_ENV`        | `development`                                 | `development` / `production` / `test` |
-| `PORT`            | `3000`                                        |                                       |
-| `DATABASE_URL`    | _required_                                    | PostgreSQL connection string          |
-| `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                       |
-| `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                       |
+| Variable          | Default                                       | Notes                                     |
+| ----------------- | --------------------------------------------- | ----------------------------------------- |
+| `NODE_ENV`        | `development`                                 | `development` / `production` / `test`     |
+| `PORT`            | `3000`                                        |                                           |
+| `DATABASE_URL`    | _required_                                    | PostgreSQL connection string              |
+| `REDIS_URL`       | _required_                                    | Redis for BullMQ (`redis://`/`rediss://`) |
+| `QUEUE_PREFIX`    | `paybridge`                                   | Prefix of every BullMQ key, no `:`        |
+| `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                           |
+| `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                           |
 
 ## Conventions
 

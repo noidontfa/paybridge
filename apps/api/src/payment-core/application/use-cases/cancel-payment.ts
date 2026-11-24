@@ -1,0 +1,99 @@
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  PaymentNotFoundError,
+  PaymentNotPendingError,
+} from '../../domain/errors.js';
+import type { Payment } from '../../domain/payment.js';
+import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
+import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
+import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import {
+  BestEffortCancel,
+  type CancellableAttempt,
+} from '../best-effort-cancel.js';
+import { recordAttemptTransition } from '../record-attempt-transition.js';
+
+const CANCEL_CAUSE = { trigger: 'merchant_cancel', actor: 'merchant' } as const;
+
+/**
+ * Merchant cancel (spec: Use cases, `cancelPayment`). One transaction under
+ * the Payment lock moves a `PENDING` Payment and all its open attempts to
+ * `CANCELLED`, writing the status transitions and the `PaymentCancelled`
+ * outbox row. After the commit the providers are asked to cancel,
+ * best-effort (`BestEffortCancel`), so a provider failure never changes
+ * local state.
+ *
+ * Cancelling a `CANCELLED` Payment is a no-op that returns it. A `SUCCEEDED`
+ * or `EXPIRED` Payment is rejected with `PaymentNotPendingError`.
+ */
+@Injectable()
+export class CancelPayment {
+  constructor(
+    @Inject(TransactionRunner) private readonly runner: TransactionRunner,
+    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
+  ) {}
+
+  async execute(paymentId: string): Promise<Payment> {
+    const { payment, cancelled } = await this.runner.run(async (repos) => {
+      const locked = await repos.payments.findForUpdate(paymentId);
+      if (!locked) throw new PaymentNotFoundError(paymentId);
+      if (locked.status === 'CANCELLED') {
+        return { payment: locked, cancelled: [] };
+      }
+      if (
+        locked.status !== 'PENDING' ||
+        !canTransitionPayment(locked.status, 'CANCELLED')
+      ) {
+        throw new PaymentNotPendingError(locked.id, locked.status);
+      }
+
+      const cancelled: CancellableAttempt[] = [];
+      for (const open of locked.attempts.filter((a) =>
+        isOpenAttempt(a.status),
+      )) {
+        cancelled.push(
+          await recordAttemptTransition(repos, open, 'CANCELLED', CANCEL_CAUSE),
+        );
+      }
+
+      const updated = await repos.payments.update(locked.id, {
+        status: 'CANCELLED',
+      });
+      await repos.statusTransitions.record({
+        entityType: 'PAYMENT',
+        entityId: locked.id,
+        fromStatus: locked.status,
+        toStatus: updated.status,
+        ...CANCEL_CAUSE,
+      });
+      await repos.outbox.add({
+        eventType: 'PaymentCancelled',
+        paymentId: locked.id,
+        payload: {
+          paymentId: locked.id,
+          upstreamReference: updated.merchantOrderId,
+          amount: updated.amount,
+          currency: updated.currency,
+          status: updated.status,
+        },
+      });
+      const reloaded = await repos.payments.findById(locked.id);
+      return { payment: reloaded ?? updated, cancelled };
+    });
+
+    // After commit; never throws. Only plugins that declare supportsCancel.
+    await this.cancels.cancel(cancelled.filter((a) => this.canCancel(a)));
+    return payment;
+  }
+
+  private canCancel(attempt: CancellableAttempt): boolean {
+    try {
+      return this.gateways.resolve(attempt.gatewayId).capabilities
+        .supportsCancel;
+    } catch {
+      return false;
+    }
+  }
+}

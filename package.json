@@ -15,6 +15,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
+    "test:int": "turbo run test:int",
     "format": "prettier --write \"**/*.{ts,json,md,yml,yaml}\"",
     "db:generate": "turbo run db:generate",
     "db:migrate": "pnpm --filter @paybridge/api db:migrate",

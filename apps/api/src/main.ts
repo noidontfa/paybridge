@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
-import { GLOBAL_PREFIX } from './constants.js';
+import { applyGlobalPrefix } from './http-prefix.js';
 import { type Env, resolveSwaggerEnabled } from './config/env.schema.js';
 import { SWAGGER_PATH, setupSwagger } from './swagger.js';
 
@@ -11,6 +11,8 @@ async function bootstrap() {
   // bufferLogs: hold bootstrap logs until pino is attached, so nothing is lost.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    // Keep the exact request bytes (req.rawBody) for webhook signature checks.
+    rawBody: true,
   });
   const logger = app.get(Logger);
   app.useLogger(logger);
@@ -20,7 +22,7 @@ async function bootstrap() {
   const nodeEnv = config.get('NODE_ENV', { infer: true });
 
   app.disable('x-powered-by');
-  app.setGlobalPrefix(GLOBAL_PREFIX);
+  applyGlobalPrefix(app);
   app.enableShutdownHooks(); // graceful SIGTERM/SIGINT: closes Prisma pool
 
   const swaggerEnabled = resolveSwaggerEnabled({
