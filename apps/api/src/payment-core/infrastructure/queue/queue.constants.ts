@@ -11,6 +11,8 @@ export const QUEUES = {
   webhookInbox: 'core-webhook-inbox',
   /** Payments past their deadline, enqueued by the sweep. Job id: the payment id. */
   paymentExpiry: 'core-payment-expiry',
+  /** Runs of the expiry sweep, produced by its job scheduler. */
+  expirySweep: 'core-expiry-sweep',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

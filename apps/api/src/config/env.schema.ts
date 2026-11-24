@@ -30,6 +30,8 @@ export const envSchema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]+$/, 'letters, digits, _ and - only')
     .default('paybridge'),
+  /** Most Payments the expiry sweep queues per run (it runs every minute). */
+  EXPIRY_SWEEP_BATCH_SIZE: z.coerce.number().int().positive().default(100),
   /** Outbox relay poll loop. Unset => enabled everywhere except test. */
   OUTBOX_RELAY_ENABLED: z.stringbool().optional(),
   /** Pause between outbox relay polls, in milliseconds. */

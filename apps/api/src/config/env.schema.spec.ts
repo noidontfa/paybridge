@@ -53,6 +53,20 @@ describe('envSchema', () => {
     ).toBe(false);
   });
 
+  it('defaults the expiry sweep batch size to 100 and requires a positive integer', () => {
+    expect(envSchema.parse(required).EXPIRY_SWEEP_BATCH_SIZE).toBe(100);
+    expect(
+      envSchema.parse({ ...required, EXPIRY_SWEEP_BATCH_SIZE: '250' })
+        .EXPIRY_SWEEP_BATCH_SIZE,
+    ).toBe(250);
+    for (const bad of ['0', '-1', '1.5', 'many']) {
+      expect(
+        envSchema.safeParse({ ...required, EXPIRY_SWEEP_BATCH_SIZE: bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+
   it('rejects unknown NODE_ENV / LOG_LEVEL', () => {
     expect(
       envSchema.safeParse({ ...required, NODE_ENV: 'staging' }).success,
