@@ -18,7 +18,7 @@ apps/
       swagger.ts            OpenAPI setup
 packages/
   typescript-config/        shared tsconfig presets
-docker-compose.yml          PostgreSQL 17 + Redis 7 for local development
+docker-compose.yml          PostgreSQL 18 + Redis 7 for local development
 ```
 
 ## Requirements
