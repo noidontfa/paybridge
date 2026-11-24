@@ -6,9 +6,14 @@ import { HttpStatus } from '@nestjs/common';
  * a row with every new error that can reach a controller. One row per line.
  */
 export const DOMAIN_ERROR_STATUS: Readonly<Record<string, HttpStatus>> = {
+  ATTEMPT_IN_REVIEW: HttpStatus.CONFLICT,
   INVALID_AMOUNT: HttpStatus.BAD_REQUEST,
   INVALID_EXPIRY: HttpStatus.BAD_REQUEST,
   INVALID_UPSTREAM_REFERENCE: HttpStatus.BAD_REQUEST,
+  OPEN_ATTEMPT_EXISTS: HttpStatus.CONFLICT,
+  PAYMENT_EXPIRY_PASSED: HttpStatus.CONFLICT,
   PAYMENT_NOT_FOUND: HttpStatus.NOT_FOUND,
+  PAYMENT_NOT_PENDING: HttpStatus.CONFLICT,
+  UNKNOWN_GATEWAY: HttpStatus.BAD_REQUEST,
   UNSUPPORTED_CURRENCY: HttpStatus.BAD_REQUEST,
 };

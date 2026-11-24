@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PaymentService } from './application/payment.service.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
+import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { Clock, SystemClock } from './domain/clock.js';
+import { AttemptsController } from './http/attempts.controller.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
 import { PaymentsController } from './http/payments.controller.js';
 import { WebhooksController } from './http/webhooks.controller.js';
@@ -20,13 +22,14 @@ import { QueueModule } from './infrastructure/queue/queue.module.js';
  */
 @Module({
   imports: [QueueModule],
-  controllers: [PaymentsController, WebhooksController],
+  controllers: [AttemptsController, PaymentsController, WebhooksController],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     CreatePayment,
     PaymentService,
+    StartAttempt,
     WebhookIntake,
   ],
   exports: [Clock, PaymentService, QueueModule, TransactionRunner],
