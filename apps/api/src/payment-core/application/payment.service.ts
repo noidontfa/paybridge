@@ -13,6 +13,10 @@ import {
   type BrowserReturnInput,
 } from './use-cases/handle-browser-return.js';
 import {
+  ResolveReview,
+  type ResolveReviewInput,
+} from './use-cases/resolve-review.js';
+import {
   StartAttempt,
   type StartAttemptInput,
   type StartAttemptResult,
@@ -32,8 +36,15 @@ export class PaymentService {
     @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
     @Inject(HandleBrowserReturn)
     private readonly handleBrowserReturnUseCase: HandleBrowserReturn,
+    @Inject(ResolveReview)
+    private readonly resolveReviewUseCase: ResolveReview,
     @Inject(StartAttempt) private readonly startAttemptUseCase: StartAttempt,
   ) {}
+
+  /** Operator: resolve a review open 72h+, or add a note (internal route). */
+  resolveReview(input: ResolveReviewInput): Promise<Payment> {
+    return this.resolveReviewUseCase.execute(input);
+  }
 
   /** Customer came back from the gateway: no writes, queues a status query. */
   handleBrowserReturn(input: BrowserReturnInput): Promise<Payment> {

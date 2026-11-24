@@ -25,16 +25,14 @@ import { TransactionRunner } from '../../infrastructure/prisma/transaction-runne
  * - `not-due`, `not-pending`, `not-found`: nothing to do.
  */
 export type ExpirePaymentResult =
-  | 'expired'
-  | 'succeeded'
-  | 'unclear'
-  | 'not-due'
-  | 'not-pending'
-  | 'not-found';
+  'expired' | 'succeeded' | 'unclear' | 'not-due' | 'not-pending' | 'not-found';
 
 type Phase1 =
   | { readonly kind: 'done'; readonly result: ExpirePaymentResult }
-  | { readonly kind: 'query'; readonly attempts: readonly PaymentTransaction[] };
+  | {
+      readonly kind: 'query';
+      readonly attempts: readonly PaymentTransaction[];
+    };
 
 interface Answer {
   readonly attempt: PaymentTransaction;
@@ -165,7 +163,8 @@ export class ExpirePayment {
     if (succeeded) return { result: 'succeeded', toCancel };
 
     // Re-check after the queries; nothing is overwritten.
-    if (payment.status !== 'PENDING') return { result: 'not-pending', toCancel };
+    if (payment.status !== 'PENDING')
+      return { result: 'not-pending', toCancel };
     if (payment.expiresAt.getTime() > this.clock.now().getTime()) {
       return { result: 'not-due', toCancel };
     }
@@ -185,12 +184,10 @@ export class ExpirePayment {
     }
 
     for (const attempt of stillOpen) {
-      const expired = await recordAttemptTransition(
-        repos,
-        attempt,
-        'EXPIRED',
-        { ...EXPIRY_CAUSE, reason: 'provider confirmed unpaid at deadline' },
-      );
+      const expired = await recordAttemptTransition(repos, attempt, 'EXPIRED', {
+        ...EXPIRY_CAUSE,
+        reason: 'provider confirmed unpaid at deadline',
+      });
       toCancel.push(expired);
     }
     await expirePayment(repos, payment);

@@ -143,7 +143,7 @@ export async function applyProviderOutcome(
   };
 }
 
-async function succeedPayment(
+export async function succeedPayment(
   repos: Repositories,
   payment: Payment,
   attempt: PaymentTransaction,
@@ -181,7 +181,7 @@ async function succeedPayment(
   });
 }
 
-async function cancelOtherOpenAttempts(
+export async function cancelOtherOpenAttempts(
   repos: Repositories,
   payment: Payment,
   succeededId: string,

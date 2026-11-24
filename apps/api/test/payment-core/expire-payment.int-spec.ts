@@ -287,9 +287,7 @@ describe('ExpirePayment with open attempts', () => {
     await expect(expirePayment.execute(payment.id)).resolves.toBe('unclear');
 
     expect(providerCalls()).toBe(0);
-    expect((await repos.payments.findById(payment.id))?.status).toBe(
-      'PENDING',
-    );
+    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
   });
 
   it('holds no transaction open while the provider is queried', async () => {
@@ -362,16 +360,17 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('unclear');
 
-    expect((await repos.payments.findById(payment.id))?.status).toBe(
-      'PENDING',
-    );
+    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
   });
 
   it('asks the rate limiter before every provider query', async () => {
     const payment = await createPayment();
     await addAttempt(payment.id, 'PENDING');
     clock.set(DEADLINE);
-    const acquire = vi.spyOn(moduleRef.get(ProviderQueryRateLimiter), 'acquire');
+    const acquire = vi.spyOn(
+      moduleRef.get(ProviderQueryRateLimiter),
+      'acquire',
+    );
 
     await expirePayment.execute(payment.id);
 
