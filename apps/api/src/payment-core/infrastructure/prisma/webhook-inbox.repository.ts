@@ -96,6 +96,54 @@ export class PrismaWebhookInboxRepository {
   }
 
   /**
+   * Inbox sweep: resets `PROCESSING` rows locked before `cutoff` (the worker
+   * died) to `RECEIVED` and clears the lock. A row locked at or after the
+   * cutoff is not touched. Returns the number of rows reset.
+   */
+  async resetStaleProcessing(cutoff: Date): Promise<number> {
+    const { count } = await this.ctx.db.webhookInbox.updateMany({
+      where: { status: 'PROCESSING', lockedAt: { lt: cutoff } },
+      data: { status: 'RECEIVED', lockedAt: null },
+    });
+    return count;
+  }
+
+  /**
+   * Inbox sweep: ids of rows to dispatch, oldest first, at most `limit`: every
+   * `RECEIVED` row, and `FAILED` rows tried at most `maxAttempts` times.
+   */
+  async findDispatchableIds(
+    maxAttempts: number,
+    limit: number,
+  ): Promise<string[]> {
+    const rows = await this.ctx.db.webhookInbox.findMany({
+      where: {
+        OR: [
+          { status: 'RECEIVED' },
+          { status: 'FAILED', attempts: { lte: maxAttempts } },
+        ],
+      },
+      orderBy: { receivedAt: 'asc' },
+      select: { id: true },
+      take: limit,
+    });
+    return rows.map((row) => row.id);
+  }
+
+  /** `FAILED` rows tried more than `maxAttempts` times: left for manual handling. */
+  async findExhausted(
+    maxAttempts: number,
+    limit: number,
+  ): Promise<WebhookInboxEntry[]> {
+    const rows = await this.ctx.db.webhookInbox.findMany({
+      where: { status: 'FAILED', attempts: { gt: maxAttempts } },
+      orderBy: { receivedAt: 'asc' },
+      take: limit,
+    });
+    return rows.map(toEntry);
+  }
+
+  /**
    * Retention: deletes rows received at or before `cutoff`, except `FAILED`
    * rows, which are never deleted automatically.
    */
