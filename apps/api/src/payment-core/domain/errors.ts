@@ -146,3 +146,52 @@ export class InvalidAttemptTransitionError extends DomainError {
     super(`Attempt ${attemptId} cannot move from ${from} to ${to}`);
   }
 }
+
+// --- Operator review resolution (ticket 29) ---------------------------------
+
+/** The Payment has no attempt with this id. */
+export class AttemptNotFoundError extends DomainError {
+  readonly code = 'ATTEMPT_NOT_FOUND';
+
+  constructor(
+    readonly paymentId: string,
+    readonly attemptId: string,
+  ) {
+    super(`Payment ${paymentId} has no attempt ${attemptId}`);
+  }
+}
+
+/** The attempt is not in `REQUIRES_REVIEW`, so there is nothing to resolve. */
+export class AttemptNotInReviewError extends DomainError {
+  readonly code = 'ATTEMPT_NOT_IN_REVIEW';
+
+  constructor(
+    readonly attemptId: string,
+    readonly status: string,
+  ) {
+    super(`Attempt ${attemptId} is ${status}, not REQUIRES_REVIEW`);
+  }
+}
+
+/** The review has been open for less than 72 hours: re-queries still own it. */
+export class ReviewWindowOpenError extends DomainError {
+  readonly code = 'REVIEW_WINDOW_OPEN';
+
+  constructor(
+    readonly attemptId: string,
+    readonly eligibleAt: Date,
+  ) {
+    super(
+      `Review of attempt ${attemptId} can be resolved by an operator from ${eligibleAt.toISOString()}`,
+    );
+  }
+
+  override get details(): Readonly<Record<string, unknown>> {
+    return { eligibleAt: this.eligibleAt.toISOString() };
+  }
+}
+
+/** The requested resolution would create an invalid state, or needs input it lacks. */
+export class ReviewResolutionNotAllowedError extends DomainError {
+  readonly code = 'REVIEW_RESOLUTION_NOT_ALLOWED';
+}

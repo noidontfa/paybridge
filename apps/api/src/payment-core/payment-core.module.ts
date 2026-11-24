@@ -5,6 +5,7 @@ import { PaymentService } from './application/payment.service.js';
 import { CancelPayment } from './application/use-cases/cancel-payment.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
 import { GetPayment } from './application/use-cases/get-payment.js';
+import { ResolveReview } from './application/use-cases/resolve-review.js';
 import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
@@ -18,6 +19,7 @@ import { AttemptsController } from './http/attempts.controller.js';
 import { BrowserReturnController } from './http/browser-return.controller.js';
 import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
 import { PaymentsController } from './http/payments.controller.js';
+import { ReviewResolutionController } from './http/review-resolution.controller.js';
 import { WebhooksController } from './http/webhooks.controller.js';
 import {
   PrismaTransactionRunner,
@@ -61,6 +63,7 @@ import {
     AttemptsController,
     BrowserReturnController,
     PaymentsController,
+    ReviewResolutionController,
     WebhooksController,
   ],
   providers: [
@@ -90,6 +93,7 @@ import {
     RetentionCleanup,
     RetentionProcessor,
     RequeryAttempt,
+    ResolveReview,
     RetentionScheduler,
     ReviewRequeryProcessor,
     ReviewRequerySweep,
