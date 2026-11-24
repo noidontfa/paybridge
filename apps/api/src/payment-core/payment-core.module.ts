@@ -12,6 +12,10 @@ import {
   TransactionRunner,
 } from './infrastructure/prisma/transaction-runner.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';
+import {
+  OutboxRelay,
+  outboxRelayOptionsProvider,
+} from './reliability/outbox-relay.js';
 
 /**
  * Payment Core. Needs `PrismaModule` (global), the config module and the
@@ -25,7 +29,9 @@ import { QueueModule } from './infrastructure/queue/queue.module.js';
     { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
     { provide: Clock, useClass: SystemClock },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
+    outboxRelayOptionsProvider,
     CreatePayment,
+    OutboxRelay,
     PaymentService,
     WebhookIntake,
   ],
