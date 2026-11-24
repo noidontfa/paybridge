@@ -7,6 +7,11 @@ import {
   type CreatePaymentResult,
 } from './use-cases/create-payment.js';
 import { GetPayment } from './use-cases/get-payment.js';
+import {
+  StartAttempt,
+  type StartAttemptInput,
+  type StartAttemptResult,
+} from './use-cases/start-attempt.js';
 
 /**
  * The API use cases of Payment Core (spec: Application services). A thin
@@ -19,6 +24,7 @@ export class PaymentService {
   constructor(
     @Inject(CreatePayment) private readonly createPaymentUseCase: CreatePayment,
     @Inject(GetPayment) private readonly getPaymentUseCase: GetPayment,
+    @Inject(StartAttempt) private readonly startAttemptUseCase: StartAttempt,
   ) {}
 
   createPayment(
@@ -31,5 +37,9 @@ export class PaymentService {
   /** Read only: no writes, no row lock. Unknown id: `PaymentNotFoundError`. */
   getPayment(paymentId: string): Promise<Payment> {
     return this.getPaymentUseCase.execute(paymentId);
+  }
+
+  startAttempt(input: StartAttemptInput): Promise<StartAttemptResult> {
+    return this.startAttemptUseCase.execute(input);
   }
 }
