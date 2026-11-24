@@ -30,6 +30,10 @@ import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.proc
 import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
 import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
 import { RetentionProcessor } from './reliability/processors/retention.processor.js';
+import {
+  ProviderQueryRateLimiter,
+  providerQueryRateLimitProvider,
+} from './reliability/provider-query-rate-limiter.js';
 import { RetentionCleanup } from './reliability/retention.js';
 import { RetentionScheduler } from './reliability/retention.scheduler.js';
 import {
@@ -56,6 +60,7 @@ import {
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
+    providerQueryRateLimitProvider,
     AttemptStatusQueryProcessor,
     BestEffortCancel,
     CancelPayment,
@@ -70,6 +75,7 @@ import {
     PaymentExpiryProcessor,
     PaymentService,
     ProcessWebhook,
+    ProviderQueryRateLimiter,
     RetentionCleanup,
     RetentionProcessor,
     RequeryAttempt,
