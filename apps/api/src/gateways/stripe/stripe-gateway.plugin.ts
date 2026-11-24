@@ -89,6 +89,7 @@ export class StripeGatewayPlugin implements PaymentGateway {
       this.stripe.paymentIntents.create(
         {
           amount,
+          // The port's GatewayCurrency is VND only, so input.currency is always VND.
           currency: 'vnd',
           allowed_payment_method_types: ['card'],
           capture_method: 'automatic',
@@ -98,11 +99,18 @@ export class StripeGatewayPlugin implements PaymentGateway {
         { idempotencyKey: input.attemptKey },
       ),
     );
+    if (!intent.client_secret) {
+      // Stripe created the PaymentIntent but gave us nothing to hand the
+      // frontend. It exists, so this is not a rejection: Core re-queries it.
+      throw new OutcomeUnknownError(
+        `PaymentIntent ${intent.id} was created without a client secret`,
+      );
+    }
     return {
       providerRef: intent.id,
       nextAction: {
         type: 'CLIENT_SDK',
-        token: intent.client_secret ?? '',
+        token: intent.client_secret,
         clientParams: {
           publishableKey: this.publishableKey,
           returnUrl: input.returnUrl,

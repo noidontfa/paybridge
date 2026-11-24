@@ -98,6 +98,12 @@ describe('StripeGatewayPlugin', () => {
       expect(JSON.stringify(result.rawPayload)).not.toContain('TestSecretValue123');
     });
 
+    it('is OutcomeUnknown when Stripe returns no client secret', async () => {
+      http.respond(200, 'payment-intent.no-client-secret');
+
+      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(OutcomeUnknownError);
+    });
+
     it.each(['1500.5', '100.25', 'abc', ''])(
       'rejects non-integer amount %j without calling Stripe',
       async (amount) => {
