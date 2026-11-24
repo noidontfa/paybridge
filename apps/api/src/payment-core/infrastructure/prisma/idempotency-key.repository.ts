@@ -32,4 +32,12 @@ export class PrismaIdempotencyKeyRepository {
       where: { key, expiresAt: { lte: now } },
     });
   }
+
+  /** Retention: deletes every record that expired at or before `cutoff`. */
+  async deleteExpiredBefore(cutoff: Date): Promise<number> {
+    const { count } = await this.ctx.db.idempotencyKey.deleteMany({
+      where: { expiresAt: { lte: cutoff } },
+    });
+    return count;
+  }
 }
