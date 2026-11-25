@@ -48,6 +48,15 @@ describe('StripeGatewayPlugin', () => {
       expect(plugin.capabilities.supportsCancel).toBe(true);
       expect(plugin.callbackHeaders).toEqual(['stripe-signature']);
       expect(typeof plugin.cancel).toBe('function');
+      expect(plugin.mode).toBe('test');
+      expect(
+        new StripeGatewayPlugin({
+          secretKey: 'sk_live_fixture',
+          publishableKey: 'pk_live_fixture',
+          webhookSecret: WEBHOOK_SECRET,
+          httpClient: http,
+        }).mode,
+      ).toBe('live');
     });
   });
 

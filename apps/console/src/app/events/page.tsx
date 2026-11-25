@@ -7,7 +7,7 @@ export const metadata = { title: 'Events' };
 export default function Page() {
   return (
     <>
-      <PageHeader title="Events" description="Payment Events Core emitted, and whether the relay has published them." />
+      <PageHeader title="Events" description="Outbox. Payment Events Core emitted, and whether the relay has published them." />
       <Suspense>
         <EventsScreen />
       </Suspense>

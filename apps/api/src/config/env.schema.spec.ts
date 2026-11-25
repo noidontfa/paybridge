@@ -27,6 +27,26 @@ describe('envSchema', () => {
     expect(env.SWAGGER_ENABLED).toBe(false);
   });
 
+  it('defaults PUBLIC_BASE_URL to localhost and validates it as an http(s) URL', () => {
+    expect(envSchema.parse(required).PUBLIC_BASE_URL).toBe(
+      'http://localhost:3000',
+    );
+    expect(envSchema.parse({ ...required, PORT: '8080' }).PUBLIC_BASE_URL).toBe(
+      'http://localhost:8080',
+    );
+    expect(
+      envSchema.parse({
+        ...required,
+        PUBLIC_BASE_URL: 'https://pay.example.com/',
+      }).PUBLIC_BASE_URL,
+    ).toBe('https://pay.example.com');
+    for (const bad of ['pay.example.com', 'ftp://x.test', 'not a url']) {
+      expect(
+        envSchema.safeParse({ ...required, PUBLIC_BASE_URL: bad }).success,
+      ).toBe(false);
+    }
+  });
+
   it('requires a PostgreSQL DATABASE_URL', () => {
     expect(envSchema.safeParse({ REDIS_URL }).success).toBe(false);
     expect(
