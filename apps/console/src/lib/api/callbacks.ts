@@ -1,6 +1,6 @@
 /**
  * `GET /internal/callbacks` and `GET /internal/callbacks/:id`: what each
- * PaymentGateway sent (the webhook inbox). A Callback is inbound only; it is
+ * PaymentGateway sent (Callbacks). A Callback is inbound only; it is
  * not a Payment Event.
  */
 import { z } from 'zod';

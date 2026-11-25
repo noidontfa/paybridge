@@ -1,3 +1,4 @@
+import { OperatorProvider } from '@/lib/operator';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -85,7 +86,9 @@ function renderScreen(id: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <PaymentDetailScreen id={id} />
+      <OperatorProvider operator={{ id: 'operator', name: 'Operator' }}>
+        <PaymentDetailScreen id={id} />
+      </OperatorProvider>
     </QueryClientProvider>,
   );
 }

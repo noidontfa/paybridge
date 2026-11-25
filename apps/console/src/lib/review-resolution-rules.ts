@@ -3,7 +3,9 @@
  * are not offered. A pure module: it shapes the form, while the API stays
  * authoritative (Payment Core spec, "Review exit"):
  *
- * - nothing is resolvable until the Review has been open for 72 hours;
+ * - a status resolution waits until the Review has been open for 72 hours (the
+ *   notes on late-success and duplicate-success Reviews are never locked: Core
+ *   accepts them at any time);
  * - `AMBIGUOUS_PROVIDER_STATUS`: SUCCEEDED (only while the Payment is `PENDING`,
  *   with the collected amount equal to the Payment Amount) or FAILED;
  * - `AMOUNT_MISMATCH`: FAILED only;
@@ -27,7 +29,7 @@ export type Verdict = { allowed: true } | { allowed: false; reason: string };
 export interface ReviewActions {
   /** The PaymentTransaction is still in Review. */
   open: boolean;
-  /** Open for less than 72 hours (or opened time unknown): nothing can be done yet. */
+  /** Open for less than 72 hours (or opened time unknown), on a Review that takes a status: nothing can be done yet. */
   locked: boolean;
   succeed: Verdict;
   fail: Verdict;
@@ -39,8 +41,10 @@ const no = (reason: string): Verdict => ({ allowed: false, reason });
 
 export function reviewActions(facts: ReviewFacts, now: Date = new Date()): ReviewActions {
   const open = facts.attemptStatus === 'REQUIRES_REVIEW';
+  const noteOnly = facts.reason === 'LATE_SUCCESS_ON_CLOSED_PAYMENT' || facts.reason === 'DUPLICATE_SUCCESS';
   const locked =
-    !facts.reviewOpenedAt || Date.parse(facts.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR > now.getTime();
+    !noteOnly &&
+    (!facts.reviewOpenedAt || Date.parse(facts.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR > now.getTime());
 
   if (!open) {
     const done = no('This Review has already been resolved.');

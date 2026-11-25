@@ -1,4 +1,5 @@
 import 'server-only';
+import { isMockModeEnabled } from '@/mocks/mode';
 import pkg from '../../package.json';
 
 export interface ConsoleEnvironment {
@@ -16,7 +17,7 @@ export const DEFAULT_API_BASE_URL = 'http://localhost:3000';
 export function getEnvironment(env: Record<string, string | undefined> = process.env): ConsoleEnvironment {
   return {
     apiBaseUrl: env.CONSOLE_API_BASE_URL || DEFAULT_API_BASE_URL,
-    mockMode: env.CONSOLE_API_MOCKS === 'true',
+    mockMode: isMockModeEnabled(env),
     version: pkg.version,
   };
 }

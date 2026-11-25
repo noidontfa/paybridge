@@ -11,7 +11,7 @@ function recordingFetch(respond: () => Response = () => Response.json({ ok: true
 }
 
 describe('forwardToApi', () => {
-  it('sends the same path, method, query and body to the API base URL', async () => {
+  it('sends the same path, method and query, and the body with the Operator as actor, to the API base URL', async () => {
     const { calls, fetchImpl } = recordingFetch();
     const request = new Request('http://console.test/api/bff/internal/payments/p%201/other-write?a=1&b=x%20y', {
       method: 'POST',
@@ -22,12 +22,13 @@ describe('forwardToApi', () => {
     const response = await forwardToApi(request, ['internal', 'payments', 'p 1', 'other-write'], {
       baseUrl: 'http://api.internal:3000/',
       fetch: fetchImpl,
+      operator: () => ({ id: 'op-1', name: 'Op' }),
     });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe('http://api.internal:3000/internal/payments/p%201/other-write?a=1&b=x%20y');
     expect(calls[0]?.init.method).toBe('POST');
-    expect(new TextDecoder().decode(calls[0]?.init.body as ArrayBuffer)).toBe('{"note":"n"}');
+    expect(new TextDecoder().decode(calls[0]?.init.body as ArrayBuffer)).toBe('{"note":"n","actor":"op-1"}');
     expect(new Headers(calls[0]?.init.headers).get('content-type')).toBe('application/json');
     expect(new Headers(calls[0]?.init.headers).get('cookie')).toBeNull();
     expect(await response.json()).toEqual({ ok: true });
@@ -35,7 +36,7 @@ describe('forwardToApi', () => {
 
   it('sends no body for GET and passes the API status through', async () => {
     const { calls, fetchImpl } = recordingFetch(() => Response.json({ message: 'gone' }, { status: 404 }));
-    const response = await forwardToApi(new Request('http://console.test/api/bff/payments/x'), ['payments', 'x'], {
+    const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
       baseUrl: 'http://api.internal:3000',
       fetch: fetchImpl,
     });
@@ -44,7 +45,7 @@ describe('forwardToApi', () => {
   });
 
   it('answers 502 in the API error shape when the API is unreachable', async () => {
-    const response = await forwardToApi(new Request('http://console.test/api/bff/payments/x'), ['payments', 'x'], {
+    const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
       baseUrl: 'http://api.internal:3000',
       fetch: (async () => {
         throw new TypeError('fetch failed');
@@ -77,9 +78,14 @@ describe('forwardToApi', () => {
       expect(sentBody(call).actor).toBe('op-7');
     });
 
-    it('leaves other writes and other methods untouched', async () => {
-      const other = await send(JSON.stringify({ actor: 'x' }), ['internal', 'payments', 'p1', 'something']);
-      expect(sentBody(other)).toEqual({ actor: 'x' });
+    it('sets actor on every operator write, whatever the path', async () => {
+      const other = await send(JSON.stringify({ actor: 'x', note: 'n' }), ['internal', 'payments', 'p1', 'something']);
+      expect(sentBody(other)).toEqual({ actor: 'op-7', note: 'n' });
+      const put = await send(JSON.stringify({ actor: 'x' }), ['internal', 'a', 'b', 'c', 'd', 'e'], 'POST');
+      expect(sentBody(put).actor).toBe('op-7');
+    });
+
+    it('leaves reads untouched', async () => {
       const get = await send(undefined, ['internal', 'payments', 'p1', 'review-resolution'], 'GET');
       expect(get.init.body).toBeUndefined();
     });
@@ -87,6 +93,56 @@ describe('forwardToApi', () => {
     it('forwards a body that is not a JSON object unchanged, for the API to reject', async () => {
       const call = await send('not json');
       expect(new TextDecoder().decode(call.init.body as ArrayBuffer)).toBe('not json');
+    });
+  });
+
+  describe('what may be forwarded', () => {
+    const attempt = async (path: string[], method = 'GET') => {
+      const { calls, fetchImpl } = recordingFetch();
+      const response = await forwardToApi(new Request('http://console.test/api/bff/x', { method, body: method === 'GET' ? undefined : '{}' }), path, {
+        baseUrl: 'http://api.internal:3000',
+        fetch: fetchImpl,
+      });
+      return { calls, response };
+    };
+
+    it.each([
+      [['payments', 'x']],
+      [['health']],
+      [[]],
+    ])('rejects a path outside /internal: %j', async (path) => {
+      const { calls, response } = await attempt(path);
+      expect(response.status).toBe(404);
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each([
+      [['internal', '..', 'admin']],
+      [['internal', '%2e%2e', 'admin']],
+      [['internal', '%2E%2E', 'admin']],
+      [['internal', '.', 'x']],
+      [['internal', 'a/../b']],
+      [['internal', 'a\\b']],
+    ])('rejects path traversal: %j', async (path) => {
+      const { calls, response } = await attempt(path);
+      expect(response.status).toBe(400);
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each(['PUT', 'PATCH', 'DELETE', 'OPTIONS'])('rejects the method %s', async (method) => {
+      const { calls, response } = await attempt(['internal', 'payments'], method);
+      expect(response.status).toBe(405);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('does not forward set-cookie from the API', async () => {
+      const { fetchImpl } = recordingFetch(() => new Response('{}', { headers: { 'set-cookie': 'a=b', 'content-type': 'application/json' } }));
+      const response = await forwardToApi(new Request('http://console.test/api/bff/internal/x'), ['internal', 'x'], {
+        baseUrl: 'http://api.internal:3000',
+        fetch: fetchImpl,
+      });
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(response.headers.get('content-type')).toBe('application/json');
     });
   });
 });

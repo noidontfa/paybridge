@@ -20,4 +20,12 @@ describe('server environment', () => {
     expect(env.apiBaseUrl).toBe('http://localhost:3000');
     expect(env.mockMode).toBe(false);
   });
+
+  it('refuses mock mode in a production build, like the BFF does', () => {
+    expect(() => getEnvironment({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'production' })).toThrow(/production/);
+  });
+
+  it('ignores mock flag values other than "true"', () => {
+    expect(getEnvironment({ CONSOLE_API_MOCKS: '1' }).mockMode).toBe(false);
+  });
 });

@@ -6,10 +6,13 @@
  * - 400 `VALIDATION_FAILED`: the body is malformed (actor, attempt id, note of
  *   1 to 2000 characters after trimming, `status` of SUCCEEDED or FAILED,
  *   `amount` a decimal string and required for SUCCEEDED);
- * - 404 `PAYMENT_NOT_FOUND`, `PAYMENT_TRANSACTION_NOT_FOUND`;
- * - 409 `REVIEW_NOT_OPEN`, `REVIEW_NOT_RESOLVABLE_YET` (under 72 hours),
- *   `PAYMENT_NOT_PENDING` (SUCCEEDED on a Payment that is not PENDING);
- * - 422 `AMOUNT_DOES_NOT_MATCH`, `RESOLUTION_NOT_ALLOWED` (for the review reason).
+ * - 404 `PAYMENT_NOT_FOUND`, `ATTEMPT_NOT_FOUND`;
+ * - 409, the codes and order of Core's `decideReviewResolution`:
+ *   `ATTEMPT_NOT_IN_REVIEW`; `REVIEW_RESOLUTION_NOT_ALLOWED` (a status on a
+ *   late-success or duplicate-success Review, which takes notes only, at any
+ *   time; a note only on the other reasons; SUCCEEDED on `AMOUNT_MISMATCH`, on
+ *   a Payment that is not PENDING, or with an amount that differs);
+ *   `REVIEW_WINDOW_OPEN` (a status resolution under 72 hours).
  *
  * Effects: the attempt becomes SUCCEEDED or FAILED (its review reason stays,
  * which keeps it a closed Review) with an `operator_resolution` transition; a
@@ -21,7 +24,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { z } from 'zod';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
 import { REVIEW_NOTE_MAX_LENGTH } from '@/lib/api/review-resolution';
-import { decimalStringSchema, type ReviewReason } from '@/lib/api/schemas';
+import { decimalStringSchema } from '@/lib/api/schemas';
 import { compareDecimal } from '@/lib/decimal';
 import type { MockAttempt, MockPayment, MockStore } from './store';
 
@@ -45,16 +48,8 @@ interface Failure {
 export type ErrorResponder = (request: Request, init: Failure) => Response;
 
 const failure = (status: number, error: string, code: string, message: string): Failure => ({ status, error, code, message });
-const unprocessable = (code: string, message: string) => failure(422, 'Unprocessable Entity', code, message);
+const notAllowed = (message: string) => conflict('REVIEW_RESOLUTION_NOT_ALLOWED', message);
 const conflict = (code: string, message: string) => failure(409, 'Conflict', code, message);
-
-/** The reasons an Operator may set a status on, and which statuses. */
-const STATUSES_FOR: Record<ReviewReason, readonly string[]> = {
-  AMBIGUOUS_PROVIDER_STATUS: ['SUCCEEDED', 'FAILED'],
-  AMOUNT_MISMATCH: ['FAILED'],
-  LATE_SUCCESS_ON_CLOSED_PAYMENT: [],
-  DUPLICATE_SUCCESS: [],
-};
 
 export function resolveReview(
   store: MockStore,
@@ -76,34 +71,36 @@ export function resolveReview(
   if (!payment) return fail(failure(404, 'Not Found', 'PAYMENT_NOT_FOUND', `Payment ${paymentId} was not found`));
   const attempt: MockAttempt | undefined = store.attempts.find((a) => a.id === attemptId && a.paymentId === paymentId);
   if (!attempt) {
-    return fail(failure(404, 'Not Found', 'PAYMENT_TRANSACTION_NOT_FOUND', `PaymentTransaction ${attemptId} was not found on Payment ${paymentId}`));
+    return fail(failure(404, 'Not Found', 'ATTEMPT_NOT_FOUND', `Payment ${paymentId} has no attempt ${attemptId}`));
   }
 
   if (attempt.status !== 'REQUIRES_REVIEW' || !attempt.reviewReason || !attempt.reviewOpenedAt) {
-    return fail(conflict('REVIEW_NOT_OPEN', 'This PaymentTransaction is not in Review any more.'));
+    return fail(conflict('ATTEMPT_NOT_IN_REVIEW', `Attempt ${attempt.id} is ${attempt.status}, not REQUIRES_REVIEW`));
   }
   const now = store.clock();
-  if (Date.parse(attempt.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR > now.getTime()) {
-    return fail(conflict('REVIEW_NOT_RESOLVABLE_YET', `A Review can be resolved only after it has been open for ${REVIEW_RESOLVABLE_AFTER_HOURS} hours.`));
-  }
+  const reason = attempt.reviewReason;
 
-  const allowed = STATUSES_FOR[attempt.reviewReason];
-  if (status ? !allowed.includes(status) : allowed.length > 0) {
-    return fail(
-      unprocessable(
-        'RESOLUTION_NOT_ALLOWED',
-        status
-          ? `A ${attempt.reviewReason} Review cannot be resolved to ${status}.`
-          : `A ${attempt.reviewReason} Review must be resolved to ${allowed.join(' or ')}; a note alone is not enough.`,
-      ),
-    );
-  }
-  if (status === 'SUCCEEDED') {
-    if (payment.status !== 'PENDING') {
-      return fail(conflict('PAYMENT_NOT_PENDING', `The Payment is no longer pending (it is ${payment.status}), so it cannot be marked succeeded.`));
+  // The order of Core's `decideReviewResolution`.
+  if (reason === 'LATE_SUCCESS_ON_CLOSED_PAYMENT' || reason === 'DUPLICATE_SUCCESS') {
+    if (status !== undefined) {
+      return fail(notAllowed(`A ${reason} review accepts notes only; its status cannot be changed until refunds exist`));
     }
-    if (compareDecimal(amount!, payment.amount) !== 0) {
-      return fail(unprocessable('AMOUNT_DOES_NOT_MATCH', `The amount ${amount} does not equal the Payment Amount ${payment.amount}.`));
+    // Notes on these are accepted at any time: no 72-hour wait.
+  } else {
+    if (status === undefined) {
+      return fail(notAllowed(`A ${reason} resolution needs a status (SUCCEEDED or FAILED)`));
+    }
+    if (Date.parse(attempt.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR > now.getTime()) {
+      return fail(conflict('REVIEW_WINDOW_OPEN', `A Review can be resolved by an operator only after it has been open for ${REVIEW_RESOLVABLE_AFTER_HOURS} hours.`));
+    }
+    if (status === 'SUCCEEDED') {
+      if (reason === 'AMOUNT_MISMATCH') return fail(notAllowed('An AMOUNT_MISMATCH review can only be set to FAILED'));
+      if (payment.status !== 'PENDING') {
+        return fail(notAllowed(`Payment ${payment.id} is ${payment.status}; SUCCEEDED needs a PENDING Payment`));
+      }
+      if (compareDecimal(amount!, payment.amount) !== 0) {
+        return fail(notAllowed(`Amount ${amount} differs from the Payment amount ${payment.amount}; SUCCEEDED needs them equal`));
+      }
     }
   }
 

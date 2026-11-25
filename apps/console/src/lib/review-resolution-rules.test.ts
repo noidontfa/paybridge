@@ -46,8 +46,8 @@ describe('reviewActions', () => {
     },
   );
 
-  it('locks every action until the Review has been open for 72 hours', () => {
-    for (const reason of ['AMBIGUOUS_PROVIDER_STATUS', 'AMOUNT_MISMATCH', 'DUPLICATE_SUCCESS'] as const) {
+  it('locks status resolutions until the Review has been open for 72 hours', () => {
+    for (const reason of ['AMBIGUOUS_PROVIDER_STATUS', 'AMOUNT_MISMATCH'] as const) {
       const a = reviewActions(facts({ reason, reviewOpenedAt: ago(71.9) }), NOW);
       for (const verdict of [a.succeed, a.fail, a.note]) {
         expect(verdict.allowed).toBe(false);
@@ -56,6 +56,14 @@ describe('reviewActions', () => {
       expect(a.locked).toBe(true);
     }
   });
+
+  it.each(['LATE_SUCCESS_ON_CLOSED_PAYMENT', 'DUPLICATE_SUCCESS'] as const)(
+    'does not lock a note on %s: Core accepts notes on these at any time',
+    (reason) => {
+      expect(allowed(reason, { reviewOpenedAt: ago(1), paymentStatus: 'EXPIRED' })).toEqual({ succeed: false, fail: false, note: true });
+      expect(reviewActions(facts({ reason, reviewOpenedAt: ago(1) }), NOW).locked).toBe(false);
+    },
+  );
 
   it('unlocks at exactly 72 hours', () => {
     const a = reviewActions(facts({ reviewOpenedAt: ago(72) }), NOW);
