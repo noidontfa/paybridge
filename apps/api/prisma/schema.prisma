@@ -122,6 +122,9 @@ model Payment {
   outboxEvents    OutboxEvent[]
 
   @@index([status, expiresAt], map: "core_payments_pending_expiry_idx", where: { status: "PENDING" })
+  /// Operator Payments list: keyset paging by creation time or amount (id is the tiebreaker).
+  @@index([createdAt, id], map: "core_payments_created_at_id_idx")
+  @@index([amount, id], map: "core_payments_amount_id_idx")
   @@map("core_payments")
 }
 
@@ -153,6 +156,9 @@ model PaymentTransaction {
   /// Invariant 7: at most one SUCCEEDED attempt per Payment.
   @@unique([paymentId], map: "core_payment_transactions_one_succeeded_uq", where: { status: "SUCCEEDED" })
   @@index([paymentId], map: "core_payment_transactions_payment_id_idx")
+  /// Operator Payments list: latest attempt of a Payment, and the gateway filter.
+  @@index([paymentId, createdAt, id], map: "core_payment_transactions_payment_created_idx")
+  @@index([gatewayId, paymentId], map: "core_payment_transactions_gateway_payment_idx")
   @@map("core_payment_transactions")
 }
 
