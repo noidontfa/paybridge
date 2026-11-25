@@ -7,6 +7,7 @@
  * array plus an accessor here, seed it in `./seed.ts`, and serve it from
  * `./handlers.ts`. Mutating handlers push to / edit these arrays directly.
  */
+import type { CallbackStatus } from '@/lib/api/callbacks';
 import type {
   AttemptStatus,
   NextAction,
@@ -42,6 +43,22 @@ export interface MockAttempt {
   updatedAt: string;
 }
 
+/** A row of the webhook inbox (a Callback), body and all. */
+export interface MockCallback {
+  id: string;
+  gatewayId: string;
+  providerEventId: string | null;
+  attemptKey: string | null;
+  status: CallbackStatus;
+  attempts: number;
+  receivedAt: string;
+  processedAt: string | null;
+  headers: Record<string, string>;
+  query: Record<string, string>;
+  rawBody: string;
+  lastError: string | null;
+}
+
 export class MockStore {
   constructor(
     readonly now: Date,
@@ -49,7 +66,12 @@ export class MockStore {
     readonly attempts: MockAttempt[] = [],
     readonly transitions: StatusTransition[] = [],
     readonly events: PaymentEvent[] = [],
+    readonly callbacks: MockCallback[] = [],
   ) {}
+
+  getCallback(id: string): MockCallback | undefined {
+    return this.callbacks.find((c) => c.id === id);
+  }
 
   getPayment(id: string): MockPayment | undefined {
     return this.payments.find((p) => p.id === id);

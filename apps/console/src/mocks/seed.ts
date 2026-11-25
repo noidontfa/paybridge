@@ -18,6 +18,7 @@ import type {
   ReviewReason,
 } from '@/lib/api/schemas';
 import { createRandom, type Random } from './random';
+import { seedCallbacks } from './seed-callbacks';
 import { MockStore, type MockAttempt, type MockPayment } from './store';
 
 /** The fixed "now" of the mock world. */
@@ -164,6 +165,7 @@ export function createSeededStore(options: { seed?: number; now?: Date } = {}): 
   for (let index = 0; index < PAYMENT_COUNT; index += 1) {
     seedPayment(store, random, deck[index % deck.length]!, index);
   }
+  seedCallbacks(store, createRandom((options.seed ?? DEFAULT_SEED) ^ 0xca11bac));
   return store;
 }
 
