@@ -8,6 +8,7 @@
  * every error has the API's envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { paymentsListHandlers } from './payments-list';
 import type { MockStore } from './store';
 
 export interface HandlerOptions {
@@ -42,6 +43,9 @@ export function apiError(
 export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[] {
   const base = baseUrl.replace(/\/$/, '');
   return [
+    ...paymentsListHandlers(base, store, (request, message) =>
+      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+    ),
     http.get(`${base}/internal/payments/:id`, ({ request, params }) => {
       const id = String(params.id);
       const payment = store.getOperatorPayment(id);
