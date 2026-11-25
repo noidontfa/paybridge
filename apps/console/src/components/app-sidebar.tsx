@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { NavMain } from '@/components/nav-main';
 import { NavSecondary } from '@/components/nav-secondary';
 import { NavUser } from '@/components/nav-user';
+import { OrganizationSwitcher } from '@/components/organization-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +33,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain sections={mainNav} />

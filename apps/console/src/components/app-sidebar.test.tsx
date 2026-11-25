@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { ReviewSummary } from '@/lib/api/reviews';
 import { OperatorProvider, type Operator } from '@/lib/operator';
+import type { OrganizationList } from '@/lib/api/organizations';
+import { organizationKeys } from '@/lib/queries/organizations';
 import { reviewKeys } from '@/lib/queries/reviews';
 import { AppSidebar } from './app-sidebar';
 
@@ -34,10 +37,16 @@ function summary(open: number): ReviewSummary {
 }
 
 /** The Review summary is served from the query cache, so no network is needed. */
-function renderShell(path = '/', openReviews: number | null = null, operator: Operator = { id: 'operator', name: 'Operator' }) {
+function renderShell(
+  path = '/',
+  openReviews: number | null = null,
+  operator: Operator = { id: 'operator', name: 'Operator' },
+  organizations?: OrganizationList,
+) {
   pathname.current = path;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   if (openReviews !== null) client.setQueryData(reviewKeys.summary(), summary(openReviews));
+  if (organizations) client.setQueryData(organizationKeys.list(), organizations);
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider attribute="class" defaultTheme="system">
@@ -145,6 +154,33 @@ describe('Console sidebar', () => {
     it('is hidden until the count is known', () => {
       renderShell('/');
       expect(screen.queryByLabelText(/open Review/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the Organization switcher', () => {
+    const superAdmin: Operator = { id: 'sa', name: 'Sam Super', role: 'SUPER_ADMIN', organization: null };
+    const organizations = { items: [{ id: '6f1f3f0e-3b8e-4c43-9a5c-1f2d3e4f5a6b', name: 'Acme Retail', status: 'ACTIVE' as const }] };
+
+    it('is offered to a Super Admin, with All Organizations and each Organization', () => {
+      renderShell('/', null, superAdmin, organizations);
+      const select = screen.getByRole('combobox', { name: 'Organization' });
+      expect(within(select).getByRole('option', { name: 'All Organizations' })).toBeInTheDocument();
+      expect(within(select).getByRole('option', { name: 'Acme Retail' })).toBeInTheDocument();
+    });
+
+    it('remembers the choice in the organization cookie', async () => {
+      const reload = vi.fn();
+      vi.stubGlobal('location', { ...window.location, reload });
+      renderShell('/', null, superAdmin, organizations);
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Organization' }), 'Acme Retail');
+      expect(document.cookie).toContain('pb_org=6f1f3f0e-3b8e-4c43-9a5c-1f2d3e4f5a6b');
+      expect(reload).toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+
+    it('is not offered to anyone else', () => {
+      renderShell('/', null, { id: 'u', name: 'Una', role: 'ORGANIZATION_ADMIN', organization: 'Acme Retail' }, organizations);
+      expect(screen.queryByRole('combobox', { name: 'Organization' })).not.toBeInTheDocument();
     });
   });
 });

@@ -9,6 +9,8 @@
  */
 export const ACCESS_COOKIE = 'pb_access';
 export const REFRESH_COOKIE = 'pb_refresh';
+/** A Super Admin's chosen Organization (an id, or `all`). Not a secret: the API checks who may use it. */
+export const ORGANIZATION_COOKIE = 'pb_org';
 
 /** The longest a refresh token lives (7 days), in seconds. */
 const REFRESH_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;

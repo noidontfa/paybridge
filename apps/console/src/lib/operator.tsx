@@ -16,6 +16,8 @@ export interface Operator {
   role?: string;
   /** The Organization's name; null for a Super Admin. Absent in mock mode. */
   organization?: string | null;
+  /** What the User may do (the API's Permission names). Absent in mock mode: everything is allowed. */
+  permissions?: string[];
 }
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -35,6 +37,16 @@ const OperatorContext = createContext<Operator | null>(null);
 
 export function OperatorProvider({ operator, children }: { operator: Operator; children: React.ReactNode }) {
   return <OperatorContext.Provider value={operator}>{children}</OperatorContext.Provider>;
+}
+
+/**
+ * Whether the signed-in User holds `permission`. The API refuses the action
+ * anyway; this only hides what would be refused. Without a session (mock mode)
+ * nothing is hidden.
+ */
+export function useCan(permission: string): boolean {
+  const permissions = useContext(OperatorContext)?.permissions;
+  return permissions === undefined || permissions.includes(permission);
 }
 
 export function useCurrentOperator(): Operator {

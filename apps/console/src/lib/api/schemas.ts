@@ -77,6 +77,10 @@ export const statusTransitionSchema = z.object({
   toStatus: z.string(),
   trigger: z.string(),
   actor: z.string(),
+  /** The acting User's name, when a User acted. */
+  actorName: z.string().nullish(),
+  /** "Super Admin (PayBridge)" when the platform acted in the Organization. */
+  actorLabel: z.string().nullish(),
   /** Shown as the "note" of the transition. */
   reason: z.string().nullable(),
   createdAt: isoTimeSchema,
