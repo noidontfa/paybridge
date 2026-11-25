@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ConsoleReadModule } from './console/console-read.module.js';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
 import { CancelPayment } from './application/use-cases/cancel-payment.js';
@@ -58,7 +59,7 @@ import {
  * Later tickets register their providers here, keeping each array sorted.
  */
 @Module({
-  imports: [QueueModule],
+  imports: [ConsoleReadModule, QueueModule],
   controllers: [
     AttemptsController,
     BrowserReturnController,

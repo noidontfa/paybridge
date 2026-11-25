@@ -7,7 +7,7 @@ export const metadata = { title: 'Callbacks' };
 export default function Page() {
   return (
     <>
-      <PageHeader title="Callbacks" description="What each PaymentGateway sent to PayBridge. Not Payment Events, which Core emits." />
+      <PageHeader title="Callbacks" description="Webhook inbox. What each PaymentGateway sent to PayBridge. Not Payment Events, which Core emits." />
       <Suspense>
         <CallbacksScreen />
       </Suspense>
