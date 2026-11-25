@@ -41,3 +41,7 @@ jobs:
       - run: pnpm test
       # Includes test/payment-core/concurrency.int-spec.ts (two real connections).
       - run: pnpm test:int
+      # The Console (Next.js): production build, then Playwright against it in mock mode.
+      - run: pnpm turbo run build --filter=@paybridge/console
+      - run: pnpm --filter @paybridge/console exec playwright install --with-deps chromium
+      - run: pnpm turbo run test:e2e --filter=@paybridge/console

@@ -3,9 +3,15 @@ node_modules
 
 # build
 dist
+.next
 .turbo
 *.tsbuildinfo
 coverage
+next-env.d.ts
+
+# playwright
+test-results
+playwright-report
 
 # generated Prisma client
 **/src/generated
@@ -24,3 +30,4 @@ coverage
 .idea
 .vscode/*
 !.vscode/extensions.json
+.claude/worktrees/

@@ -1,0 +1,148 @@
+import { describe, expect, it } from 'vitest';
+import { forwardToApi } from './bff-proxy';
+
+function recordingFetch(respond: () => Response = () => Response.json({ ok: true })) {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+    calls.push({ url: url.toString(), init: init ?? {} });
+    return respond();
+  }) as typeof fetch;
+  return { calls, fetchImpl };
+}
+
+describe('forwardToApi', () => {
+  it('sends the same path, method and query, and the body with the Operator as actor, to the API base URL', async () => {
+    const { calls, fetchImpl } = recordingFetch();
+    const request = new Request('http://console.test/api/bff/internal/payments/p%201/other-write?a=1&b=x%20y', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: 'secret=1' },
+      body: JSON.stringify({ note: 'n' }),
+    });
+
+    const response = await forwardToApi(request, ['internal', 'payments', 'p 1', 'other-write'], {
+      baseUrl: 'http://api.internal:3000/',
+      fetch: fetchImpl,
+      operator: () => ({ id: 'op-1', name: 'Op' }),
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe('http://api.internal:3000/internal/payments/p%201/other-write?a=1&b=x%20y');
+    expect(calls[0]?.init.method).toBe('POST');
+    expect(new TextDecoder().decode(calls[0]?.init.body as ArrayBuffer)).toBe('{"note":"n","actor":"op-1"}');
+    expect(new Headers(calls[0]?.init.headers).get('content-type')).toBe('application/json');
+    expect(new Headers(calls[0]?.init.headers).get('cookie')).toBeNull();
+    expect(await response.json()).toEqual({ ok: true });
+  });
+
+  it('sends no body for GET and passes the API status through', async () => {
+    const { calls, fetchImpl } = recordingFetch(() => Response.json({ message: 'gone' }, { status: 404 }));
+    const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
+      baseUrl: 'http://api.internal:3000',
+      fetch: fetchImpl,
+    });
+    expect(calls[0]?.init.body).toBeUndefined();
+    expect(response.status).toBe(404);
+  });
+
+  it('answers 502 in the API error shape when the API is unreachable', async () => {
+    const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
+      baseUrl: 'http://api.internal:3000',
+      fetch: (async () => {
+        throw new TypeError('fetch failed');
+      }) as typeof fetch,
+    });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ statusCode: 502, code: 'API_UNREACHABLE' });
+  });
+
+  describe('review resolution', () => {
+    const OPERATOR = { id: 'op-7', name: 'Dana Operator' };
+    const send = async (body: BodyInit | undefined, path = ['internal', 'payments', 'p1', 'review-resolution'], method = 'POST') => {
+      const { calls, fetchImpl } = recordingFetch();
+      await forwardToApi(new Request(`http://console.test/api/bff/${path.join('/')}`, { method, body }), path, {
+        baseUrl: 'http://api.internal:3000',
+        fetch: fetchImpl,
+        operator: () => OPERATOR,
+      });
+      return calls[0]!;
+    };
+    const sentBody = (call: { init: RequestInit }) => JSON.parse(new TextDecoder().decode(call.init.body as ArrayBuffer));
+
+    it('sets actor from the current Operator', async () => {
+      const call = await send(JSON.stringify({ attemptId: 'a1', note: 'n', status: 'FAILED' }));
+      expect(sentBody(call)).toEqual({ attemptId: 'a1', note: 'n', status: 'FAILED', actor: 'op-7' });
+    });
+
+    it('ignores an actor sent by the browser', async () => {
+      const call = await send(JSON.stringify({ attemptId: 'a1', note: 'n', actor: 'someone-else' }));
+      expect(sentBody(call).actor).toBe('op-7');
+    });
+
+    it('sets actor on every operator write, whatever the path', async () => {
+      const other = await send(JSON.stringify({ actor: 'x', note: 'n' }), ['internal', 'payments', 'p1', 'something']);
+      expect(sentBody(other)).toEqual({ actor: 'op-7', note: 'n' });
+      const put = await send(JSON.stringify({ actor: 'x' }), ['internal', 'a', 'b', 'c', 'd', 'e'], 'POST');
+      expect(sentBody(put).actor).toBe('op-7');
+    });
+
+    it('leaves reads untouched', async () => {
+      const get = await send(undefined, ['internal', 'payments', 'p1', 'review-resolution'], 'GET');
+      expect(get.init.body).toBeUndefined();
+    });
+
+    it('forwards a body that is not a JSON object unchanged, for the API to reject', async () => {
+      const call = await send('not json');
+      expect(new TextDecoder().decode(call.init.body as ArrayBuffer)).toBe('not json');
+    });
+  });
+
+  describe('what may be forwarded', () => {
+    const attempt = async (path: string[], method = 'GET') => {
+      const { calls, fetchImpl } = recordingFetch();
+      const response = await forwardToApi(new Request('http://console.test/api/bff/x', { method, body: method === 'GET' ? undefined : '{}' }), path, {
+        baseUrl: 'http://api.internal:3000',
+        fetch: fetchImpl,
+      });
+      return { calls, response };
+    };
+
+    it.each([
+      [['payments', 'x']],
+      [['health']],
+      [[]],
+    ])('rejects a path outside /internal: %j', async (path) => {
+      const { calls, response } = await attempt(path);
+      expect(response.status).toBe(404);
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each([
+      [['internal', '..', 'admin']],
+      [['internal', '%2e%2e', 'admin']],
+      [['internal', '%2E%2E', 'admin']],
+      [['internal', '.', 'x']],
+      [['internal', 'a/../b']],
+      [['internal', 'a\\b']],
+    ])('rejects path traversal: %j', async (path) => {
+      const { calls, response } = await attempt(path);
+      expect(response.status).toBe(400);
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each(['PUT', 'PATCH', 'DELETE', 'OPTIONS'])('rejects the method %s', async (method) => {
+      const { calls, response } = await attempt(['internal', 'payments'], method);
+      expect(response.status).toBe(405);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('does not forward set-cookie from the API', async () => {
+      const { fetchImpl } = recordingFetch(() => new Response('{}', { headers: { 'set-cookie': 'a=b', 'content-type': 'application/json' } }));
+      const response = await forwardToApi(new Request('http://console.test/api/bff/internal/x'), ['internal', 'x'], {
+        baseUrl: 'http://api.internal:3000',
+        fetch: fetchImpl,
+      });
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(response.headers.get('content-type')).toBe('application/json');
+    });
+  });
+});

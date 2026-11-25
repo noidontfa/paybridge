@@ -56,6 +56,26 @@ _Avoid_: Timeout, TTL
 A PaymentGateway reporting that a PaymentTransaction has been paid after Core has already closed it or moved on from it.
 _Avoid_: Late callback, Duplicate payment
 
+**Callback**:
+A server-to-server notification that a PaymentGateway sends to PayBridge about a PaymentTransaction. Callbacks are inbound only; notifications PayBridge sends to the merchant are not Callbacks.
+_Avoid_: Webhook, IPN, Notification
+
 **Ignored Callback**:
 A verified PaymentGateway callback that does not concern any PayBridge PaymentTransaction (an event type the plugin does not handle, or a provider object PayBridge did not create). Core acknowledges it with the plugin's acknowledgement and stores nothing.
 _Avoid_: Dropped webhook, Skipped event
+
+**Operator**:
+A person working for the merchant who monitors Payments and resolves Reviews. Every status change an Operator makes is recorded with their identity and a note.
+_Avoid_: Admin, Administrator, Support agent
+
+**Review**:
+A PaymentTransaction that Core could not settle automatically. It carries a review reason (ambiguous provider status, amount mismatch, late success on a closed Payment, or duplicate success) and the time it opened. It closes by automatic re-query or by an Operator's resolution.
+_Avoid_: Dispute, Case, Flag
+
+**Payment Event**:
+A record that Core emits when a Payment or PaymentTransaction reaches a status other systems must know about.
+_Avoid_: Outbox message, Notification
+
+**Webhook**:
+The delivery of a Payment Event to the merchant's system. Not built yet; inbound notifications from a PaymentGateway are Callbacks, not Webhooks.
+_Avoid_: Callback, Notification
