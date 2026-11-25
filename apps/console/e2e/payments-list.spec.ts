@@ -64,11 +64,16 @@ test('stays usable at phone width: the table scrolls, the page does not', async 
 });
 
 test('follows the table density from Settings', async ({ page }) => {
+  const rowHeight = async () => {
+    // Wait for real rows: while loading the table shows skeleton rows.
+    await expect(page.getByRole('table', { name: 'Payments' }).getByRole('link').first()).toBeVisible();
+    return page.locator('[data-slot="table-body"] tr').first().evaluate((el) => el.getBoundingClientRect().height);
+  };
   await page.addInitScript(() => localStorage.setItem('paybridge.density', 'compact'));
   await page.goto('/payments');
-  const compact = await page.locator('[data-slot="table-body"] tr').first().evaluate((el) => el.getBoundingClientRect().height);
+  const compact = await rowHeight();
   await page.addInitScript(() => localStorage.setItem('paybridge.density', 'comfortable'));
   await page.reload();
-  const comfortable = await page.locator('[data-slot="table-body"] tr').first().evaluate((el) => el.getBoundingClientRect().height);
+  const comfortable = await rowHeight();
   expect(compact).toBeLessThan(comfortable);
 });

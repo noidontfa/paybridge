@@ -10,6 +10,8 @@
 import type { z } from 'zod';
 import { BFF_PREFIX } from '@/lib/bff';
 import { ApiError, CLIENT_ERROR_CODES } from './errors';
+import type { OverviewRange } from '@/lib/overview-range';
+import { overviewSchema, type Overview } from './overview-schema';
 import { apiErrorBodySchema, operatorPaymentSchema, type OperatorPayment } from './schemas';
 
 /** Operator routes live under the API's internal prefix. */
@@ -87,4 +89,9 @@ export async function request<S extends z.ZodType>(
 /** `GET /internal/payments/:id`: a Payment with its attempts, transitions and events. */
 export function getOperatorPayment(id: string, signal?: AbortSignal): Promise<OperatorPayment> {
   return request(`${INTERNAL}/payments/${encodeURIComponent(id)}`, operatorPaymentSchema, { signal });
+}
+
+/** `GET /internal/overview?range=`: figures, chart data, gateway breakdown and recent Payments. */
+export function getOverview(range: OverviewRange, signal?: AbortSignal): Promise<Overview> {
+  return request(`${INTERNAL}/overview`, overviewSchema, { query: { range }, signal });
 }
