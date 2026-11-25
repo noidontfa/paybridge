@@ -14,6 +14,8 @@ export interface TransitionCause {
   readonly trigger: string;
   /** e.g. `customer`, `system`, an operator id. */
   readonly actor: string;
+  /** The Role the acting User held, when the actor is a User. */
+  readonly actorRole?: string;
   readonly reason?: string | null;
 }
 
@@ -52,6 +54,7 @@ export async function recordAttemptTransition(
     toStatus: to,
     trigger: cause.trigger,
     actor: cause.actor,
+    actorRole: cause.actorRole ?? null,
     reason: cause.reason ?? null,
   });
   return updated;

@@ -7,8 +7,6 @@ import { z } from 'zod';
  */
 export const reviewResolutionSchema = z.object({
   attemptId: z.uuid(),
-  /** Required caller identity; trusted because the route is internal. */
-  actor: z.string().trim().min(1).max(128),
   note: z.string().trim().min(1).max(2000),
   status: z.enum(['SUCCEEDED', 'FAILED']).optional(),
   amount: z.string().trim().min(1).max(40).optional(),
@@ -20,13 +18,6 @@ export type ReviewResolutionBody = z.output<typeof reviewResolutionSchema>;
 export class ReviewResolutionBodyDto {
   @ApiProperty({ format: 'uuid', description: 'The attempt in review' })
   attemptId: string;
-
-  @ApiProperty({
-    example: 'ops.alice',
-    description:
-      'Who is resolving. Required and trusted: the route is internal and Phase 1 has no authentication.',
-  })
-  actor: string;
 
   @ApiProperty({
     description: 'Mandatory explanation, kept in the audit trail',

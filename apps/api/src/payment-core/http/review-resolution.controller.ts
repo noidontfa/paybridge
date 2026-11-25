@@ -22,7 +22,11 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../constants.js';
 import { PaymentService } from '../application/payment.service.js';
 import type { OrganizationScope } from '../domain/organization-scope.js';
-import { CurrentScope } from './current-scope.decorator.js';
+import {
+  CurrentActor,
+  CurrentScope,
+  type Actor,
+} from './current-scope.decorator.js';
 import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,
@@ -35,8 +39,8 @@ import {
 
 /**
  * Operator endpoint. It lives under `/internal` (outside the public `/api`
- * prefix) and has no authentication in Phase 1: keeping it off the public
- * ingress is a deployment concern.
+ * prefix) and needs a signed-in User: the actor and their Role come from the
+ * access token, never from the body.
  */
 @ApiTags('internal')
 @Controller(`${INTERNAL_PREFIX}/payments/:paymentId/review-resolution`)
@@ -63,6 +67,7 @@ export class ReviewResolutionController {
   })
   async resolve(
     @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() actor: Actor,
     @Param('paymentId', new ParseUUIDPipe()) paymentId: string,
     @Body(new ZodValidationPipe(reviewResolutionSchema))
     body: ReviewResolutionBody,
@@ -70,6 +75,8 @@ export class ReviewResolutionController {
     const payment = await this.payments.resolveReview(scope, {
       paymentId,
       ...body,
+      actor: actor.userId,
+      actorRole: actor.role,
     });
     return toPaymentDetailResponse(payment);
   }

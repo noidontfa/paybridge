@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { Principal } from '../../common/principal/principal.js';
 import { DEFAULT_ORGANIZATION_ID } from '../domain/organization.js';
-import { PrincipalResolver } from '../port/principal-resolver.js';
 
 /**
- * Temporary: no sign-in exists yet, so every caller is scoped to the default
- * Organization. Ticket 04 replaces this with the User's access token, and
- * ticket 09 adds API Keys.
+ * Temporary: the public payments API has no API Keys yet, so its callers are
+ * scoped to the default Organization. Ticket 09 replaces this with API Keys.
+ * Operator routes never use it: they need a User's access token.
  */
 @Injectable()
-export class StubPrincipalResolver extends PrincipalResolver {
+export class StubPrincipalResolver {
   resolve(): Principal {
-    return { organizationId: DEFAULT_ORGANIZATION_ID };
+    return { organizationId: DEFAULT_ORGANIZATION_ID, user: null };
   }
 }

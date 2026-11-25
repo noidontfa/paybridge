@@ -10,6 +10,7 @@ import type { ReviewReason } from '../../src/payment-core/domain/statuses.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { signedInHttp, type SignedInHttp } from '../setup/users.js';
 import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 29: operator review resolution over HTTP.
@@ -21,6 +22,7 @@ const clock = new FakeClock(new Date(OPENED.getTime() + 73 * HOUR));
 let app: INestApplication;
 let service: PaymentService;
 let runner: TransactionRunner;
+let operator: SignedInHttp;
 
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -32,6 +34,7 @@ beforeAll(async () => {
   await app.init();
   service = moduleRef.get(PaymentService);
   runner = moduleRef.get(TransactionRunner);
+  operator = await signedInHttp(app, prisma);
 });
 
 afterAll(async () => {
@@ -79,7 +82,7 @@ async function seedReview(
 }
 
 const resolve = (paymentId: string, body: Record<string, unknown>) =>
-  request(app.getHttpServer())
+  operator
     .post(`/internal/payments/${paymentId}/review-resolution`)
     .send(body);
 
@@ -100,7 +103,7 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     const { paymentId, attemptId } = await seedReview(
       'AMBIGUOUS_PROVIDER_STATUS',
     );
-    const body = { attemptId, actor: 'ops.alice', note: 'n', status: 'FAILED' };
+    const body = { attemptId, note: 'n', status: 'FAILED' };
     const server = request(app.getHttpServer());
 
     await server
@@ -118,26 +121,45 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     await resolve(paymentId, body).expect(200);
   });
 
-  it('requires a note and an actor', async () => {
+  it('requires a note', async () => {
     const { paymentId, attemptId } = await seedReview(
       'AMBIGUOUS_PROVIDER_STATUS',
     );
 
     await resolve(paymentId, {
       attemptId,
-      actor: 'ops.alice',
       status: 'FAILED',
     }).expect(400);
     await resolve(paymentId, {
       attemptId,
-      actor: 'ops.alice',
       note: '   ',
       status: 'FAILED',
     }).expect(400);
-    await resolve(paymentId, { attemptId, note: 'x', status: 'FAILED' }).expect(
-      400,
-    );
     expect((await attemptRow(attemptId)).status).toBe('REQUIRES_REVIEW');
+  });
+
+  it('records the signed-in User and their Role, never an actor from the body', async () => {
+    const { paymentId, attemptId } = await seedReview('AMOUNT_MISMATCH');
+    const admin = await signedInHttp(app, prisma, {
+      role: 'ORGANIZATION_ADMIN',
+    });
+
+    await admin
+      .post(`/internal/payments/${paymentId}/review-resolution`)
+      .send({ attemptId, actor: 'someone-else', note: 'n', status: 'FAILED' })
+      .expect(200);
+
+    expect(await trail(attemptId)).toEqual([
+      expect.objectContaining({
+        actor: admin.user.id,
+        actorRole: 'ORGANIZATION_ADMIN',
+      }),
+    ]);
+    const audit = await admin.get('/internal/status-transitions').expect(200);
+    expect(audit.body.items[0]).toMatchObject({
+      actor: admin.user.id,
+      actorRole: 'ORGANIZATION_ADMIN',
+    });
   });
 
   it('409 before the review is 72 hours old', async () => {
@@ -148,7 +170,6 @@ describe('POST /internal/payments/:id/review-resolution', () => {
 
     const res = await resolve(paymentId, {
       attemptId,
-      actor: 'ops.alice',
       note: 'too early',
       status: 'FAILED',
     }).expect(409);
@@ -162,7 +183,6 @@ describe('POST /internal/payments/:id/review-resolution', () => {
 
     const res = await resolve(paymentId, {
       attemptId,
-      actor: 'ops.alice',
       note: 'provider confirmed no money',
       status: 'FAILED',
     }).expect(200);
@@ -178,7 +198,8 @@ describe('POST /internal/payments/:id/review-resolution', () => {
         fromStatus: 'REQUIRES_REVIEW',
         toStatus: 'FAILED',
         trigger: 'operator_resolution',
-        actor: 'ops.alice',
+        actor: operator.user.id,
+        actorRole: 'OPERATOR',
         reason: 'provider confirmed no money',
       }),
     ]);
@@ -192,7 +213,6 @@ describe('POST /internal/payments/:id/review-resolution', () => {
 
     const res = await resolve(paymentId, {
       attemptId,
-      actor: 'ops.bob',
       note: 'bank statement shows 150000',
       status: 'SUCCEEDED',
       amount: '150000',
@@ -206,7 +226,8 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     expect(await trail(attemptId)).toEqual([
       expect.objectContaining({
         toStatus: 'SUCCEEDED',
-        actor: 'ops.bob',
+        actor: operator.user.id,
+        actorRole: 'OPERATOR',
         reason: 'bank statement shows 150000',
       }),
     ]);
@@ -220,7 +241,6 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     const a = await seedReview('AMBIGUOUS_PROVIDER_STATUS');
     const body = (attemptId: string, extra: Record<string, unknown>) => ({
       attemptId,
-      actor: 'ops.bob',
       note: 'n',
       status: 'SUCCEEDED',
       ...extra,
@@ -259,12 +279,10 @@ describe('POST /internal/payments/:id/review-resolution', () => {
 
       await resolve(paymentId, {
         attemptId,
-        actor: 'ops.carol',
         note: 'customer contacted; refund when available',
       }).expect(200);
       await resolve(paymentId, {
         attemptId,
-        actor: 'ops.carol',
         note: 'x',
         status: 'FAILED',
       }).expect(409);
@@ -279,7 +297,8 @@ describe('POST /internal/payments/:id/review-resolution', () => {
           fromStatus: 'REQUIRES_REVIEW',
           toStatus: 'REQUIRES_REVIEW',
           trigger: 'operator_note',
-          actor: 'ops.carol',
+          actor: operator.user.id,
+          actorRole: 'OPERATOR',
           reason: 'customer contacted; refund when available',
         }),
       ]);
@@ -290,7 +309,7 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     const { paymentId, attemptId } = await seedReview(
       'AMBIGUOUS_PROVIDER_STATUS',
     );
-    const body = { actor: 'ops.alice', note: 'n', status: 'FAILED' };
+    const body = { note: 'n', status: 'FAILED' };
 
     await resolve(newId(), { ...body, attemptId }).expect(404);
     await resolve(paymentId, { ...body, attemptId: newId() }).expect(404);

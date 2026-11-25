@@ -3,6 +3,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
+import type { UserRole } from '../src/identity/domain/user.js';
+import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import {
   callbackSpecs,
   eventSpecs,
@@ -43,6 +45,7 @@ export interface SeedOptions {
 
 export interface SeedResult {
   organizations: number;
+  users: number;
   payments: number;
   attempts: number;
   transitions: number;
@@ -61,6 +64,56 @@ const ORGANIZATIONS: Record<OrganizationKey, { id: string; name: string }> = {
   primary: { id: DEFAULT_ORGANIZATION_ID, name: 'Default Organization' },
   acme: { id: id('organization:acme-retail'), name: 'Acme Retail' },
 };
+
+/** The one password every seeded User has. Development only: the seed refuses production. */
+export const SEED_PASSWORD = 'paybridge-dev-password';
+
+interface SeedUser {
+  readonly key: string;
+  readonly email: string;
+  readonly name: string;
+  readonly role: UserRole;
+  readonly organization: OrganizationKey | null;
+}
+
+/** A Super Admin, plus an Organization Admin and an Operator in each Organization. */
+export const SEED_USERS: readonly SeedUser[] = [
+  {
+    key: 'super-admin',
+    email: 'super.admin@paybridge.dev',
+    name: 'Sam Super Admin',
+    role: 'SUPER_ADMIN',
+    organization: null,
+  },
+  {
+    key: 'admin-primary',
+    email: 'admin@default.paybridge.dev',
+    name: 'Dana Admin (Default)',
+    role: 'ORGANIZATION_ADMIN',
+    organization: 'primary',
+  },
+  {
+    key: 'operator-primary',
+    email: 'operator@default.paybridge.dev',
+    name: 'Olu Operator (Default)',
+    role: 'OPERATOR',
+    organization: 'primary',
+  },
+  {
+    key: 'admin-acme',
+    email: 'admin@acme.paybridge.dev',
+    name: 'Ana Admin (Acme)',
+    role: 'ORGANIZATION_ADMIN',
+    organization: 'acme',
+  },
+  {
+    key: 'operator-acme',
+    email: 'operator@acme.paybridge.dev',
+    name: 'Omar Operator (Acme)',
+    role: 'OPERATOR',
+    organization: 'acme',
+  },
+];
 
 function assertAllowed(options: SeedOptions): void {
   if (options.nodeEnv === 'production') {
@@ -86,6 +139,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   }
   const now = (options.now ?? new Date()).getTime();
   const rows = buildRows(now, bulk);
+  const passwordHash = await new Argon2PasswordHasher().hash(SEED_PASSWORD);
 
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: options.databaseUrl }),
@@ -100,6 +154,25 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             where: { id: organization.id },
             update: {},
             create: organization,
+          });
+        }
+        // Users are kept across re-runs (their sign-ins stay valid); the
+        // password and the active flag are reset so the seed always works.
+        for (const user of SEED_USERS) {
+          const data = {
+            email: user.email,
+            name: user.name,
+            passwordHash,
+            role: user.role,
+            organizationId: user.organization
+              ? ORGANIZATIONS[user.organization].id
+              : null,
+            active: true,
+          };
+          await tx.user.upsert({
+            where: { id: id(`user:${user.key}`) },
+            update: data,
+            create: { id: id(`user:${user.key}`), ...data },
           });
         }
         await insertChunked(rows.payments, (data) =>
@@ -125,6 +198,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   }
   return {
     organizations: Object.keys(ORGANIZATIONS).length,
+    users: SEED_USERS.length,
     payments: rows.payments.length,
     attempts: rows.attempts.length,
     transitions: rows.transitions.length,
