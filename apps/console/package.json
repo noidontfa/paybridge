@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 8888",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit -p tsconfig.json",

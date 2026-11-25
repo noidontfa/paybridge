@@ -36,8 +36,8 @@ pnpm docker:up          # PostgreSQL :5432 + Redis :6379
 pnpm dev                # generates the Prisma client, then starts the API with watch
 ```
 
-- API: <http://localhost:3000/api/health>
-- Swagger UI: <http://localhost:3000/docs> (OpenAPI JSON at `/docs/json`)
+- API: <http://localhost:9999/api/health>
+- Swagger UI: <http://localhost:9999/docs> (OpenAPI JSON at `/docs/json`)
 
 ## Scripts (run from the repo root)
 
@@ -104,14 +104,14 @@ are loaded for `NODE_ENV` (default `development`), first match wins:
 
 The Operator Console (`apps/console`, Next.js) reads the API through its BFF. In development it uses the
 real API by default (`apps/console/.env.development`: `CONSOLE_API_MOCKS=false`,
-`CONSOLE_API_BASE_URL=http://localhost:3000`). The API listens on 3000 and the Console dev server on 3001.
+`CONSOLE_API_BASE_URL=http://localhost:9999`). The API listens on 9999 and the Console dev server on 8888.
 
 ```bash
 pnpm docker:up                              # PostgreSQL + Redis
 pnpm db:deploy                              # apply migrations
 pnpm db:seed                                # 22 Payments, Callbacks, Events (`--bulk N` for more; re-run to reset)
-pnpm --filter @paybridge/api dev            # API on :3000
-pnpm --filter @paybridge/console dev        # Console on :3001
+pnpm --filter @paybridge/api dev            # API on :9999
+pnpm --filter @paybridge/console dev        # Console on :8888
 ```
 
 - **Mock mode** (no backend, in-process MSW data): put `CONSOLE_API_MOCKS=true` in `apps/console/.env.local`
