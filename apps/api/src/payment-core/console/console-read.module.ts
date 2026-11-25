@@ -17,7 +17,7 @@ import { PaymentsListModule } from './payments-list.module.js';
 
 // ticket 06: GatewaysModule
 
-// ticket 07: DeveloperViewsModule
+import { DeveloperViewsModule } from './developer-views.module.js';
 
 @Module({
   imports: [
@@ -31,7 +31,7 @@ import { PaymentsListModule } from './payments-list.module.js';
 
     // ticket 06
 
-    // ticket 07
+    DeveloperViewsModule,
   ],
 })
 export class ConsoleReadModule {}
