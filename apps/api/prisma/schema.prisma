@@ -159,6 +159,8 @@ model PaymentTransaction {
   /// Operator Payments list: latest attempt of a Payment, and the gateway filter.
   @@index([paymentId, createdAt, id], map: "core_payment_transactions_payment_created_idx")
   @@index([gatewayId, paymentId], map: "core_payment_transactions_gateway_payment_idx")
+  /// Operator Reviews list: keyset paging by the time the Review opened.
+  @@index([reviewOpenedAt, id], map: "core_payment_transactions_review_opened_idx")
   @@map("core_payment_transactions")
 }
 

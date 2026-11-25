@@ -11,7 +11,7 @@ import { PaymentsListModule } from './payments-list.module.js';
 
 import { PaymentDetailModule } from './payment-detail.module.js';
 
-// ticket 04: ReviewsModule
+import { ReviewsModule } from './reviews.module.js';
 
 // ticket 05: OverviewModule
 
@@ -25,7 +25,7 @@ import { PaymentDetailModule } from './payment-detail.module.js';
 
     PaymentDetailModule,
 
-    // ticket 04
+    ReviewsModule,
 
     // ticket 05
 
