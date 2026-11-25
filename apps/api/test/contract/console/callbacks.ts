@@ -1,0 +1,51 @@
+// COPIED BY HAND from apps/console/src/lib/api/callbacks.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// Do not edit this copy; change the Console file and copy again.
+/**
+ * `GET /internal/callbacks` and `GET /internal/callbacks/:id`: what each
+ * PaymentGateway sent (Callbacks). A Callback is inbound only; it is
+ * not a Payment Event.
+ */
+import { z } from 'zod';
+import { listPageSchema, type ListPage, type ListQuery } from './pagination.js';
+
+/** The inbox statuses (API `WebhookInboxStatus`). */
+export const CALLBACK_STATUSES = ['RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED'] as const;
+export const callbackStatusSchema = z.enum(CALLBACK_STATUSES);
+export type CallbackStatus = z.infer<typeof callbackStatusSchema>;
+
+export const callbackListItemSchema = z.object({
+  id: z.string(),
+  gatewayId: z.string(),
+  /** Absent when the gateway sent no event id. */
+  providerEventId: z.string().nullable(),
+  /** The Attempt Key (PaymentTransaction id) the Callback names, if any. */
+  attemptKey: z.string().nullable(),
+  status: callbackStatusSchema,
+  /** Delivery attempts (processing tries so far). */
+  attempts: z.number().int().nonnegative(),
+  receivedAt: z.string(),
+  processedAt: z.string().nullable(),
+});
+export type CallbackListItem = z.infer<typeof callbackListItemSchema>;
+
+export const callbackDetailSchema = callbackListItemSchema.extend({
+  /** Allow-listed per plugin. */
+  headers: z.record(z.string(), z.string()),
+  query: z.record(z.string(), z.string()),
+  /** The body exactly as received, as text. Never render it as HTML. */
+  rawBody: z.string(),
+  lastError: z.string().nullable(),
+  /** The Payment of the PaymentTransaction the Attempt Key names; null when it matches none. */
+  paymentId: z.string().nullable(),
+});
+export type CallbackDetail = z.infer<typeof callbackDetailSchema>;
+
+export const callbackListSchema = listPageSchema(callbackListItemSchema);
+export type CallbackList = ListPage<CallbackListItem>;
+
+export interface CallbackListQuery extends ListQuery {
+  gatewayId?: string;
+  status?: string;
+  /** Callback id, Provider Event id, Attempt Key, or the Payment id / Upstream Reference it resolves to. */
+  q?: string;
+}

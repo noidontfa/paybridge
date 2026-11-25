@@ -17,7 +17,7 @@ import { OverviewModule } from './overview.module.js';
 
 import { GatewaysModule } from './gateways.module.js';
 
-// ticket 07: DeveloperViewsModule
+import { DeveloperViewsModule } from './developer-views.module.js';
 
 @Module({
   imports: [
@@ -31,7 +31,7 @@ import { GatewaysModule } from './gateways.module.js';
 
     GatewaysModule,
 
-    // ticket 07
+    DeveloperViewsModule,
   ],
 })
 export class ConsoleReadModule {}

@@ -230,6 +230,7 @@ model OutboxEvent {
 
   @@index([id], map: "core_outbox_events_unpublished_idx", where: raw("(published_at IS NULL)"))
   @@index([publishedAt], map: "core_outbox_events_published_at_idx")
+  @@index([createdAt, id], map: "core_outbox_events_created_at_id_idx")
   @@map("core_outbox_events")
 }
 
@@ -275,5 +276,6 @@ model StatusTransition {
   createdAt  DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([entityType, entityId, createdAt], map: "core_status_transitions_entity_idx")
+  @@index([createdAt, id], map: "core_status_transitions_created_at_id_idx")
   @@map("core_status_transitions")
 }
