@@ -8,6 +8,7 @@
  * every error has the API's envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { eventsAuditHandlers } from './events-audit';
 import { callbacksHandlers } from './callbacks';
 import { gatewaysHandlers } from './gateways';
 import { paymentsListHandlers } from './payments-list';
@@ -49,6 +50,13 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
   return [
     ...paymentsListHandlers(base, store, (request, message) =>
       apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+    ),
+    ...eventsAuditHandlers(
+      base,
+      store,
+      (request, message) =>
+        apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+      (request, code, message) => apiError(request, { status: 404, error: 'Not Found', code, message }, store.now),
     ),
     ...callbacksHandlers(
       base,
