@@ -370,3 +370,22 @@ describe('Super Admin scope', () => {
     expect(all.body.items).toHaveLength(0);
   });
 });
+
+describe('GET /internal/organizations (manage Organizations)', () => {
+  it('lists Organizations for a Super Admin only', async () => {
+    const other = await createOrganization(prisma, 'Listed Organization');
+    const superAdmin = await signedInHttp(app, prisma, { role: 'SUPER_ADMIN' });
+    const res = await superAdmin.get('/internal/organizations').expect(200);
+    expect(res.body.items).toEqual(
+      expect.arrayContaining([
+        { id: other, name: 'Listed Organization', status: 'ACTIVE' },
+      ]),
+    );
+
+    for (const role of ['OPERATOR', 'ORGANIZATION_ADMIN'] as const) {
+      const user = await signedInHttp(app, prisma, { role });
+      const refused = await user.get('/internal/organizations').expect(403);
+      expect(refused.body.code).toBe('FORBIDDEN');
+    }
+  });
+});

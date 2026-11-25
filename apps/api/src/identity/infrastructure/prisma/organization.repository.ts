@@ -27,6 +27,13 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
     return row ? toOrganization(row) : null;
   }
 
+  async list(): Promise<Organization[]> {
+    const rows = await this.ctx.db.organization.findMany({
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toOrganization);
+  }
+
   async create(organization: NewOrganization): Promise<Organization> {
     const row = await this.ctx.db.organization.create({
       data: { id: organization.id, name: organization.name },

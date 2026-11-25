@@ -10,6 +10,7 @@ import { SignOut } from './application/use-cases/sign-out.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
+import { OrganizationsController } from './http/organizations.controller.js';
 import { PrincipalGuard } from './http/principal.guard.js';
 import { StubPrincipalResolver } from './http/stub-principal.resolver.js';
 import { Argon2PasswordHasher } from './infrastructure/crypto/argon2-password-hasher.js';
@@ -33,7 +34,7 @@ import { UserRepository } from './port/user.repository.js';
  * Needs the global `PrismaModule`.
  */
 @Module({
-  controllers: [AuthController, JwksController],
+  controllers: [AuthController, JwksController, OrganizationsController],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
