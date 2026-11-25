@@ -145,14 +145,14 @@ describe('gateways without Stripe configured', () => {
     expect(detail.lastCallbackAt).toBeNull();
   });
 
-  it('last Callback time may be older than 24 hours', async () => {
+  it('last Callback time ignores Callbacks older than 24 hours', async () => {
     const at = new Date(Date.now() - 48 * HOUR);
     await insertCallback('fake', 'PROCESSED', at);
     const detail = await api.getValid(
       '/internal/gateways/fake',
       gatewayDetailSchema,
     );
-    expect(detail.lastCallbackAt).toBe(at.toISOString());
+    expect(detail.lastCallbackAt).toBeNull();
     expect(detail.callbackCounts.PROCESSED).toBe(0);
   });
 

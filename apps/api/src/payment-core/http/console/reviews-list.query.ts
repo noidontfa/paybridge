@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { REVIEW_REASONS } from '../../domain/statuses.js';
-import { optionalParam, pagingShape, readKeysetCursor } from './list-query.js';
-
-const isIsoTime = (value: string) =>
-  !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
+import {
+  isIsoTime,
+  optionalParam,
+  pagingShape,
+  parseKeysetCursor,
+} from './list-query.js';
 
 export const reviewsListQuerySchema = z
   .object({
@@ -18,17 +20,8 @@ export const reviewsListQuerySchema = z
   .transform((query, ctx) => {
     // Oldest first by default: the longest-waiting Review comes first.
     const order = query.order ?? 'asc';
-    const after = readKeysetCursor(
-      query.cursor,
-      `reviewOpenedAt:${order}`,
-      isIsoTime,
-    );
+    const after = parseKeysetCursor(ctx, query.cursor, `reviewOpenedAt:${order}`, isIsoTime, 'is not valid for this list and order');
     if (after === null) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['cursor'],
-        message: 'is not valid for this list and order',
-      });
       return z.NEVER;
     }
     return {

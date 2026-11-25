@@ -47,6 +47,12 @@ export interface OverviewData {
 }
 
 const RECENT_COUNT = 8;
+/** A Payment is closed once it reached one of these final states. */
+const CLOSED_STATUSES: readonly PaymentStatus[] = [
+  'SUCCEEDED',
+  'CANCELLED',
+  'EXPIRED',
+];
 const CURRENCY = 'VND';
 
 /**
@@ -153,7 +159,7 @@ export class OverviewReadRepository {
         g.volume = g.volume.plus(row.volume);
         g.succeeded += count;
       }
-      if (row.status !== 'PENDING') g.closed += count;
+      if (CLOSED_STATUSES.includes(row.status)) g.closed += count;
       perGateway.set(row.gateway_id, g);
     }
 
@@ -162,7 +168,7 @@ export class OverviewReadRepository {
       volume: decimalToString(volume._sum.amount ?? new Prisma.Decimal(0)),
       paymentCount,
       succeeded: countOf('SUCCEEDED'),
-      closed: paymentCount - countOf('PENDING'),
+      closed: CLOSED_STATUSES.reduce((n, s) => n + countOf(s), 0),
       openReviewCount,
       volumeSeries: series,
       statusCounts: PAYMENT_STATUSES.map((status) => ({

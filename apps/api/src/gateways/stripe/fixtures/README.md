@@ -12,11 +12,11 @@ responses. None was recorded from Stripe test mode.** They carry fake ids
 that Stripe really answers this way for our requests (VND, card-only,
 automatic capture). Re-record before relying on them as evidence.
 
-| Group                | Files                   | Notes                                                                                                                |
-| -------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Group | Files | Notes |
+| --- | --- | --- |
 | PaymentIntent states | `payment-intent.*.json` | One per status the plugin maps. `declined` is `requires_payment_method` plus `last_payment_error` (`card_declined`). |
-| Errors               | `error.*.json`          | Bodies of Stripe error responses; the HTTP status is chosen in the spec.                                             |
-| Search               | `search.*.json`         | `GET /v1/payment_intents/search` results.                                                                            |
+| Errors | `error.*.json` | Bodies of Stripe error responses; the HTTP status is chosen in the spec. |
+| Search | `search.*.json` | `GET /v1/payment_intents/search` results. |
 
 Webhook events are not stored as files. The specs build them in code around
 these PaymentIntent fixtures and sign them with `generateTestHeaderString`.
@@ -68,7 +68,6 @@ Use a Stripe account in test mode only (`sk_test_…`). Never record live mode.
    `error.unexpected-state-*` cannot be produced on demand in test mode. Keep
    them hand-built, or capture them with `stripe listen` / the Dashboard
    request log when they occur.
-
 4. Scrub before committing: replace `client_secret` with the fake value above,
    replace real ids with the fixture ids (the specs assert on
    `pi_3QxTest1AbCdEfGh0aBcDeFg` and the attempt key

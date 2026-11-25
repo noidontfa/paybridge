@@ -1,8 +1,8 @@
 // Vocabularies the developer views filter by. They mirror the database enums
-// (`WebhookInboxStatus`, `OutboxEventType`, `StatusTransitionEntityType`) and
+// (`WebhookInboxStatus`, stored as Callbacks, `OutboxEventType`, `StatusTransitionEntityType`) and
 // the Console's schemas.
 
-export const WEBHOOK_INBOX_STATUSES = [
+export const CALLBACK_STATUSES = [
   'RECEIVED',
   'PROCESSING',
   'PROCESSED',

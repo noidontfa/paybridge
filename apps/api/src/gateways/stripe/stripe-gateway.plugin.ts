@@ -11,6 +11,7 @@ import {
   type CancelInput,
   type CancelResult,
   type GatewayCapabilities,
+  type GatewayMode,
   type InitiateInput,
   type InitiateResult,
   type NormalizedStatus,
@@ -73,20 +74,18 @@ export class StripeGatewayPlugin implements PaymentGateway {
   readonly capabilities: GatewayCapabilities = { supportsCancel: true };
   readonly callbackHeaders = ['stripe-signature'] as const;
   /** From the secret key prefix: `sk_live_`/`rk_live_` is live, anything else test. */
-  readonly mode: 'test' | 'live';
+  readonly mode: GatewayMode;
 
   private readonly stripe: Stripe;
   private readonly publishableKey: string;
   private readonly webhookSecret: string;
-  private readonly livemode: boolean;
   private readonly logger: Pick<LoggerService, 'warn'>;
 
   constructor(options: StripeGatewayOptions) {
     this.publishableKey = options.publishableKey;
     this.webhookSecret = options.webhookSecret;
     this.logger = options.logger ?? new Logger(StripeGatewayPlugin.name);
-    this.livemode = /^(sk|rk)_live_/.test(options.secretKey);
-    this.mode = this.livemode ? 'live' : 'test';
+    this.mode = /^(sk|rk)_live_/.test(options.secretKey) ? 'live' : 'test';
     this.stripe = new Stripe(options.secretKey, {
       apiVersion: STRIPE_API_VERSION,
       maxNetworkRetries: options.maxNetworkRetries ?? 2,
@@ -190,7 +189,7 @@ export class StripeGatewayPlugin implements PaymentGateway {
   async parseCallback(input: CallbackInput): Promise<CallbackResult> {
     const event = this.verify(input);
     const status = EVENT_STATUS_MAP[event.type];
-    if (status === undefined || event.livemode !== this.livemode) {
+    if (status === undefined || event.livemode !== (this.mode === 'live')) {
       return { ignored: true, ack: SUCCESS_ACK };
     }
     const intent = event.data.object as Stripe.PaymentIntent;
