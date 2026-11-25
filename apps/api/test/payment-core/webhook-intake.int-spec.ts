@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { createHash, createHmac } from 'node:crypto';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Logger, type INestApplication } from '@nestjs/common';
@@ -70,7 +71,9 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ rawBody: true, logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
-  fake = app.get(FakeGatewayPlugin);
+  fake = app
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 beforeEach(async () => {

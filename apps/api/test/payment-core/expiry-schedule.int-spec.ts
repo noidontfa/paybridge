@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
@@ -125,7 +126,9 @@ describe('expiry sweep schedule', () => {
     const id = await createPendingPayment();
     const app = await bootInstance();
     const sweep = app.get(ExpirySweep);
-    const fake = app.get(FakeGatewayPlugin);
+    const fake = app
+      .get(GatewayManager, { strict: false })
+      .resolve('fake') as FakeGatewayPlugin;
 
     // The last sweep before the deadline leaves it alone.
     clock.set(new Date(DEADLINE.getTime() - 1));

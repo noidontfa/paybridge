@@ -9,6 +9,7 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import type { Payment } from '../../src/payment-core/domain/payment.js';
 import { canTransitionAttempt } from '../../src/payment-core/domain/rules/attempt-transitions.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
+import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
@@ -36,7 +37,12 @@ const beta = new FakeGatewayPlugin({
 });
 
 @Module({
-  providers: [{ provide: GATEWAY_PLUGINS, useValue: [alpha, beta] }],
+  providers: [
+    {
+      provide: GATEWAY_PLUGINS,
+      useValue: [fixedPlugin(alpha), fixedPlugin(beta)],
+    },
+  ],
   exports: [GATEWAY_PLUGINS],
 })
 class TwoGatewaysModule {}

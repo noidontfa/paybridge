@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
@@ -76,7 +77,9 @@ beforeAll(async () => {
   sweep = moduleRef.get(WebhookInboxSweep);
   worker = moduleRef.get(ProcessWebhook);
   service = moduleRef.get(PaymentService);
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
   inboxQueue = moduleRef.get<Queue>(getQueueToken(QUEUES.webhookInbox));
 });
 
