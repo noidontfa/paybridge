@@ -19,6 +19,8 @@ export interface NewStatusTransition {
   readonly actor: string;
   /** The Role the acting User held; absent for system and customer actors. */
   readonly actorRole?: string | null;
+  /** The acting User's name; absent for system and customer actors. */
+  readonly actorName?: string | null;
   readonly reason?: string | null;
 }
 

@@ -2,6 +2,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { BadgeKind } from '@/lib/status-badges';
 import type { StatusTransition } from '@/lib/api/schemas';
+import { actorText } from '@/lib/actor';
 
 const KIND_BY_ENTITY: Record<StatusTransition['entityType'], BadgeKind> = {
   PAYMENT: 'payment',
@@ -38,7 +39,7 @@ export function StatusHistory({ transitions }: { transitions: StatusTransition[]
                 <StatusBadge kind={KIND_BY_ENTITY[step.entityType]} value={step.toStatus} />
               </td>
               <td className="py-1.5 pr-4 font-mono text-xs">{step.trigger}</td>
-              <td className="py-1.5 pr-4">{step.actor}</td>
+              <td className="py-1.5 pr-4">{actorText(step)}</td>
               <td className="py-1.5 pr-4">{step.reason ?? <span className="text-muted-foreground">-</span>}</td>
               <td className="py-1.5">
                 <TimeText iso={step.createdAt} />

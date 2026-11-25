@@ -12,8 +12,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
-import { CurrentScope } from '../current-scope.decorator.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GatewaysOverview,
@@ -26,6 +27,7 @@ import {
  * the Console's `gatewayListSchema` and `gatewayDetailSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/gateways`)
 export class GatewaysController {
   constructor(
@@ -38,7 +40,7 @@ export class GatewaysController {
   })
   @ApiOkResponse({ description: '`{ items }`; never contains a credential' })
   async list(
-    @CurrentScope() scope: OrganizationScope,
+    @CurrentReadScope() scope: ReadScope,
   ): Promise<{ items: GatewaySummary[] }> {
     return { items: await this.gateways.list(scope) };
   }
@@ -51,7 +53,7 @@ export class GatewaysController {
   @ApiOkResponse({ description: 'Summary plus Callback counts by status' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async get(
-    @CurrentScope() scope: OrganizationScope,
+    @CurrentReadScope() scope: ReadScope,
     @Param('id') id: string,
   ): Promise<GatewayDetail> {
     const detail = await this.gateways.detail(scope, id);

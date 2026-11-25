@@ -394,6 +394,8 @@ model StatusTransition {
   actor          String
   /// The Role the acting User held; null for system and customer actors.
   actorRole      String?                    @map("actor_role")
+  /// The acting User's name, kept so read models need not read Users.
+  actorName      String?                    @map("actor_name")
   reason         String?
   createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
 

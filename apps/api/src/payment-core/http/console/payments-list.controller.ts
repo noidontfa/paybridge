@@ -7,8 +7,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentScope } from '../current-scope.decorator.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { ListPayments } from '../../application/use-cases/console/list-payments.js';
 import {
@@ -21,6 +22,7 @@ import {
  * public ingress). The response shape is the Console's `paymentListSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentsListController {
   constructor(
@@ -39,7 +41,7 @@ export class PaymentsListController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
-    @CurrentScope() scope: OrganizationScope,
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(paymentsListQuerySchema))
     query: PaymentsListQuery,
   ) {

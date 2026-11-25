@@ -4,13 +4,13 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A fixed Role-to-Permission map in code covers: view Payment data, resolve Review, manage Users, manage API Keys, manage Gateway Connections, manage Organizations, manage Super Admins
-- [ ] Every `/internal` route checks a named Permission, never a Role name; missing Permission is refused with the standard error envelope
-- [ ] Resolving a Review is a sensitive write: it re-reads in the database that the User is active, still holds the Role, and that the Organization is not suspended, and is refused at once otherwise
-- [ ] A Super Admin can read with one chosen Organization or with "all Organizations"; every write requires exactly one chosen Organization
-- [ ] A Super Admin can resolve a Review in any Organization with a note; operator read models label it "Super Admin (PayBridge)" with the User's name
-- [ ] The Console hides or disables actions the signed-in User has no Permission for
-- [ ] The Console gives Super Admins an Organization switcher and an "All Organizations" read view
-- [ ] Integration tests over HTTP cover every Permission for each Role, the refusals, the Super Admin scope rules, and the immediate refusal of a sensitive write after the User is deactivated or the Organization suspended (set directly in the test)
+- [x] A fixed Role-to-Permission map in code covers: view Payment data, resolve Review, manage Users, manage API Keys, manage Gateway Connections, manage Organizations, manage Super Admins
+- [x] Every `/internal` route checks a named Permission, never a Role name; missing Permission is refused with the standard error envelope
+- [x] Resolving a Review is a sensitive write: it re-reads in the database that the User is active, still holds the Role, and that the Organization is not suspended, and is refused at once otherwise
+- [x] A Super Admin can read with one chosen Organization or with "all Organizations"; every write requires exactly one chosen Organization
+- [x] A Super Admin can resolve a Review in any Organization with a note; operator read models label it "Super Admin (PayBridge)" with the User's name
+- [x] The Console hides or disables actions the signed-in User has no Permission for
+- [x] The Console gives Super Admins an Organization switcher and an "All Organizations" read view
+- [x] Integration tests over HTTP cover every Permission for each Role, the refusals, the Super Admin scope rules, and the immediate refusal of a sensitive write after the User is deactivated or the Organization suspended (set directly in the test)

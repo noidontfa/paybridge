@@ -29,6 +29,8 @@ export interface ResolveReviewInput {
   readonly actor: string;
   /** The Role that User held. */
   readonly actorRole: string;
+  /** That User's name. */
+  readonly actorName: string;
   readonly note: string;
   /** Absent: add a note without changing the status. */
   readonly status?: OperatorResolutionStatus;
@@ -79,6 +81,7 @@ export class ResolveReview {
         trigger: 'operator_resolution',
         actor: input.actor,
         actorRole: input.actorRole,
+        actorName: input.actorName,
         reason: input.note,
       };
       let cancelled: CancellableAttempt[] = [];
@@ -93,6 +96,7 @@ export class ResolveReview {
             trigger: 'operator_note',
             actor: input.actor,
             actorRole: input.actorRole,
+            actorName: input.actorName,
             reason: input.note,
           });
           break;

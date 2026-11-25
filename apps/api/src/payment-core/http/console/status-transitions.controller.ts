@@ -7,8 +7,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentScope } from '../current-scope.decorator.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { ListStatusTransitions } from '../../application/use-cases/console/status-transitions.js';
 import {
@@ -20,6 +21,7 @@ import {
  * Operator endpoint (needs a signed-in User). The response shape is the Console's `auditListSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/status-transitions`)
 export class StatusTransitionsController {
   constructor(
@@ -40,7 +42,7 @@ export class StatusTransitionsController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
-    @CurrentScope() scope: OrganizationScope,
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(statusTransitionsListQuerySchema))
     query: StatusTransitionsListQuery,
   ) {
@@ -55,6 +57,10 @@ export class StatusTransitionsController {
         trigger: row.trigger,
         actor: row.actor,
         actorRole: row.actorRole,
+        actorName: row.actorName,
+        // Platform staff acting in an Organization are labelled as such.
+        actorLabel:
+          row.actorRole === 'SUPER_ADMIN' ? 'Super Admin (PayBridge)' : null,
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         paymentId: row.paymentId,

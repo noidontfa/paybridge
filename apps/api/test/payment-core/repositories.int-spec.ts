@@ -95,6 +95,7 @@ describe('StatusTransitionRepository', () => {
         trigger: 'merchant_cancel',
         actor: 'merchant',
         actorRole: null,
+        actorName: null,
         reason: 'customer changed their mind',
         createdAt: expect.any(Date),
       },

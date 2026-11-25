@@ -16,7 +16,7 @@
  * ever put in a response body, and upstream `set-cookie` is not passed back.
  */
 import { refreshOnce } from './refresh-once';
-import { ACCESS_COOKIE, REFRESH_COOKIE, clearedSessionCookies, readCookie, sessionCookies, withCookies } from './session-cookies';
+import { ACCESS_COOKIE, ORGANIZATION_COOKIE, REFRESH_COOKIE, clearedSessionCookies, readCookie, sessionCookies, withCookies } from './session-cookies';
 import type { FetchLike } from './auth-api';
 
 const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'idempotency-key'];
@@ -31,6 +31,7 @@ export interface ForwardOptions {
   authenticate?: boolean;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_METHODS = ['GET', 'HEAD', 'POST'];
 const FORWARDED_PREFIX = 'internal';
 
@@ -100,6 +101,11 @@ export async function forwardToApi(request: Request, path: string[], options: Fo
     newCookies = sessionCookies(result.session);
     return true;
   };
+
+  // A Super Admin's chosen Organization (or "all") rides along; the API
+  // ignores it for everyone else. The browser's own header was not copied.
+  const organization = authenticate ? readCookie(request, ORGANIZATION_COOKIE) : undefined;
+  if (organization && (organization === 'all' || UUID.test(organization))) headers.set('x-organization-id', organization);
 
   if (authenticate && !accessToken && !(await refresh())) return sessionExpired(request);
 

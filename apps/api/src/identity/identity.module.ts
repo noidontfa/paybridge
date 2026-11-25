@@ -10,8 +10,10 @@ import { RequestPasswordReset } from './application/use-cases/request-password-r
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
+import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
+import { OrganizationsController } from './http/organizations.controller.js';
 import { PrincipalGuard } from './http/principal.guard.js';
 import { StubPrincipalResolver } from './http/stub-principal.resolver.js';
 import { Argon2PasswordHasher } from './infrastructure/crypto/argon2-password-hasher.js';
@@ -27,6 +29,7 @@ import { EmailSender } from './port/email-sender.js';
 import { OrganizationRepository } from './port/organization.repository.js';
 import { PasswordHasher } from './port/password-hasher.js';
 import { PrincipalResolver } from './port/principal-resolver.js';
+import { UserRepository } from './port/user.repository.js';
 
 /**
  * Identity: Organizations, Users, sign-in and tokens, Invitations, Password
@@ -34,9 +37,10 @@ import { PrincipalResolver } from './port/principal-resolver.js';
  * Needs the global `PrismaModule`.
  */
 @Module({
-  controllers: [AuthController, JwksController],
+  controllers: [AuthController, JwksController, OrganizationsController],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
+    { provide: APP_GUARD, useClass: AccessGuard },
     { provide: EmailSender, useClass: ConsoleLogEmailSender },
     StubPrincipalResolver,
     { provide: PrincipalResolver, useClass: HttpPrincipalResolver },
@@ -56,6 +60,11 @@ import { PrincipalResolver } from './port/principal-resolver.js';
       inject: [TransactionRunner],
       useFactory: (runner: TransactionRunner) =>
         runner.repositories.organizations,
+    },
+    {
+      provide: UserRepository,
+      inject: [TransactionRunner],
+      useFactory: (runner: TransactionRunner) => runner.repositories.users,
     },
     GetOrganization,
     SignIn,

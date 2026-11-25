@@ -232,5 +232,49 @@ describe('forwardToApi', () => {
       expect(response.headers.get('set-cookie')).toBeNull();
       expect(response.headers.get('content-type')).toBe('application/json');
     });
+
+    describe('the chosen Organization', () => {
+      const cookie = (access: string, refresh: string) => `pb_access=${access}; pb_refresh=${refresh}`;
+      const call = (fetchImpl: typeof fetch, cookies: string, body: string | undefined, method = 'POST') =>
+        forwardToApi(
+          new Request('http://console.test/api/bff/internal/payments/p1/review-resolution', {
+            method,
+            headers: { cookie: cookies, 'content-type': 'application/json' },
+            body,
+          }),
+          ['internal', 'payments', 'p1', 'review-resolution'],
+          { baseUrl: 'http://api.internal:3000', fetch: fetchImpl },
+        );
+      const ORG = '6f1f3f0e-3b8e-4c43-9a5c-1f2d3e4f5a6b';
+      const orgHeader = (call: { init: RequestInit }) => new Headers(call.init.headers).get('x-organization-id');
+
+      it('forwards the Super Admin\'s choice from the organization cookie as a header', async () => {
+        const { calls, fetchImpl } = recordingFetch();
+        await call(fetchImpl, `${cookie('access-A', 'refresh-A')}; pb_org=${ORG}`, '{}');
+        expect(orgHeader(calls[0]!)).toBe(ORG);
+      });
+
+      it('forwards "all" and falls back to nothing for anything else', async () => {
+        const all = recordingFetch();
+        await call(all.fetchImpl, `${cookie('access-A', 'refresh-A')}; pb_org=all`, undefined, 'GET');
+        expect(orgHeader(all.calls[0]!)).toBe('all');
+
+        const junk = recordingFetch();
+        await call(junk.fetchImpl, `${cookie('access-A', 'refresh-A')}; pb_org=not-an-id`, undefined, 'GET');
+        expect(orgHeader(junk.calls[0]!)).toBeNull();
+      });
+
+      it('never lets the browser send the header itself', async () => {
+        const { calls, fetchImpl } = recordingFetch();
+        await forwardToApi(
+          new Request('http://console.test/api/bff/internal/reviews', {
+            headers: { cookie: cookie('access-A', 'refresh-A'), 'x-organization-id': ORG },
+          }),
+          ['internal', 'reviews'],
+          { baseUrl: 'http://api.internal:3000', fetch: fetchImpl },
+        );
+        expect(orgHeader(calls[0]!)).toBeNull();
+      });
+    });
   });
 });

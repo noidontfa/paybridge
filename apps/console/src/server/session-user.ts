@@ -23,5 +23,5 @@ export async function getSessionOperator(): Promise<Operator | null> {
   if (!accessToken) return null;
   const user = await apiMe(apiBaseUrl, accessToken);
   if (!user) redirect('/api/auth/refresh?next=/');
-  return { id: user.id, name: user.name, role: user.role, organization: user.organization?.name ?? null };
+  return { id: user.id, name: user.name, role: user.role, organization: user.organization?.name ?? null, permissions: user.permissions };
 }

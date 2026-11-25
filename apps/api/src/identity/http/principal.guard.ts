@@ -9,7 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { PRINCIPAL_REQUEST_KEY } from '../../common/principal/principal.js';
 import { PrincipalResolver } from '../port/principal-resolver.js';
 
-const IS_PUBLIC = 'identity:public';
+export const IS_PUBLIC = 'identity:public';
 
 /** Marks an operator route that needs no access token (sign-in and the like). */
 export const Public = (): MethodDecorator & ClassDecorator =>
