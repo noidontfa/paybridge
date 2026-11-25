@@ -80,6 +80,16 @@ const envObject = z.object({
     .min(1)
     .max(1000)
     .default(100),
+  /**
+   * ES256 signing key of access tokens: a PKCS#8 PEM (P-256), newlines may be
+   * written as `\n`. Unset => a fresh key per process (development and tests
+   * only: restarting then signs everyone out). Production refuses to start
+   * without it.
+   */
+  AUTH_JWT_PRIVATE_KEY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
   /** Stripe Gateway Plugin: all three keys or none. */
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
@@ -88,6 +98,13 @@ const envObject = z.object({
 
 export const envSchema = envObject
   .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && !env.AUTH_JWT_PRIVATE_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_JWT_PRIVATE_KEY'],
+        message: 'is required in production (an ES256 PKCS#8 PEM key)',
+      });
+    }
     const missing = STRIPE_KEYS.filter((k) => !env[k]);
     if (missing.length > 0 && missing.length < STRIPE_KEYS.length) {
       ctx.addIssue({

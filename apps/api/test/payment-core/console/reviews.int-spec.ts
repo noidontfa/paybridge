@@ -1,4 +1,3 @@
-import request from 'supertest';
 import { runSeed } from '../../../seed/seed.js';
 import { Prisma } from '../../../src/generated/prisma/client.js';
 import { newId } from '../../../src/payment-core/domain/ids.js';
@@ -358,15 +357,15 @@ describe('seeded data', () => {
       (r) => Date.parse(r.resolvableAt) < Date.now(),
     );
     expect(target).toBeDefined();
-    const res = await request(api.app.getHttpServer())
-      .post(`/internal/payments/${target!.payment.id}/review-resolution`)
-      .send({
+    const res = await api.post(
+      `/internal/payments/${target!.payment.id}/review-resolution`,
+      {
         attemptId: target!.id,
-        actor: 'ops.test',
         note: 'Confirmed in the provider dashboard',
         status: 'SUCCEEDED',
         amount: target!.payment.amount,
-      });
+      },
+    );
     expect(res.status, JSON.stringify(res.body)).toBe(200);
 
     const after = await summary();

@@ -7,13 +7,17 @@
  * Only `/internal/...` paths and the methods GET, HEAD and POST are forwarded;
  * path segments that could climb out of that prefix are refused.
  *
- * Every write (any method other than GET and HEAD) gets its identity here,
- * never from the browser: `actor` of a JSON object body is overwritten from
- * the auth seam (`./current-operator.ts`). Upstream `set-cookie` is not passed
- * back to the browser.
+ * Identity comes from the session, never from the browser: the access token
+ * in the httpOnly cookie is forwarded as a bearer token, and the API derives
+ * the acting User from it. When the access token has expired (its cookie is
+ * gone) or the API refuses it, the proxy refreshes once with the refresh
+ * cookie and retries. When that fails it answers 401 `SESSION_EXPIRED` and
+ * clears the cookies, which sends the Console to the sign-in page. No token is
+ * ever put in a response body, and upstream `set-cookie` is not passed back.
  */
-import { getCurrentOperator } from './current-operator';
-import type { Operator } from '@/lib/operator';
+import { refreshOnce } from './refresh-once';
+import { ACCESS_COOKIE, REFRESH_COOKIE, clearedSessionCookies, readCookie, sessionCookies, withCookies } from './session-cookies';
+import type { FetchLike } from './auth-api';
 
 const FORWARDED_REQUEST_HEADERS = ['content-type', 'accept', 'idempotency-key'];
 const DROPPED_RESPONSE_HEADERS = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'set-cookie'];
@@ -22,9 +26,9 @@ export interface ForwardOptions {
   /** The API base URL (server-side configuration). */
   baseUrl: string;
   /** Replaceable in tests. */
-  fetch?: typeof fetch;
-  /** The current Operator (the auth seam). Replaceable in tests. */
-  operator?: () => Operator;
+  fetch?: FetchLike;
+  /** False in mock mode, where there is no API to sign in to. Default true. */
+  authenticate?: boolean;
 }
 
 const ALLOWED_METHODS = ['GET', 'HEAD', 'POST'];
@@ -48,26 +52,23 @@ function isUnsafeSegment(segment: string): boolean {
   return true;
 }
 
-function refuse(status: number, error: string, code: string, message: string, request: Request): Response {
-  return Response.json(
-    { statusCode: status, error, code, message, path: new URL(request.url).pathname, method: request.method, timestamp: new Date().toISOString() },
-    { status },
-  );
+function errorBody(status: number, error: string, code: string, message: string, request: Request) {
+  return { statusCode: status, error, code, message, path: new URL(request.url).pathname, method: request.method, timestamp: new Date().toISOString() };
 }
 
-/** The body with `actor` set to the Operator; a body that is not a JSON object goes through for the API to reject. */
-function withActor(body: ArrayBuffer, operator: Operator): ArrayBuffer {
-  try {
-    const parsed: unknown = JSON.parse(new TextDecoder().decode(body));
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return body;
-    return new TextEncoder().encode(JSON.stringify({ ...parsed, actor: operator.id })).buffer as ArrayBuffer;
-  } catch {
-    return body;
-  }
+function refuse(status: number, error: string, code: string, message: string, request: Request): Response {
+  return Response.json(errorBody(status, error, code, message, request), { status });
+}
+
+function sessionExpired(request: Request): Response {
+  const response = Response.json(errorBody(401, 'Unauthorized', 'SESSION_EXPIRED', 'Your session has ended. Sign in again.', request), { status: 401 });
+  return withCookies(response, clearedSessionCookies());
 }
 
 export async function forwardToApi(request: Request, path: string[], options: ForwardOptions): Promise<Response> {
   const incoming = new URL(request.url);
+  const fetchImpl = options.fetch ?? fetch;
+  const authenticate = options.authenticate ?? true;
   if (!ALLOWED_METHODS.includes(request.method)) {
     return refuse(405, 'Method Not Allowed', 'BFF_METHOD_NOT_ALLOWED', `The Console does not forward ${request.method}.`, request);
   }
@@ -84,35 +85,44 @@ export async function forwardToApi(request: Request, path: string[], options: Fo
     const value = request.headers.get(name);
     if (value !== null) headers.set(name, value);
   }
-  const hasBody = !isRead(request.method);
+  // Read once so a retry after a refresh can send it again.
+  const body: ArrayBuffer | undefined = isRead(request.method) ? undefined : await request.arrayBuffer();
 
-  let body: ArrayBuffer | undefined = hasBody ? await request.arrayBuffer() : undefined;
-  if (body) body = withActor(body, (options.operator ?? getCurrentOperator)());
+  let accessToken = authenticate ? readCookie(request, ACCESS_COOKIE) : undefined;
+  const refreshToken = authenticate ? readCookie(request, REFRESH_COOKIE) : undefined;
+  let newCookies: string[] = [];
+
+  const refresh = async (): Promise<boolean> => {
+    if (!refreshToken) return false;
+    const result = await refreshOnce(options.baseUrl, refreshToken, options.fetch);
+    if (!result.ok) return false;
+    accessToken = result.session.accessToken;
+    newCookies = sessionCookies(result.session);
+    return true;
+  };
+
+  if (authenticate && !accessToken && !(await refresh())) return sessionExpired(request);
+
+  const send = async (): Promise<Response> => {
+    const requestHeaders = new Headers(headers);
+    if (authenticate && accessToken) requestHeaders.set('authorization', `Bearer ${accessToken}`);
+    return fetchImpl(target, { method: request.method, headers: requestHeaders, body, cache: 'no-store' });
+  };
 
   let upstream: Response;
   try {
-    upstream = await (options.fetch ?? fetch)(target, {
-      method: request.method,
-      headers,
-      body,
-      cache: 'no-store',
-    });
+    upstream = await send();
+    if (authenticate && upstream.status === 401) {
+      if (newCookies.length > 0 || !(await refresh())) return sessionExpired(request);
+      upstream = await send();
+      if (upstream.status === 401) return sessionExpired(request);
+    }
   } catch {
-    return Response.json(
-      {
-        statusCode: 502,
-        error: 'Bad Gateway',
-        code: 'API_UNREACHABLE',
-        message: 'The Console server could not reach the API.',
-        path: incoming.pathname,
-        method: request.method,
-        timestamp: new Date().toISOString(),
-      },
-      { status: 502 },
-    );
+    return Response.json(errorBody(502, 'Bad Gateway', 'API_UNREACHABLE', 'The Console server could not reach the API.', request), { status: 502 });
   }
 
   const responseHeaders = new Headers(upstream.headers);
   for (const name of DROPPED_RESPONSE_HEADERS) responseHeaders.delete(name);
-  return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders });
+  const response = new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders });
+  return withCookies(response, newCookies);
 }

@@ -17,6 +17,8 @@ export interface NewStatusTransition {
   readonly trigger: string;
   /** Who caused it, e.g. `merchant`, `system`, an operator id. */
   readonly actor: string;
+  /** The Role the acting User held; absent for system and customer actors. */
+  readonly actorRole?: string | null;
   readonly reason?: string | null;
 }
 

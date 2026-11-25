@@ -6,7 +6,7 @@ export type GatewayId = 'stripe' | 'fake';
 
 /**
  * The Organization a Payment belongs to. `primary` is the default
- * Organization (the one the stub principal scopes the API to); `acme` is a
+ * Organization (the one the public payments API is scoped to until API Keys); `acme` is a
  * second Organization, so isolation between Organizations is visible.
  */
 export type OrganizationKey = 'primary' | 'acme';

@@ -47,6 +47,20 @@ describe('envSchema', () => {
     }
   });
 
+  it('requires the access-token signing key in production only', () => {
+    expect(envSchema.safeParse(required).success).toBe(true);
+    expect(
+      envSchema.safeParse({ ...required, NODE_ENV: 'production' }).success,
+    ).toBe(false);
+    expect(
+      envSchema.safeParse({
+        ...required,
+        NODE_ENV: 'production',
+        AUTH_JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\n...',
+      }).success,
+    ).toBe(true);
+  });
+
   it('requires a PostgreSQL DATABASE_URL', () => {
     expect(envSchema.safeParse({ REDIS_URL }).success).toBe(false);
     expect(

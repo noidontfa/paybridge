@@ -36,7 +36,12 @@ beforeAll(async () => {
     .overrideProvider(Clock)
     .useValue(clock)
     .overrideProvider(PrincipalResolver)
-    .useValue({ resolve: () => ({ organizationId: actingAs }) })
+    .useValue({
+      resolve: () => ({
+        organizationId: actingAs,
+        user: { id: 'ops.bob', role: 'OPERATOR', permissions: [] },
+      }),
+    })
     .compile();
   app = moduleRef.createNestApplication({ logger: false });
   applyGlobalPrefix(app);
@@ -176,7 +181,6 @@ describe('as Organization B, a row of Organization A', () => {
       .post(`/internal/payments/${a.paymentId}/review-resolution`)
       .send({
         attemptId: a.attemptId,
-        actor: 'ops.bob',
         note: 'trying from another Organization',
         status: 'FAILED',
       })

@@ -25,8 +25,10 @@ import { recordAttemptTransition } from '../record-attempt-transition.js';
 export interface ResolveReviewInput {
   readonly paymentId: string;
   readonly attemptId: string;
-  /** Who decided. Trusted: the route is internal and Phase 1 has no auth. */
+  /** The id of the User who decided, from their access token. */
   readonly actor: string;
+  /** The Role that User held. */
+  readonly actorRole: string;
   readonly note: string;
   /** Absent: add a note without changing the status. */
   readonly status?: OperatorResolutionStatus;
@@ -76,6 +78,7 @@ export class ResolveReview {
       const cause = {
         trigger: 'operator_resolution',
         actor: input.actor,
+        actorRole: input.actorRole,
         reason: input.note,
       };
       let cancelled: CancellableAttempt[] = [];
@@ -89,6 +92,7 @@ export class ResolveReview {
             toStatus: attempt.status,
             trigger: 'operator_note',
             actor: input.actor,
+            actorRole: input.actorRole,
             reason: input.note,
           });
           break;

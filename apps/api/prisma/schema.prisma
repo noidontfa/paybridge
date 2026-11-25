@@ -130,8 +130,58 @@ model Organization {
   outboxEvents        OutboxEvent[]
   webhookInbox        WebhookInbox[]
   statusTransitions   StatusTransition[]
+  users               User[]
 
   @@map("iam_organizations")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ORGANIZATION_ADMIN
+  OPERATOR
+
+  @@map("iam_user_role")
+}
+
+/// A person who signs in to the Console. A Super Admin has no Organization
+/// (enforced by a check constraint in the migration).
+model User {
+  id             String   @id @db.Uuid
+  email          String   @unique
+  name           String
+  passwordHash   String   @map("password_hash")
+  role           UserRole
+  organizationId String?  @map("organization_id") @db.Uuid
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  refreshTokens RefreshToken[]
+
+  @@index([organizationId], map: "iam_users_organization_id_idx")
+  @@map("iam_users")
+}
+
+/// A refresh token, stored hashed. Tokens of one sign-in form a family.
+model RefreshToken {
+  id          String    @id @db.Uuid
+  familyId    String    @map("family_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Absolute lifetime: 7 days from sign-in, carried over on rotation.
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Idle lifetime: 24 hours from this token's creation.
+  idleExpiresAt DateTime @map("idle_expires_at") @db.Timestamptz(3)
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@index([familyId], map: "iam_refresh_tokens_family_id_idx")
+  @@index([userId], map: "iam_refresh_tokens_user_id_idx")
+  @@map("iam_refresh_tokens")
 }
 
 // ---------------------------------------------------------------------------
@@ -326,6 +376,8 @@ model StatusTransition {
   toStatus       String                     @map("to_status")
   trigger        String
   actor          String
+  /// The Role the acting User held; null for system and customer actors.
+  actorRole      String?                    @map("actor_role")
   reason         String?
   createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
 

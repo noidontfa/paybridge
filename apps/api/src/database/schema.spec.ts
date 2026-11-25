@@ -62,6 +62,8 @@ describe('schema ownership', () => {
       'core_status_transitions',
       'core_webhook_inbox',
       'iam_organizations',
+      'iam_refresh_tokens',
+      'iam_users',
     ]);
   });
 });

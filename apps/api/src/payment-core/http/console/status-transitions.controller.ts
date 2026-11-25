@@ -17,8 +17,7 @@ import {
 } from './status-transitions.query.js';
 
 /**
- * Operator endpoint (no authentication in Phase 1; keep `/internal` off the
- * public ingress). The response shape is the Console's `auditListSchema`.
+ * Operator endpoint (needs a signed-in User). The response shape is the Console's `auditListSchema`.
  */
 @ApiTags('internal')
 @Controller(`${INTERNAL_PREFIX}/status-transitions`)
@@ -55,6 +54,7 @@ export class StatusTransitionsController {
         toStatus: row.toStatus,
         trigger: row.trigger,
         actor: row.actor,
+        actorRole: row.actorRole,
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         paymentId: row.paymentId,

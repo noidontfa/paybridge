@@ -1,13 +1,14 @@
 'use client';
 
-import { ChevronsUpDownIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { ChevronsUpDownIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useCurrentOperator } from '@/lib/operator';
+import { describeOperator, useCurrentOperator } from '@/lib/operator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -39,6 +40,15 @@ function initials(name: string): string {
   );
 }
 
+/** Ends the sign-in on the server (revokes the refresh token), then goes to the sign-in page. */
+async function signOut() {
+  try {
+    await fetch('/api/auth/sign-out', { method: 'POST' });
+  } finally {
+    window.location.assign('/sign-in');
+  }
+}
+
 export function NavUser() {
   const operator = useCurrentOperator();
   const { isMobile } = useSidebar();
@@ -56,7 +66,7 @@ export function NavUser() {
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{operator.name}</span>
-              <span className="truncate text-xs">{operator.id}</span>
+              <span className="truncate text-xs">{describeOperator(operator) ?? operator.id}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>
@@ -78,6 +88,10 @@ export function NavUser() {
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => void signOut()}>
+              <LogOutIcon />
+              Sign out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

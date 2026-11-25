@@ -31,6 +31,7 @@ export interface StatusTransitionRow {
   readonly toStatus: string;
   readonly trigger: string;
   readonly actor: string;
+  readonly actorRole: string | null;
   readonly reason: string | null;
   readonly createdAt: Date;
   /** A Payment resolves to itself, a PaymentTransaction to its Payment, a Refund to none. */
@@ -45,6 +46,7 @@ interface RawRow {
   to_status: string;
   trigger: string;
   actor: string;
+  actor_role: string | null;
   reason: string | null;
   created_at: Date;
   payment_id: string | null;
@@ -66,7 +68,7 @@ export class StatusTransitionsReadRepository {
   ): Promise<StatusTransitionRow[]> {
     const rows = await this.prisma.$queryRaw<RawRow[]>`
       SELECT st.id, st.entity_type, st.entity_id, st.from_status, st.to_status,
-             st.trigger, st.actor, st.reason, st.created_at, p.id AS payment_id
+             st.trigger, st.actor, st.actor_role, st.reason, st.created_at, p.id AS payment_id
       FROM core_status_transitions st
       LEFT JOIN core_payment_transactions pt
         ON st.entity_type = 'PAYMENT_TRANSACTION' AND pt.id = st.entity_id
@@ -86,6 +88,7 @@ export class StatusTransitionsReadRepository {
       toStatus: row.to_status,
       trigger: row.trigger,
       actor: row.actor,
+      actorRole: row.actor_role,
       reason: row.reason,
       createdAt: row.created_at,
       paymentId: row.payment_id,
