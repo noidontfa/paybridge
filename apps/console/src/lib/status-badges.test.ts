@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTEMPT_STATUSES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
+import { ATTEMPT_STATUSES, PAYMENT_EVENT_TYPES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
 import { statusBadge } from './status-badges';
 
 describe('statusBadge', () => {
@@ -7,6 +7,13 @@ describe('statusBadge', () => {
     for (const status of PAYMENT_STATUSES) expect(statusBadge('payment', status).icon).toBeDefined();
     for (const status of ATTEMPT_STATUSES) expect(statusBadge('transaction', status).icon).toBeDefined();
     for (const reason of REVIEW_REASONS) expect(statusBadge('review', reason).label.length).toBeGreaterThan(0);
+  });
+
+  it('gives every Payment Event type a badge, toned like the status it announces', () => {
+    for (const type of PAYMENT_EVENT_TYPES) expect(statusBadge('event', type).label.length).toBeGreaterThan(0);
+    expect(statusBadge('event', 'PaymentSucceeded')).toMatchObject({ label: 'Payment succeeded', tone: 'success' });
+    expect(statusBadge('event', 'PaymentRequiresReview').tone).toBe('warning');
+    expect(statusBadge('event', 'PaymentCreated').tone).toBe(statusBadge('payment', 'PENDING').tone);
   });
 
   it('labels in plain words', () => {

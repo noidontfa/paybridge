@@ -1,7 +1,16 @@
-import { PlaceholderPage } from '@/components/placeholder-page';
+import { Suspense } from 'react';
+import { AuditScreen } from '@/components/audit/audit-screen';
+import { PageHeader } from '@/components/page-header';
 
 export const metadata = { title: 'Audit log' };
 
 export default function Page() {
-  return <PlaceholderPage title="Audit log" description="Status transitions and who made them." />;
+  return (
+    <>
+      <PageHeader title="Audit log" description="Every status transition, what triggered it and who made it." />
+      <Suspense>
+        <AuditScreen />
+      </Suspense>
+    </>
+  );
 }

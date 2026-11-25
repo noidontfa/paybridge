@@ -32,6 +32,12 @@ interface AttemptPlan {
   /** Statuses visited, ending on the attempt's current status. */
   path: AttemptStatus[];
   reviewReason?: ReviewReason;
+  /** The attempt is cancelled because the Payment moved to another gateway. */
+  switched?: boolean;
+  /** An Operator note on the open Review (an `operator_note` transition). */
+  note?: string;
+  /** The Operator resolved the Review: the last status of the path was set by them, with this note. */
+  resolutionNote?: string;
 }
 
 interface Scenario {
@@ -79,6 +85,43 @@ const SCENARIOS: Scenario[] = [
   { weight: 3, payment: 'CANCELLED', ageHours: [1, 700], attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'CANCELLED'] }] },
   { weight: 4, payment: 'EXPIRED', ageHours: [1, 700], attempts: [] },
   { weight: 4, payment: 'EXPIRED', ageHours: [1, 700], attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'EXPIRED'] }] },
+  // A gateway switch: the first attempt is cancelled when the customer picks another gateway.
+  {
+    weight: 2,
+    payment: 'PENDING',
+    ageHours: [0.1, 0.4],
+    attempts: [
+      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'CANCELLED'], switched: true },
+      { gateway: 'fake', path: ['CREATED', 'PENDING'] },
+    ],
+  },
+  // Reviews an Operator already resolved.
+  {
+    weight: 2,
+    payment: 'SUCCEEDED',
+    ageHours: [10, 400],
+    attempts: [
+      {
+        gateway: 'stripe',
+        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW', 'SUCCEEDED'],
+        reviewReason: 'AMBIGUOUS_PROVIDER_STATUS',
+        resolutionNote: 'Confirmed paid in the Stripe dashboard.',
+      },
+    ],
+  },
+  {
+    weight: 1,
+    payment: 'PENDING',
+    ageHours: [10, 400],
+    attempts: [
+      {
+        gateway: 'fake',
+        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW', 'FAILED'],
+        reviewReason: 'AMOUNT_MISMATCH',
+        resolutionNote: 'Customer paid the wrong amount; refunded in full.',
+      },
+    ],
+  },
   // Reviews.
   {
     weight: 3,
@@ -103,7 +146,12 @@ const SCENARIOS: Scenario[] = [
     payment: 'EXPIRED',
     ageHours: [10, 400],
     attempts: [
-      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'EXPIRED', 'REQUIRES_REVIEW'], reviewReason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT' },
+      {
+        gateway: 'stripe',
+        path: ['CREATED', 'PENDING', 'EXPIRED', 'REQUIRES_REVIEW'],
+        reviewReason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT',
+        note: 'Customer paid after expiry; refund requested from Stripe.',
+      },
     ],
   },
   {
@@ -119,7 +167,12 @@ const SCENARIOS: Scenario[] = [
     payment: 'SUCCEEDED',
     ageHours: [10, 400],
     attempts: [
-      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'], reviewReason: 'DUPLICATE_SUCCESS' },
+      {
+        gateway: 'stripe',
+        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'],
+        reviewReason: 'DUPLICATE_SUCCESS',
+        note: 'Second charge confirmed in the Stripe dashboard.',
+      },
       { gateway: 'fake', path: ['CREATED', 'PENDING', 'SUCCEEDED'] },
     ],
   },
@@ -131,13 +184,17 @@ const EVENT_FOR_CLOSING_STATUS: Record<Exclude<PaymentStatus, 'PENDING'>, Paymen
   EXPIRED: 'PaymentExpired',
 };
 
+/** The Operator identity on seeded resolutions and notes (the Console has no sign-in yet). */
+const OPERATOR = 'operator';
+
 interface Cause {
   trigger: string;
   actor: string;
 }
 
 /** What caused an attempt to move from one status to the next. */
-function attemptCause(from: AttemptStatus | null, to: AttemptStatus): Cause {
+function attemptCause(from: AttemptStatus | null, to: AttemptStatus, plan: AttemptPlan): Cause {
+  if (from === 'REQUIRES_REVIEW' && plan.resolutionNote) return { trigger: 'operator_resolution', actor: OPERATOR };
   if (from === null) return { trigger: 'start_attempt', actor: 'system' };
   switch (to) {
     case 'PENDING':
@@ -149,7 +206,7 @@ function attemptCause(from: AttemptStatus | null, to: AttemptStatus): Cause {
     case 'EXPIRED':
       return { trigger: 'expiry', actor: 'system' };
     case 'CANCELLED':
-      return { trigger: 'merchant_cancel', actor: 'merchant' };
+      return plan.switched ? { trigger: 'gateway_switch', actor: 'system' } : { trigger: 'merchant_cancel', actor: 'merchant' };
     case 'REQUIRES_REVIEW':
       return from === 'PENDING' ? { trigger: 'status_query', actor: 'system' } : { trigger: 'webhook', actor: 'system' };
     default:
@@ -212,13 +269,15 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
   const emit = (type: PaymentEventType, atMs: number, payload: Record<string, unknown>) => {
     eventId += 1;
     const recent = nowMs - atMs < HOUR;
+    // Recent events may simply not have been relayed yet; a few old ones are stuck.
+    const unpublished = recent ? random.next() < 0.4 : type !== 'PaymentCreated' && index % 11 === 0;
     store.events.push({
       id: `${payment.id.slice(0, 8)}-e${eventId}`,
       type,
       paymentId: payment.id,
       payload: { paymentId: payment.id, upstreamReference: payment.upstreamReference, ...payload },
       createdAt: iso(atMs),
-      publishedAt: recent && random.next() < 0.4 ? null : iso(atMs + random.int(1, 5) * SECOND),
+      publishedAt: unpublished ? null : iso(atMs + random.int(1, 5) * SECOND),
     });
   };
 
@@ -232,6 +291,8 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
 
   let clock = createdMs;
   let paymentClosedMs: number | undefined;
+  let resolution: Cause | undefined;
+  let resolutionNote: string | null = null;
   scenario.attempts.forEach((plan, planIndex) => {
     clock += random.int(5, 60) * SECOND;
     const attempt: MockAttempt = {
@@ -252,7 +313,17 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
       else if (previous === 'EXPIRED' || previous === 'CANCELLED') clock += random.int(60, 300) * MINUTE;
       else if (previous !== null) clock += random.int(5, 90) * SECOND;
       const review = status === 'REQUIRES_REVIEW' ? plan.reviewReason : undefined;
-      transition('PAYMENT_TRANSACTION', attempt.id, previous, status, attemptCause(previous, status), clock, review ?? null);
+      const cause = attemptCause(previous, status, plan);
+      const resolved = cause.trigger === 'operator_resolution';
+      transition('PAYMENT_TRANSACTION', attempt.id, previous, status, cause, clock, resolved ? plan.resolutionNote! : (review ?? null));
+      if (resolved) {
+        // The Review is over: its reason no longer applies.
+        delete attempt.reviewReason;
+        delete attempt.reviewOpenedAt;
+        attempt.refundRequired = false;
+        resolution = cause;
+        resolutionNote = plan.resolutionNote ?? null;
+      }
 
       attempt.status = status;
       attempt.updatedAt = iso(clock);
@@ -271,6 +342,12 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
           refundRequired: attempt.refundRequired,
           reviewOpenedAt: attempt.reviewOpenedAt,
         });
+        if (plan.note) {
+          // The Operator annotates the open Review; its status does not change.
+          const noteMs = clock + random.int(1, 30) * MINUTE;
+          transition('PAYMENT_TRANSACTION', attempt.id, status, status, { trigger: 'operator_note', actor: OPERATOR }, noteMs, plan.note);
+          clock = noteMs;
+        }
       }
       if (planIndex === scenario.attempts.length - 1 && status === 'PENDING' && plan.path.at(-1) === 'PENDING') {
         attempt.nextAction = nextActionFor(plan.gateway, attempt, random);
@@ -286,12 +363,13 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
     // Payments without a closing attempt (cancelled or expired while idle) close on their own.
     paymentClosedMs ??= payment.status === 'EXPIRED' ? expiresMs : clock + random.int(1, 20) * MINUTE;
     const cause: Cause =
-      payment.status === 'CANCELLED'
+      resolution ??
+      (payment.status === 'CANCELLED'
         ? { trigger: 'merchant_cancel', actor: 'merchant' }
         : payment.status === 'EXPIRED'
           ? { trigger: 'expiry', actor: 'system' }
-          : { trigger: 'webhook', actor: 'system' };
-    transition('PAYMENT', payment.id, 'PENDING', payment.status, cause, paymentClosedMs);
+          : { trigger: 'webhook', actor: 'system' });
+    transition('PAYMENT', payment.id, 'PENDING', payment.status, cause, paymentClosedMs, resolutionNote);
     emit(EVENT_FOR_CLOSING_STATUS[payment.status], paymentClosedMs, { status: payment.status });
     payment.updatedAt = iso(paymentClosedMs);
   } else {

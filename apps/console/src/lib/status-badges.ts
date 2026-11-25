@@ -11,6 +11,7 @@ import {
   CheckCircle2Icon,
   CircleDashedIcon,
   CircleDotIcon,
+  PlusCircleIcon,
   ClockIcon,
   CopyCheckIcon,
   HourglassIcon,
@@ -30,7 +31,7 @@ export interface BadgeSpec {
   icon: LucideIcon;
 }
 
-export type BadgeKind = 'payment' | 'transaction' | 'review';
+export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event';
 
 const SUCCEEDED: BadgeSpec = { label: 'Succeeded', tone: 'success', icon: CheckCircle2Icon };
 const PENDING: BadgeSpec = { label: 'Pending', tone: 'info', icon: HourglassIcon };
@@ -58,6 +59,14 @@ const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
     AMOUNT_MISMATCH: { label: 'Amount mismatch', tone: 'warning', icon: ScaleIcon },
     LATE_SUCCESS_ON_CLOSED_PAYMENT: { label: 'Late success', tone: 'warning', icon: ClockIcon },
     DUPLICATE_SUCCESS: { label: 'Duplicate success', tone: 'warning', icon: CopyCheckIcon },
+  },
+  /** Payment Event types, toned like the Payment status they announce. */
+  event: {
+    PaymentCreated: { label: 'Payment created', tone: 'info', icon: PlusCircleIcon },
+    PaymentSucceeded: { label: 'Payment succeeded', tone: 'success', icon: CheckCircle2Icon },
+    PaymentCancelled: { label: 'Payment cancelled', tone: 'neutral', icon: BanIcon },
+    PaymentExpired: { label: 'Payment expired', tone: 'neutral', icon: TimerOffIcon },
+    PaymentRequiresReview: { label: 'Payment requires review', tone: 'warning', icon: SearchCheckIcon },
   },
 };
 

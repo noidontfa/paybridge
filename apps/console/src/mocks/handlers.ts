@@ -8,6 +8,7 @@
  * every error has the API's envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { eventsAuditHandlers } from './events-audit';
 import { paymentsListHandlers } from './payments-list';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
@@ -47,6 +48,13 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
   return [
     ...paymentsListHandlers(base, store, (request, message) =>
       apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+    ),
+    ...eventsAuditHandlers(
+      base,
+      store,
+      (request, message) =>
+        apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+      (request, code, message) => apiError(request, { status: 404, error: 'Not Found', code, message }, store.now),
     ),
     http.get(`${base}/internal/overview`, ({ request }) => {
       const range = new URL(request.url).searchParams.get('range');

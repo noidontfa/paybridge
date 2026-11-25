@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTEMPT_STATUSES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
+import { ATTEMPT_STATUSES, PAYMENT_EVENT_TYPES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
 import { operatorPaymentSchema } from '@/lib/api/schemas';
 import { SEED_NOW, createSeededStore } from './seed';
 
@@ -61,11 +61,39 @@ describe('seeded mock store', () => {
       expect(types).toContain('PaymentCreated');
       const closing = { SUCCEEDED: 'PaymentSucceeded', CANCELLED: 'PaymentCancelled', EXPIRED: 'PaymentExpired' } as const;
       if (payment.status !== 'PENDING') expect(types).toContain(closing[payment.status]);
-      const reviews = store.attemptsOf(payment.id).filter((a) => a.reviewReason).length;
+      const attemptIds = new Set(store.attemptsOf(payment.id).map((a) => a.id));
+      // A Review opens when an attempt enters REQUIRES_REVIEW (resolved ones count too).
+      const reviews = store.transitions.filter(
+        (t) => attemptIds.has(t.entityId) && t.toStatus === 'REQUIRES_REVIEW' && t.fromStatus !== 'REQUIRES_REVIEW',
+      ).length;
       expect(types.filter((t) => t === 'PaymentRequiresReview')).toHaveLength(reviews);
     }
     expect(store.events.some((e) => e.publishedAt === null)).toBe(true);
     expect(store.events.some((e) => e.publishedAt !== null)).toBe(true);
+  });
+
+  it('has published and unpublished Payment Events of every type', () => {
+    for (const type of PAYMENT_EVENT_TYPES) {
+      const ofType = store.events.filter((e) => e.type === type);
+      expect(ofType.some((e) => e.publishedAt === null), `unpublished ${type}`).toBe(true);
+      expect(ofType.some((e) => e.publishedAt !== null), `published ${type}`).toBe(true);
+    }
+  });
+
+  it('records every trigger Core uses, including operator resolutions and notes', () => {
+    expect(new Set(store.transitions.map((t) => t.trigger))).toEqual(
+      new Set([
+        'create_payment', 'start_attempt', 'gateway_accepted', 'gateway_rejected', 'gateway_switch',
+        'webhook', 'status_query', 'expiry', 'merchant_cancel', 'operator_resolution', 'operator_note',
+      ]),
+    );
+    for (const t of store.transitions.filter((t) => t.trigger.startsWith('operator_'))) {
+      expect(t.actor).toMatch(/^operator/);
+      expect(t.reason).toBeTruthy();
+    }
+    const note = store.transitions.find((t) => t.trigger === 'operator_note')!;
+    expect(note.fromStatus).toBe('REQUIRES_REVIEW');
+    expect(note.toStatus).toBe('REQUIRES_REVIEW');
   });
 
   it('assembles every Payment into a valid operator Payment detail', () => {
