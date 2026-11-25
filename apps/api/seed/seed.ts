@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
+import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
 import {
   callbackSpecs,
   eventSpecs,
   paymentSpecs,
+  type OrganizationKey,
   type PaymentSpec,
   type When,
 } from './scenarios.js';
@@ -40,6 +42,7 @@ export interface SeedOptions {
 }
 
 export interface SeedResult {
+  organizations: number;
   payments: number;
   attempts: number;
   transitions: number;
@@ -49,9 +52,21 @@ export interface SeedResult {
 
 const id = (name: string): string => v5(name, NAMESPACE);
 
+/**
+ * The Organizations the seed works in: the default one (created by the
+ * migration; it holds the original scenarios) and a second one, so the
+ * isolation between Organizations is visible in the Console.
+ */
+const ORGANIZATIONS: Record<OrganizationKey, { id: string; name: string }> = {
+  primary: { id: DEFAULT_ORGANIZATION_ID, name: 'Default Organization' },
+  acme: { id: id('organization:acme-retail'), name: 'Acme Retail' },
+};
+
 function assertAllowed(options: SeedOptions): void {
   if (options.nodeEnv === 'production') {
-    throw new SeedRefusedError('The seed refuses to run when NODE_ENV=production.');
+    throw new SeedRefusedError(
+      'The seed refuses to run when NODE_ENV=production.',
+    );
   }
   const host = new URL(options.databaseUrl).hostname;
   if (!LOCAL_HOSTS.includes(host) && !options.force) {
@@ -65,7 +80,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   assertAllowed(options);
   const bulk = options.bulk ?? 0;
   if (!Number.isInteger(bulk) || bulk < 0) {
-    throw new SeedRefusedError('The bulk count must be a non-negative integer.');
+    throw new SeedRefusedError(
+      'The bulk count must be a non-negative integer.',
+    );
   }
   const now = (options.now ?? new Date()).getTime();
   const rows = buildRows(now, bulk);
@@ -77,7 +94,17 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     await prisma.$transaction(
       async (tx) => {
         await deleteSeedRows(tx);
-        await insertChunked(rows.payments, (data) => tx.payment.createMany({ data }));
+        // Organizations are never deleted: re-runs keep them as they are.
+        for (const organization of Object.values(ORGANIZATIONS)) {
+          await tx.organization.upsert({
+            where: { id: organization.id },
+            update: {},
+            create: organization,
+          });
+        }
+        await insertChunked(rows.payments, (data) =>
+          tx.payment.createMany({ data }),
+        );
         await insertChunked(rows.attempts, (data) =>
           tx.paymentTransaction.createMany({ data }),
         );
@@ -87,7 +114,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
         await insertChunked(rows.callbacks, (data) =>
           tx.webhookInbox.createMany({ data }),
         );
-        await insertChunked(rows.events, (data) => tx.outboxEvent.createMany({ data }));
+        await insertChunked(rows.events, (data) =>
+          tx.outboxEvent.createMany({ data }),
+        );
       },
       { timeout: 120_000, maxWait: 30_000 },
     );
@@ -95,6 +124,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     await prisma.$disconnect();
   }
   return {
+    organizations: Object.keys(ORGANIZATIONS).length,
     payments: rows.payments.length,
     attempts: rows.attempts.length,
     transitions: rows.transitions.length,
@@ -151,7 +181,9 @@ interface Rows {
 
 function at(now: number, createdAt: number, when: When): Date {
   return new Date(
-    'afterMin' in when ? createdAt + when.afterMin * MINUTE : now - when.agoH * HOUR,
+    'afterMin' in when
+      ? createdAt + when.afterMin * MINUTE
+      : now - when.agoH * HOUR,
   );
 }
 
@@ -165,15 +197,23 @@ function buildRows(now: number, bulk: number): Rows {
   };
   const createdAtOf = new Map<string, number>();
   const attemptIds = new Map<string, string>();
+  // The Organization each Payment and attempt belongs to, by spec name.
+  const organizationOf = new Map<string, string>();
 
-  for (const spec of paymentSpecs()) addPayment(rows, now, spec, createdAtOf, attemptIds);
+  for (const spec of paymentSpecs()) {
+    addPayment(rows, now, spec, createdAtOf, attemptIds, organizationOf);
+  }
 
   for (const [n, spec] of callbackSpecs().entries()) {
     const attemptKey = spec.attempt
       ? attemptIds.get(spec.attempt)!
       : id('attempt:unknown-to-core');
     const body = Buffer.from(
-      JSON.stringify({ seed: spec.key, attemptKey, event: `seed.${spec.gateway}.event` }),
+      JSON.stringify({
+        seed: spec.key,
+        attemptKey,
+        event: `seed.${spec.gateway}.event`,
+      }),
     );
     const dedupeKey =
       spec.providerEventId ??
@@ -181,6 +221,9 @@ function buildRows(now: number, bulk: number): Rows {
     const receivedAt = new Date(now - spec.receivedAgoH * HOUR);
     rows.callbacks.push({
       id: id(`callback:${spec.key}`),
+      organizationId:
+        (spec.attempt && organizationOf.get(spec.attempt)) ||
+        ORGANIZATIONS.primary.id,
       gatewayId: spec.gateway,
       dedupeKey,
       providerEventId: spec.providerEventId,
@@ -193,7 +236,10 @@ function buildRows(now: number, bulk: number): Rows {
       lockedAt: spec.status === 'PROCESSING' ? receivedAt : null,
       lastError: spec.lastError ?? null,
       receivedAt,
-      processedAt: spec.status === 'PROCESSED' ? new Date(receivedAt.getTime() + 2000) : null,
+      processedAt:
+        spec.status === 'PROCESSED'
+          ? new Date(receivedAt.getTime() + 2000)
+          : null,
     });
   }
 
@@ -203,11 +249,12 @@ function buildRows(now: number, bulk: number): Rows {
     const createdAt = at(now, created, spec.when);
     rows.events.push({
       id: id(`event:${spec.key}`),
+      organizationId: organizationOf.get(spec.payment)!,
       eventType: spec.type,
       paymentId: id(`payment:${spec.payment}`),
       payload: {
         paymentId: id(`payment:${spec.payment}`),
-        upstreamReference: `${SEED_PREFIX}${spec.payment}`,
+        upstreamReference: `${SEED_PREFIX}${payment.reference ?? spec.payment}`,
         amount: payment.amount,
         currency: 'VND',
         status: payment.status,
@@ -227,8 +274,11 @@ function addPayment(
   spec: PaymentSpec,
   createdAtOf: Map<string, number>,
   attemptIds: Map<string, string>,
+  organizationOf: Map<string, string>,
 ): void {
   const paymentId = id(`payment:${spec.key}`);
+  const organizationId = ORGANIZATIONS[spec.organization ?? 'primary'].id;
+  organizationOf.set(spec.key, organizationId);
   const createdAt = now - spec.createdAgoH * HOUR;
   createdAtOf.set(spec.key, createdAt);
   let updatedAt = createdAt;
@@ -238,6 +288,7 @@ function addPayment(
 
   rows.transitions.push({
     id: id(`transition:${spec.key}:create`),
+    organizationId,
     entityType: 'PAYMENT' as const,
     entityId: paymentId,
     fromStatus: null,
@@ -252,6 +303,7 @@ function addPayment(
     touch(when);
     rows.transitions.push({
       id: id(`transition:${spec.key}:p${n}`),
+      organizationId,
       entityType: 'PAYMENT' as const,
       entityId: paymentId,
       fromStatus: t.from,
@@ -266,13 +318,17 @@ function addPayment(
   for (const a of spec.attempts) {
     const attemptId = id(`attempt:${spec.key}:${a.key}`);
     attemptIds.set(`${spec.key}/${a.key}`, attemptId);
-    const attemptCreated = new Date(createdAt + (a.createdAfterMin ?? 1) * MINUTE);
+    organizationOf.set(`${spec.key}/${a.key}`, organizationId);
+    const attemptCreated = new Date(
+      createdAt + (a.createdAfterMin ?? 1) * MINUTE,
+    );
     let attemptUpdated = attemptCreated.getTime();
     for (const [n, t] of a.transitions.entries()) {
       const when = at(now, createdAt, t.when);
       attemptUpdated = Math.max(attemptUpdated, when.getTime());
       rows.transitions.push({
         id: id(`transition:${spec.key}:${a.key}:${n}`),
+        organizationId,
         entityType: 'PAYMENT_TRANSACTION',
         entityId: attemptId,
         fromStatus: t.from,
@@ -287,16 +343,21 @@ function addPayment(
     const hasProviderRef = a.status !== 'CREATED' && a.status !== 'FAILED';
     rows.attempts.push({
       id: attemptId,
+      organizationId,
       paymentId,
       gatewayId: a.gateway,
       status: a.status,
-      providerRef: hasProviderRef ? `${a.gateway === 'stripe' ? 'pi' : 'fk'}_SEED_${spec.key}_${a.key}` : null,
+      providerRef: hasProviderRef
+        ? `${a.gateway === 'stripe' ? 'pi' : 'fk'}_SEED_${spec.key}_${a.key}`
+        : null,
       providerMetadata: a.review?.providerReportedAmount
         ? { providerReportedAmount: a.review.providerReportedAmount }
         : undefined,
       nextAction: a.nextAction as Prisma.InputJsonObject | undefined,
       reviewReason: a.review?.reason ?? null,
-      reviewOpenedAt: a.review ? new Date(now - a.review.openedAgoH * HOUR) : null,
+      reviewOpenedAt: a.review
+        ? new Date(now - a.review.openedAgoH * HOUR)
+        : null,
       refundRequired: a.review?.refundRequired ?? false,
       createdAt: attemptCreated,
       updatedAt: new Date(attemptUpdated),
@@ -305,7 +366,8 @@ function addPayment(
 
   rows.payments.push({
     id: paymentId,
-    merchantOrderId: `${SEED_PREFIX}${spec.key}`,
+    organizationId,
+    merchantOrderId: `${SEED_PREFIX}${spec.reference ?? spec.key}`,
     amount: spec.amount,
     currency: 'VND',
     status: spec.status,
@@ -319,14 +381,18 @@ function addPayment(
 function addBulkPayment(rows: Rows, now: number, n: number): void {
   const key = `BULK-${String(n).padStart(6, '0')}`;
   const paymentId = id(`payment:${key}`);
+  const organizationId = ORGANIZATIONS.primary.id;
   const ageMin = 5 + ((n * 997) % (30 * 24 * 60 - 60));
   const createdAt = now - ageMin * MINUTE;
   const kind = n % 5;
-  const status = (['PENDING', 'SUCCEEDED', 'SUCCEEDED', 'CANCELLED', 'EXPIRED'] as const)[kind]!;
+  const status = (
+    ['PENDING', 'SUCCEEDED', 'SUCCEEDED', 'CANCELLED', 'EXPIRED'] as const
+  )[kind]!;
   const gateway = n % 2 === 0 ? 'stripe' : 'fake';
   const finished = createdAt + 20 * MINUTE;
   rows.payments.push({
     id: paymentId,
+    organizationId,
     merchantOrderId: `${SEED_PREFIX}${key}`,
     amount: String(10_000 * (1 + (n % 50))),
     currency: 'VND',
@@ -342,6 +408,7 @@ function addBulkPayment(rows: Rows, now: number, n: number): void {
   };
   rows.transitions.push({
     ...base,
+    organizationId,
     id: id(`transition:${key}:create`),
     entityId: paymentId,
     fromStatus: null,
@@ -351,9 +418,14 @@ function addBulkPayment(rows: Rows, now: number, n: number): void {
     createdAt: new Date(createdAt),
   });
   if (status === 'PENDING') return;
-  const trigger = { SUCCEEDED: 'webhook', CANCELLED: 'merchant_cancel', EXPIRED: 'expiry' }[status];
+  const trigger = {
+    SUCCEEDED: 'webhook',
+    CANCELLED: 'merchant_cancel',
+    EXPIRED: 'expiry',
+  }[status];
   rows.transitions.push({
     ...base,
+    organizationId,
     id: id(`transition:${key}:status`),
     entityId: paymentId,
     fromStatus: 'PENDING',
@@ -364,6 +436,7 @@ function addBulkPayment(rows: Rows, now: number, n: number): void {
   const attemptId = id(`attempt:${key}:a1`);
   rows.attempts.push({
     id: attemptId,
+    organizationId,
     paymentId,
     gatewayId: gateway,
     status,

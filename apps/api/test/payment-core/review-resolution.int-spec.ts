@@ -10,6 +10,7 @@ import type { ReviewReason } from '../../src/payment-core/domain/statuses.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 29: operator review resolution over HTTP.
 
@@ -47,26 +48,26 @@ async function seedReview(
   reason: ReviewReason,
   options: { openedAt?: Date; extraOpenAttempt?: boolean } = {},
 ) {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
   const attemptId = newId();
   await runner.run(async (tx) => {
-    await tx.payments.createAttempt({
+    await tx.payments.createAttempt(defaultScope, {
       id: attemptId,
       paymentId: payment.id,
       gatewayId: 'fake',
       status: 'REQUIRES_REVIEW',
     });
-    await tx.payments.updateAttempt(attemptId, {
+    await tx.payments.updateAttempt(defaultScope, attemptId, {
       reviewReason: reason,
       reviewOpenedAt: options.openedAt ?? OPENED,
       refundRequired: true,
     });
     if (options.extraOpenAttempt) {
-      await tx.payments.createAttempt({
+      await tx.payments.createAttempt(defaultScope, {
         id: newId(),
         paymentId: payment.id,
         gatewayId: 'fake',

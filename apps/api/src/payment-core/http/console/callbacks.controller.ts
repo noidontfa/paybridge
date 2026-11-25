@@ -15,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentScope } from '../current-scope.decorator.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetCallback,
@@ -50,10 +52,11 @@ export class CallbacksController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentScope() scope: OrganizationScope,
     @Query(new ZodValidationPipe(callbacksListQuerySchema))
     query: CallbacksListQuery,
   ) {
-    const page = await this.listCallbacks.execute(query);
+    const page = await this.listCallbacks.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -76,8 +79,8 @@ export class CallbacksController {
   })
   @ApiOkResponse({ description: 'The Callback' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async get(@Param('id') id: string) {
-    const row = await this.getCallback.execute(id);
+  async get(@CurrentScope() scope: OrganizationScope, @Param('id') id: string) {
+    const row = await this.getCallback.execute(scope, id);
     if (!row) throw new NotFoundException(`Callback ${id} not found`);
     return {
       id: row.id,

@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { escapeLike, uuidNeedle } from './developer-views.shared.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeSql } from '../scope.js';
 
 export type TransitionEntityType = 'PAYMENT' | 'PAYMENT_TRANSACTION' | 'REFUND';
 
@@ -58,7 +60,10 @@ export class StatusTransitionsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first. */
-  async list(query: StatusTransitionListQuery): Promise<StatusTransitionRow[]> {
+  async list(
+    scope: ReadScope,
+    query: StatusTransitionListQuery,
+  ): Promise<StatusTransitionRow[]> {
     const rows = await this.prisma.$queryRaw<RawRow[]>`
       SELECT st.id, st.entity_type, st.entity_id, st.from_status, st.to_status,
              st.trigger, st.actor, st.reason, st.created_at, p.id AS payment_id
@@ -70,7 +75,7 @@ export class StatusTransitionsReadRepository {
                     WHEN 'PAYMENT' THEN st.entity_id
                     WHEN 'PAYMENT_TRANSACTION' THEN pt.payment_id
                   END
-      ${this.where(query)}
+      ${this.where(scope, query)}
       ORDER BY st.created_at DESC, st.id DESC
       LIMIT ${query.limit + 1}`;
     return rows.map((row) => ({
@@ -87,9 +92,12 @@ export class StatusTransitionsReadRepository {
     }));
   }
 
-  private where(query: StatusTransitionListQuery): Prisma.Sql {
+  private where(
+    scope: ReadScope,
+    query: StatusTransitionListQuery,
+  ): Prisma.Sql {
     const { filters, after } = query;
-    const conditions: Prisma.Sql[] = [];
+    const conditions: Prisma.Sql[] = [scopeSql(scope, 'st.organization_id')];
     if (filters.entityType) {
       conditions.push(
         Prisma.sql`st.entity_type = ${filters.entityType}::core_status_transition_entity_type`,

@@ -29,11 +29,13 @@ async function main(): Promise<void> {
     bulk,
   });
   console.log(
-    `Seeded ${result.payments} Payments, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
+    `Seeded ${result.payments} Payments in ${result.organizations} Organizations, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
   );
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof SeedRefusedError ? `Refused: ${error.message}` : error);
+  console.error(
+    error instanceof SeedRefusedError ? `Refused: ${error.message}` : error,
+  );
   process.exit(1);
 });

@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   PaymentsReadRepository,
   type PaymentListFilters,
@@ -27,8 +28,11 @@ export class ListPayments {
     private readonly payments: PaymentsReadRepository,
   ) {}
 
-  async execute(input: ListPaymentsInput): Promise<Page<PaymentListRow>> {
-    const rows = await this.payments.list(input);
+  async execute(
+    scope: ReadScope,
+    input: ListPaymentsInput,
+  ): Promise<Page<PaymentListRow>> {
+    const rows = await this.payments.list(scope, input);
     return toPage(rows, input.limit, (last) =>
       encodeCursor([
         `${input.sort}:${input.order}`,

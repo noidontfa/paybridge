@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   PaymentEventsReadRepository,
   type PaymentEventDetailRow,
@@ -17,9 +18,10 @@ export class ListPaymentEvents {
   ) {}
 
   async execute(
+    scope: ReadScope,
     query: PaymentEventListQuery,
   ): Promise<Page<PaymentEventSummaryRow>> {
-    const rows = await this.events.list(query);
+    const rows = await this.events.list(scope, query);
     return toPage(rows, query.limit, (last) =>
       encodeCursor(['payment-events', last.createdAt.toISOString(), last.id]),
     );
@@ -34,7 +36,10 @@ export class GetPaymentEvent {
     private readonly events: PaymentEventsReadRepository,
   ) {}
 
-  async execute(id: string): Promise<PaymentEventDetailRow | null> {
-    return isUuid(id) ? this.events.findById(id.toLowerCase()) : null;
+  async execute(
+    scope: ReadScope,
+    id: string,
+  ): Promise<PaymentEventDetailRow | null> {
+    return isUuid(id) ? this.events.findById(scope, id.toLowerCase()) : null;
   }
 }

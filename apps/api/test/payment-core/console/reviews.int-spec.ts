@@ -14,6 +14,7 @@ import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { testDatabaseUrl } from '../../setup/test-database.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 04: GET /internal/reviews and /internal/reviews/summary over HTTP on
 // real PostgreSQL. Every success is parsed with the Console's copied schemas.
@@ -53,6 +54,7 @@ async function insertReview(input: ReviewInput) {
   await prisma.payment.create({
     data: {
       id: paymentId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: input.ref,
       amount: new Prisma.Decimal('1500000'),
       currency: 'VND',
@@ -65,6 +67,7 @@ async function insertReview(input: ReviewInput) {
   await prisma.paymentTransaction.create({
     data: {
       id: attemptId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       paymentId,
       gatewayId: input.gatewayId ?? 'stripe',
       status: open ? 'REQUIRES_REVIEW' : 'SUCCEEDED',
@@ -162,6 +165,7 @@ describe('state', () => {
     await prisma.payment.create({
       data: {
         id: paymentId,
+        organizationId: DEFAULT_ORGANIZATION_ID,
         merchantOrderId: 'NEVER',
         amount: new Prisma.Decimal('1'),
         currency: 'VND',
@@ -172,6 +176,7 @@ describe('state', () => {
     await prisma.paymentTransaction.create({
       data: {
         id: newId(),
+        organizationId: DEFAULT_ORGANIZATION_ID,
         paymentId,
         gatewayId: 'stripe',
         status: 'PENDING',
@@ -252,9 +257,9 @@ describe('filters', () => {
     expect(await refs('?gatewayId=fake&reason=DUPLICATE_SUCCESS')).toEqual([
       'B',
     ]);
-    expect(
-      await refs('?gatewayId=stripe&reason=DUPLICATE_SUCCESS'),
-    ).toEqual([]);
+    expect(await refs('?gatewayId=stripe&reason=DUPLICATE_SUCCESS')).toEqual(
+      [],
+    );
   });
 });
 

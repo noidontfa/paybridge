@@ -12,6 +12,8 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { WebhookIntake } from '../application/webhook-intake.js';
+import type { OrganizationScope } from '../domain/organization-scope.js';
+import { CurrentScope } from './current-scope.decorator.js';
 import { UnknownGatewayError } from '../gateway-manager/gateway-manager.js';
 import type { CallbackAck, HeaderValues } from '../port/index.js';
 
@@ -29,6 +31,7 @@ export class WebhooksController {
     summary: 'Receive a provider callback (verified, stored, acknowledged)',
   })
   async receive(
+    @CurrentScope() scope: OrganizationScope,
     @Param('gatewayId') gatewayId: string,
     @Req() req: RawBodyRequest<Request>,
     @Res() res: Response,
@@ -36,7 +39,7 @@ export class WebhooksController {
     const rawBody = await readRawBody(req);
     let ack: CallbackAck;
     try {
-      ack = await this.intake.receive({
+      ack = await this.intake.receive(scope, {
         gatewayId,
         rawBody,
         headers: req.headers,

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Queue } from 'bullmq';
+import type { OrganizationScope } from '../domain/organization-scope.js';
 import { GatewayManager } from '../gateway-manager/gateway-manager.js';
 import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
 import { QUEUES, jobIds } from '../infrastructure/queue/queue.constants.js';
@@ -53,7 +54,10 @@ export class WebhookIntake {
     @InjectQueue(QUEUES.webhookInbox) private readonly queue: Queue,
   ) {}
 
-  async receive(callback: IncomingCallback): Promise<CallbackAck> {
+  async receive(
+    scope: OrganizationScope,
+    callback: IncomingCallback,
+  ): Promise<CallbackAck> {
     const plugin = this.gateways.resolve(callback.gatewayId);
 
     let parsed;
@@ -81,7 +85,7 @@ export class WebhookIntake {
 
     const providerEventId = parsed.providerEventId || null;
     const { entry, duplicate } =
-      await this.runner.repositories.webhookInbox.record({
+      await this.runner.repositories.webhookInbox.record(scope, {
         gatewayId: callback.gatewayId,
         dedupeKey:
           providerEventId ??

@@ -1,3 +1,4 @@
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable } from '@nestjs/common';
 import type { JobsOptions, Queue } from 'bullmq';
@@ -55,6 +56,7 @@ export class ReviewRequerySweep {
     );
     const ids =
       await this.runner.repositories.payments.findReviewRequeryAttemptIds(
+        ALL_ORGANIZATIONS,
         REQUERIED_REVIEW_REASONS,
         openedAfter,
         REVIEW_REQUERY_BATCH_SIZE,

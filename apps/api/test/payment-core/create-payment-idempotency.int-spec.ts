@@ -18,6 +18,10 @@ import {
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import {
+  DEFAULT_ORGANIZATION_ID,
+  defaultScope,
+} from '../setup/organizations.js';
 
 // Idempotency-Key on createPayment (ticket 13), against the test database.
 
@@ -74,8 +78,12 @@ describe('createPayment with an Idempotency-Key', () => {
     const input = request();
     const key = `key-${newId()}`;
 
-    const first = await service.createPayment(input, { idempotencyKey: key });
-    const second = await service.createPayment(input, { idempotencyKey: key });
+    const first = await service.createPayment(defaultScope, input, {
+      idempotencyKey: key,
+    });
+    const second = await service.createPayment(defaultScope, input, {
+      idempotencyKey: key,
+    });
 
     expect(first).toMatchObject({ status: 201, replayed: false });
     expect(second).toMatchObject({ status: 201, replayed: true });
@@ -86,13 +94,17 @@ describe('createPayment with an Idempotency-Key', () => {
 
   it('replays the original response even after the Payment changed', async () => {
     const input = request();
-    const first = await service.createPayment(input, { idempotencyKey: 'k1' });
+    const first = await service.createPayment(defaultScope, input, {
+      idempotencyKey: 'k1',
+    });
     await prisma.payment.update({
       where: { id: first.payment.id },
       data: { status: 'CANCELLED' },
     });
 
-    const second = await service.createPayment(input, { idempotencyKey: 'k1' });
+    const second = await service.createPayment(defaultScope, input, {
+      idempotencyKey: 'k1',
+    });
 
     expect(second.snapshot).toEqual(first.snapshot);
     expect(second.snapshot).toMatchObject({ status: 'PENDING' });
@@ -100,16 +112,17 @@ describe('createPayment with an Idempotency-Key', () => {
 
   it('rejects the same key with a different body (422) and stores nothing new', async () => {
     const input = request();
-    await service.createPayment(input, { idempotencyKey: 'k1' });
+    await service.createPayment(defaultScope, input, { idempotencyKey: 'k1' });
 
     await expect(
       service.createPayment(
+        defaultScope,
         { ...input, amount: '99000' },
         { idempotencyKey: 'k1' },
       ),
     ).rejects.toThrow(IdempotencyKeyReusedError);
     await expect(
-      service.createPayment(request(), { idempotencyKey: 'k1' }),
+      service.createPayment(defaultScope, request(), { idempotencyKey: 'k1' }),
     ).rejects.toThrow(IdempotencyKeyReusedError);
 
     expect(await counts()).toEqual({ payments: 1, outbox: 1, keys: 1 });
@@ -117,10 +130,12 @@ describe('createPayment with an Idempotency-Key', () => {
 
   it('rejects a new key whose upstream reference exists (409) with the existing Payment id', async () => {
     const input = request();
-    const first = await service.createPayment(input, { idempotencyKey: 'k1' });
+    const first = await service.createPayment(defaultScope, input, {
+      idempotencyKey: 'k1',
+    });
 
     const error = await service
-      .createPayment(input, { idempotencyKey: 'k2' })
+      .createPayment(defaultScope, input, { idempotencyKey: 'k2' })
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(UpstreamReferenceExistsError);
@@ -132,14 +147,20 @@ describe('createPayment with an Idempotency-Key', () => {
   });
 
   it('stores hash, response, Payment id, creation and 24-hour expiry', async () => {
-    const result = await service.createPayment(request(), {
+    const result = await service.createPayment(defaultScope, request(), {
       idempotencyKey: 'k1',
     });
 
     const record = await prisma.idempotencyKey.findUniqueOrThrow({
-      where: { key: 'k1' },
+      where: {
+        organizationId_key: {
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          key: 'k1',
+        },
+      },
     });
     expect(record).toEqual({
+      organizationId: DEFAULT_ORGANIZATION_ID,
       key: 'k1',
       requestHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       responseStatus: 201,
@@ -151,10 +172,12 @@ describe('createPayment with an Idempotency-Key', () => {
   });
 
   it('treats an expired record as absent: the key may be reused', async () => {
-    await service.createPayment(request(), { idempotencyKey: 'k1' });
+    await service.createPayment(defaultScope, request(), {
+      idempotencyKey: 'k1',
+    });
     clock.set(new Date('2026-05-02T10:00:00.001Z'));
 
-    const reused = await service.createPayment(request(), {
+    const reused = await service.createPayment(defaultScope, request(), {
       idempotencyKey: 'k1',
     });
 
@@ -167,7 +190,7 @@ describe('createPayment with an Idempotency-Key', () => {
 
     const results = await Promise.all(
       Array.from({ length: 5 }, () =>
-        service.createPayment(input, { idempotencyKey: 'k1' }),
+        service.createPayment(defaultScope, input, { idempotencyKey: 'k1' }),
       ),
     );
 
@@ -179,7 +202,7 @@ describe('createPayment with an Idempotency-Key', () => {
   });
 
   it('accepts a request without a key as an ordinary create, storing no record', async () => {
-    const result = await service.createPayment(request());
+    const result = await service.createPayment(defaultScope, request());
 
     expect(result).toMatchObject({ status: 201, replayed: false });
     expect(await counts()).toEqual({ payments: 1, outbox: 1, keys: 0 });
@@ -187,9 +210,11 @@ describe('createPayment with an Idempotency-Key', () => {
 
   it('rejects a duplicate upstream reference without a key (409) with the existing id', async () => {
     const input = request();
-    const first = await service.createPayment(input);
+    const first = await service.createPayment(defaultScope, input);
 
-    await expect(service.createPayment(input)).rejects.toMatchObject({
+    await expect(
+      service.createPayment(defaultScope, input),
+    ).rejects.toMatchObject({
       code: 'UPSTREAM_REFERENCE_EXISTS',
       paymentId: first.payment.id,
     });
@@ -207,11 +232,11 @@ describe('createPayment idempotency atomicity', () => {
         work({
           ...txRepos,
           idempotencyKeys: {
-            find: (key) => txRepos.idempotencyKeys.find(key),
-            deleteIfExpired: (key, now) =>
-              txRepos.idempotencyKeys.deleteIfExpired(key, now),
-            deleteExpiredBefore: (cutoff) =>
-              txRepos.idempotencyKeys.deleteExpiredBefore(cutoff),
+            find: (scope, key) => txRepos.idempotencyKeys.find(scope, key),
+            deleteIfExpired: (scope, key, now) =>
+              txRepos.idempotencyKeys.deleteIfExpired(scope, key, now),
+            deleteExpiredBefore: (scope, cutoff) =>
+              txRepos.idempotencyKeys.deleteExpiredBefore(scope, cutoff),
             create: () => Promise.reject(new Error('key store down')),
           },
         }),
@@ -232,7 +257,7 @@ describe('createPayment idempotency atomicity', () => {
       await expect(
         failing
           .get(PaymentService)
-          .createPayment(request(), { idempotencyKey: 'k1' }),
+          .createPayment(defaultScope, request(), { idempotencyKey: 'k1' }),
       ).rejects.toThrow('key store down');
       expect(await counts()).toEqual({ payments: 0, outbox: 0, keys: 0 });
     } finally {

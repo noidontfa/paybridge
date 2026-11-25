@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export const CALLBACK_STATUSES = [
   'RECEIVED',
@@ -22,13 +24,15 @@ export class GatewaysReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Gateway ids that appear on any PaymentTransaction or stored Callback. */
-  async gatewayIdsWithData(): Promise<string[]> {
+  async gatewayIdsWithData(scope: ReadScope): Promise<string[]> {
     const [transactions, callbacks] = await Promise.all([
       this.prisma.paymentTransaction.findMany({
+        where: scopeWhere(scope),
         distinct: ['gatewayId'],
         select: { gatewayId: true },
       }),
       this.prisma.webhookInbox.findMany({
+        where: scopeWhere(scope),
         distinct: ['gatewayId'],
         select: { gatewayId: true },
       }),
@@ -39,17 +43,18 @@ export class GatewaysReadRepository {
   }
 
   async callbackHealth(
+    scope: ReadScope,
     gatewayId: string,
     since: Date,
   ): Promise<GatewayCallbackHealth> {
     const [grouped, last] = await Promise.all([
       this.prisma.webhookInbox.groupBy({
         by: ['status'],
-        where: { gatewayId, receivedAt: { gte: since } },
+        where: { ...scopeWhere(scope), gatewayId, receivedAt: { gte: since } },
         _count: { _all: true },
       }),
       this.prisma.webhookInbox.aggregate({
-        where: { gatewayId, receivedAt: { gte: since } },
+        where: { ...scopeWhere(scope), gatewayId, receivedAt: { gte: since } },
         _max: { receivedAt: true },
       }),
     ]);

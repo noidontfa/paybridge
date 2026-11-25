@@ -4,6 +4,8 @@ import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import type { PaymentStatus, AttemptStatus } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export type PaymentSortColumn = 'createdAt' | 'amount';
 
@@ -58,9 +60,12 @@ export class PaymentsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, so the caller can tell whether another page exists. */
-  async list(query: PaymentListQuery): Promise<PaymentListRow[]> {
+  async list(
+    scope: ReadScope,
+    query: PaymentListQuery,
+  ): Promise<PaymentListRow[]> {
     const rows = await this.prisma.payment.findMany({
-      where: this.where(query),
+      where: this.where(scope, query),
       // The id breaks ties so a page boundary never repeats or skips a row.
       orderBy: [{ [query.sort]: query.order }, { id: query.order }],
       take: query.limit + 1,
@@ -85,9 +90,12 @@ export class PaymentsReadRepository {
     }));
   }
 
-  private where(query: PaymentListQuery): Prisma.PaymentWhereInput {
+  private where(
+    scope: ReadScope,
+    query: PaymentListQuery,
+  ): Prisma.PaymentWhereInput {
     const { filters, after } = query;
-    const and: Prisma.PaymentWhereInput[] = [];
+    const and: Prisma.PaymentWhereInput[] = [scopeWhere(scope)];
     if (filters.status) and.push({ status: filters.status });
     if (filters.gatewayId) {
       and.push({ transactions: { some: { gatewayId: filters.gatewayId } } });

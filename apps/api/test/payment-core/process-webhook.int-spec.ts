@@ -20,6 +20,7 @@ import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 19: a stored webhook is applied to its attempt and Payment by the
 // ProcessWebhook worker service, against the migrated test database with the
@@ -70,12 +71,12 @@ async function pendingAttempt(): Promise<{
   payment: Payment;
   attemptId: string;
 }> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
-  const { attempt } = await service.startAttempt({
+  const { attempt } = await service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId: fake.gatewayId,
     returnUrl: 'https://shop.example/return',
@@ -93,7 +94,7 @@ async function storeCallback(
     amount: '150000',
     ...payload,
   });
-  const { entry } = await repos.webhookInbox.record({
+  const { entry } = await repos.webhookInbox.record(defaultScope, {
     gatewayId: fake.gatewayId,
     dedupeKey: newId(),
     attemptKey: payload.attemptKey,
@@ -124,7 +125,7 @@ describe('a stored row that re-parses as ignored', () => {
   it('is marked PROCESSED with no state change and no error', async () => {
     const { payment, attemptId } = await pendingAttempt();
     const callback = fake.signedCallback({ ignored: true });
-    const { entry } = await repos.webhookInbox.record({
+    const { entry } = await repos.webhookInbox.record(defaultScope, {
       gatewayId: fake.gatewayId,
       dedupeKey: newId(),
       rawBody: callback.rawBody,
@@ -209,14 +210,14 @@ describe('a success with the Payment amount', () => {
   });
 
   it('is accepted for an attempt still in CREATED', async () => {
-    const { payment } = await service.createPayment({
+    const { payment } = await service.createPayment(defaultScope, {
       amount: '150000',
       currency: 'VND',
       upstreamReference: `order-${newId()}`,
     });
     const attemptId = newId();
     await moduleRef.get(TransactionRunner).run((tx) =>
-      tx.payments.createAttempt({
+      tx.payments.createAttempt(defaultScope, {
         id: attemptId,
         paymentId: payment.id,
         gatewayId: 'fake',
@@ -333,7 +334,7 @@ describe('a result that goes to review', () => {
     );
 
     await expect(
-      service.startAttempt({
+      service.startAttempt(defaultScope, {
         paymentId: payment.id,
         gatewayId: fake.gatewayId,
         returnUrl: 'https://shop.example/return',
@@ -407,7 +408,7 @@ describe('a row that cannot be applied', () => {
       status: 'SUCCEEDED',
       amount: '150000',
     });
-    const { entry } = await repos.webhookInbox.record({
+    const { entry } = await repos.webhookInbox.record(defaultScope, {
       gatewayId: 'fake',
       dedupeKey: newId(),
       attemptKey: attemptId,
@@ -450,7 +451,7 @@ describe('dispatch', () => {
 
     await moduleRef
       .get(WebhookIntake)
-      .receive({ gatewayId: 'fake', ...callback });
+      .receive(defaultScope, { gatewayId: 'fake', ...callback });
 
     await vi.waitFor(
       async () => {

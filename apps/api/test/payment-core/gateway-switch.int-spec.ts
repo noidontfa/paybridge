@@ -22,6 +22,7 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Gateway switch (ticket 16): a new attempt on the same Payment cancels the
 // open one in the same locked step, then cancels it at the provider
@@ -83,7 +84,7 @@ beforeEach(async () => {
 });
 
 async function createPayment(): Promise<Payment> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -92,7 +93,7 @@ async function createPayment(): Promise<Payment> {
 }
 
 function start(payment: Payment, gatewayId: string) {
-  return service.startAttempt({
+  return service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId,
     returnUrl: RETURN_URL,
@@ -101,6 +102,7 @@ function start(payment: Payment, gatewayId: string) {
 
 async function trail(attemptId: string) {
   const rows = await repos.statusTransitions.listForEntity(
+    defaultScope,
     'PAYMENT_TRANSACTION',
     attemptId,
   );
@@ -124,7 +126,7 @@ describe('Gateway switch: the local cancel', () => {
       gatewayId: 'beta',
       status: 'PENDING',
     });
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     expect(stored?.status).toBe('PENDING');
     const byId = new Map(stored?.attempts.map((a) => [a.id, a.status]));
     expect(byId.get(first.attempt.id)).toBe('CANCELLED');
@@ -136,12 +138,13 @@ describe('Gateway switch: the local cancel', () => {
     // Leaves the attempt CREATED (ticket 22); the queued query runs later.
     alpha.scriptInitiate(new OutcomeUnknownError('timeout'));
     await start(payment, 'alpha');
-    const [created] = (await repos.payments.findById(payment.id))!.attempts;
+    const [created] = (await repos.payments.findById(defaultScope, payment.id))!
+      .attempts;
     expect(created?.status).toBe('CREATED');
 
     const second = await start(payment, 'beta');
 
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     const byId = new Map(stored?.attempts.map((a) => [a.id, a.status]));
     expect(byId.get(created!.id)).toBe('CANCELLED');
     expect(byId.get(second.attempt.id)).toBe('PENDING');
@@ -223,7 +226,7 @@ describe('Gateway switch: the local cancel', () => {
 
     const second = await start(payment, 'alpha');
 
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     const byId = new Map(stored?.attempts.map((a) => [a.id, a.status]));
     expect(byId.get(first.attempt.id)).toBe('CANCELLED');
     expect(byId.get(second.attempt.id)).toBe('PENDING');
@@ -241,9 +244,10 @@ describe('Gateway switch: the local cancel', () => {
 
     await start(payment, 'beta');
 
-    const old = (await repos.payments.findById(payment.id))!.attempts.find(
-      (a) => a.id === first.attempt.id,
-    );
+    const old = (await repos.payments.findById(
+      defaultScope,
+      payment.id,
+    ))!.attempts.find((a) => a.id === first.attempt.id);
     expect(old).toMatchObject({
       status: 'CANCELLED',
       providerRef: 'alpha-ref',
@@ -279,6 +283,7 @@ describe('Gateway switch: the provider cancel', () => {
     ]);
     expect(statusAtCancel).toBe('CANCELLED');
     const raw = await repos.gatewayRawResponses.listForAttempt(
+      defaultScope,
       first.attempt.id,
     );
     expect(raw.map((r) => [r.operation, r.payload])).toEqual([
@@ -298,7 +303,7 @@ describe('Gateway switch: the provider cancel', () => {
     const second = await start(payment, 'beta');
 
     expect(second.attempt.status).toBe('PENDING');
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     const byId = new Map(stored?.attempts.map((a) => [a.id, a.status]));
     expect(byId.get(first.attempt.id)).toBe('CANCELLED');
     expect(warn).toHaveBeenCalledWith(
@@ -319,7 +324,7 @@ describe('Gateway switch: the provider cancel', () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringMatching(new RegExp(`supportsCancel.*${first.attempt.id}`)),
     );
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     expect(
       stored?.attempts.find((a) => a.id === first.attempt.id)?.status,
     ).toBe('CANCELLED');

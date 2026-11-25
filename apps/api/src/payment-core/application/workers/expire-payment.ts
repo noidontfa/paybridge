@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../../domain/clock.js';
+import {
+  ALL_ORGANIZATIONS,
+  organizationScope,
+  type OrganizationScope,
+} from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
@@ -31,6 +36,7 @@ type Phase1 =
   | { readonly kind: 'done'; readonly result: ExpirePaymentResult }
   | {
       readonly kind: 'query';
+      readonly scope: OrganizationScope;
       readonly attempts: readonly PaymentTransaction[];
     };
 
@@ -72,7 +78,12 @@ export class ExpirePayment {
 
   async execute(paymentId: string): Promise<ExpirePaymentResult> {
     const first = await this.runner.run(async (repos): Promise<Phase1> => {
-      const payment = await repos.payments.findForUpdate(paymentId);
+      // The queued job holds only the Payment id, so the first lock looks
+      // across Organizations; the rest stays in the Payment's own one.
+      const payment = await repos.payments.findForUpdate(
+        ALL_ORGANIZATIONS,
+        paymentId,
+      );
       if (!payment) return { kind: 'done', result: 'not-found' };
       if (payment.status !== 'PENDING') {
         return { kind: 'done', result: 'not-pending' };
@@ -89,19 +100,24 @@ export class ExpirePayment {
         await expirePayment(repos, payment);
         return { kind: 'done', result: 'expired' };
       }
-      return { kind: 'query', attempts: open };
+      return {
+        kind: 'query',
+        scope: organizationScope(payment.organizationId),
+        attempts: open,
+      };
     });
     if (first.kind === 'done') return first.result;
-    return this.expireWithAttempts(paymentId, first.attempts);
+    return this.expireWithAttempts(first.scope, paymentId, first.attempts);
   }
 
   private async expireWithAttempts(
+    scope: OrganizationScope,
     paymentId: string,
     open: readonly PaymentTransaction[],
   ): Promise<ExpirePaymentResult> {
     const answers = await this.queryAll(open);
     const { result, toCancel } = await this.runner.run((repos) =>
-      this.close(repos, paymentId, answers),
+      this.close(repos, scope, paymentId, answers),
     );
     if (toCancel.length > 0) await this.cancels.cancel(toCancel);
     return result;
@@ -119,11 +135,14 @@ export class ExpirePayment {
           attemptKey: attempt.id,
           providerMetadata: attempt.providerMetadata ?? {},
         });
-        await this.runner.repositories.gatewayRawResponses.record({
-          attemptId: attempt.id,
-          operation: 'query',
-          payload: result.rawPayload,
-        });
+        await this.runner.repositories.gatewayRawResponses.record(
+          organizationScope(attempt.organizationId),
+          {
+            attemptId: attempt.id,
+            operation: 'query',
+            payload: result.rawPayload,
+          },
+        );
         answers.push({ attempt, result });
       } catch {
         // Unavailable, unknown outcome or not found: not a confirmation of
@@ -135,13 +154,14 @@ export class ExpirePayment {
 
   private async close(
     repos: Repositories,
+    scope: OrganizationScope,
     paymentId: string,
     answers: readonly Answer[],
   ): Promise<{
     result: ExpirePaymentResult;
     toCancel: readonly PaymentTransaction[];
   }> {
-    let payment = await repos.payments.findForUpdate(paymentId);
+    let payment = await repos.payments.findForUpdate(scope, paymentId);
     if (!payment) return { result: 'not-found', toCancel: [] };
 
     const toCancel: PaymentTransaction[] = [];
@@ -211,10 +231,11 @@ async function expirePayment(
       `Payment ${payment.id} cannot expire from ${payment.status}`,
     );
   }
-  const expired = await repos.payments.update(payment.id, {
+  const scope = organizationScope(payment.organizationId);
+  const expired = await repos.payments.update(scope, payment.id, {
     status: 'EXPIRED',
   });
-  await repos.statusTransitions.record({
+  await repos.statusTransitions.record(scope, {
     entityType: 'PAYMENT',
     entityId: payment.id,
     fromStatus: payment.status,
@@ -222,7 +243,7 @@ async function expirePayment(
     trigger: 'expiry',
     actor: 'system',
   });
-  await repos.outbox.add({
+  await repos.outbox.add(scope, {
     eventType: 'PaymentExpired',
     paymentId: payment.id,
     payload: {

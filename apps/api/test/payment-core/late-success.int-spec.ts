@@ -21,6 +21,7 @@ import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 21: a success on a FAILED, EXPIRED or CANCELLED attempt is promoted
 // only when safe, else it goes to review. Expiry itself is built later, so
@@ -75,7 +76,7 @@ async function seed(options: {
   payment?: PaymentStatus;
   others?: AttemptStatus[];
 }) {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -83,7 +84,7 @@ async function seed(options: {
   const attemptId = newId();
   const otherIds: string[] = [];
   await runner.run(async (tx) => {
-    await tx.payments.createAttempt({
+    await tx.payments.createAttempt(defaultScope, {
       id: attemptId,
       paymentId: payment.id,
       gatewayId: 'fake',
@@ -92,7 +93,7 @@ async function seed(options: {
     for (const status of options.others ?? []) {
       const id = newId();
       otherIds.push(id);
-      await tx.payments.createAttempt({
+      await tx.payments.createAttempt(defaultScope, {
         id,
         paymentId: payment.id,
         gatewayId: 'fake',
@@ -100,7 +101,9 @@ async function seed(options: {
       });
     }
     if (options.payment) {
-      await tx.payments.update(payment.id, { status: options.payment });
+      await tx.payments.update(defaultScope, payment.id, {
+        status: options.payment,
+      });
     }
   });
   return { paymentId: payment.id, attemptId, otherIds };
@@ -116,7 +119,7 @@ async function deliver(
     ...payload,
     attemptKey,
   });
-  const { entry } = await repos.webhookInbox.record({
+  const { entry } = await repos.webhookInbox.record(defaultScope, {
     gatewayId: fake.gatewayId,
     dedupeKey: newId(),
     attemptKey,

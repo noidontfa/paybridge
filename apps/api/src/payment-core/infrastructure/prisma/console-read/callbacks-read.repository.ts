@@ -7,6 +7,8 @@ import {
   toStringRecord,
   uuidNeedle,
 } from './developer-views.shared.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export interface CallbackListFilters {
   readonly gatewayId?: string;
@@ -60,9 +62,12 @@ export class CallbacksReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first, so the caller can tell whether another page exists. */
-  async list(query: CallbackListQuery): Promise<CallbackListRow[]> {
+  async list(
+    scope: ReadScope,
+    query: CallbackListQuery,
+  ): Promise<CallbackListRow[]> {
     return this.prisma.webhookInbox.findMany({
-      where: await this.where(query),
+      where: await this.where(scope, query),
       // The id breaks ties so a page boundary never repeats or skips a row.
       orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
@@ -70,13 +75,18 @@ export class CallbacksReadRepository {
     });
   }
 
-  async findById(id: string): Promise<CallbackDetailRow | null> {
-    const row = await this.prisma.webhookInbox.findUnique({ where: { id } });
+  async findById(
+    scope: ReadScope,
+    id: string,
+  ): Promise<CallbackDetailRow | null> {
+    const row = await this.prisma.webhookInbox.findUnique({
+      where: { id, ...scopeWhere(scope) },
+    });
     if (!row) return null;
     // No foreign key on the Attempt Key: a Callback may name an unknown attempt.
     const attempt = row.attemptKey
       ? await this.prisma.paymentTransaction.findUnique({
-          where: { id: row.attemptKey },
+          where: { id: row.attemptKey, ...scopeWhere(scope) },
           select: { paymentId: true },
         })
       : null;
@@ -98,10 +108,11 @@ export class CallbacksReadRepository {
   }
 
   private async where(
+    scope: ReadScope,
     query: CallbackListQuery,
   ): Promise<Prisma.WebhookInboxWhereInput> {
     const { filters, after } = query;
-    const and: Prisma.WebhookInboxWhereInput[] = [];
+    const and: Prisma.WebhookInboxWhereInput[] = [scopeWhere(scope)];
     if (filters.gatewayId) and.push({ gatewayId: filters.gatewayId });
     if (filters.status) and.push({ status: filters.status });
     if (filters.q) {
@@ -110,6 +121,7 @@ export class CallbacksReadRepository {
       // The Attempt Keys of Payments that match the needle (no relation to follow).
       const keys = await this.prisma.paymentTransaction.findMany({
         where: {
+          ...scopeWhere(scope),
           payment: {
             OR: [
               ...(id ? [{ id }] : []),

@@ -27,6 +27,8 @@ import type { Response } from 'express';
 import { ErrorResponseDto } from '../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PaymentService } from '../application/payment.service.js';
+import type { OrganizationScope } from '../domain/organization-scope.js';
+import { CurrentScope } from './current-scope.decorator.js';
 import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,
@@ -74,6 +76,7 @@ export class PaymentsController {
     description: 'The Idempotency-Key was used with a different body',
   })
   async create(
+    @CurrentScope() scope: OrganizationScope,
     @Body(new ZodValidationPipe(createPaymentSchema)) body: CreatePaymentBody,
     @Headers(IDEMPOTENCY_KEY_HEADER.toLowerCase()) rawKey: unknown,
     @Res({ passthrough: true }) res: Response,
@@ -81,7 +84,9 @@ export class PaymentsController {
     const idempotencyKey = new ZodValidationPipe(
       idempotencyKeySchema,
     ).transform(rawKey);
-    const result = await this.payments.createPayment(body, { idempotencyKey });
+    const result = await this.payments.createPayment(scope, body, {
+      idempotencyKey,
+    });
     res.status(result.status);
     if (result.replayed) res.setHeader(IDEMPOTENT_REPLAYED_HEADER, 'true');
     return snapshotToPaymentResponse(result.snapshot);
@@ -101,9 +106,12 @@ export class PaymentsController {
     description: 'The Payment is SUCCEEDED or EXPIRED',
   })
   async cancel(
+    @CurrentScope() scope: OrganizationScope,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<PaymentDetailResponseDto> {
-    return toPaymentDetailResponse(await this.payments.cancelPayment(id));
+    return toPaymentDetailResponse(
+      await this.payments.cancelPayment(scope, id),
+    );
   }
 
   @Get(':id')
@@ -113,8 +121,11 @@ export class PaymentsController {
     type: ErrorResponseDto,
     description: 'No Payment has this id',
   })
-  async get(@Param('id') id: string): Promise<PaymentDetailResponseDto> {
-    const payment = await this.payments.getPayment(id);
+  async get(
+    @CurrentScope() scope: OrganizationScope,
+    @Param('id') id: string,
+  ): Promise<PaymentDetailResponseDto> {
+    const payment = await this.payments.getPayment(scope, id);
     return toPaymentDetailResponse(payment);
   }
 }

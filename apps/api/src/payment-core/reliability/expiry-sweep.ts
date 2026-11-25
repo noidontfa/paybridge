@@ -1,3 +1,4 @@
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable } from '@nestjs/common';
 import type { JobsOptions, Queue } from 'bullmq';
@@ -62,7 +63,9 @@ export class ExpirySweep {
   ) {}
 
   async run(): Promise<{ queued: number }> {
+    // A system sweep: it queues work for every Organization.
     const ids = await this.runner.repositories.payments.findExpiredPendingIds(
+      ALL_ORGANIZATIONS,
       this.clock.now(),
       this.options.batchSize,
     );

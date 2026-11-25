@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import type { GatewayMode } from '../../../port/payment-gateway.port.js';
 import { GatewayManager } from '../../../gateway-manager/gateway-manager.js';
 import {
@@ -42,18 +43,20 @@ export class GatewaysOverview {
     @Inject(PUBLIC_BASE_URL) private readonly baseUrl: string,
   ) {}
 
-  async list(): Promise<GatewaySummary[]> {
-    const ids = await this.knownIds();
+  async list(scope: ReadScope): Promise<GatewaySummary[]> {
+    const ids = await this.knownIds(scope);
     return [...ids].sort().map((id) => this.summary(id));
   }
 
   /** Undefined when the id is neither registered nor holds data. */
   async detail(
+    scope: ReadScope,
     id: string,
     now = new Date(),
   ): Promise<GatewayDetail | undefined> {
-    if (!(await this.knownIds()).has(id)) return undefined;
+    if (!(await this.knownIds(scope)).has(id)) return undefined;
     const health = await this.repo.callbackHealth(
+      scope,
       id,
       new Date(now.getTime() - DAY_MS),
     );
@@ -66,10 +69,10 @@ export class GatewaysOverview {
     };
   }
 
-  private async knownIds(): Promise<Set<string>> {
+  private async knownIds(scope: ReadScope): Promise<Set<string>> {
     return new Set([
       ...this.manager.gatewayIds(),
-      ...(await this.repo.gatewayIdsWithData()),
+      ...(await this.repo.gatewayIdsWithData(scope)),
     ]);
   }
 
