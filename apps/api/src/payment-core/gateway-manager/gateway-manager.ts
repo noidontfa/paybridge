@@ -1,4 +1,10 @@
 import type { PaymentGateway } from '../port/index.js';
+import {
+  pluginCacheKey,
+  type GatewayPluginFactory,
+  type GatewayRegistration,
+  type PluginInstanceKey,
+} from './gateway-plugin-factory.js';
 
 /** Boot-time error: two plugins declare the same gateway identifier. */
 export class DuplicateGatewayError extends Error {
@@ -33,36 +39,35 @@ export interface GatewayManagerOptions {
 
 /**
  * Finds the Gateway Plugin for a PaymentTransaction from its gateway
- * identifier. The map is built once, at boot, from the plugins registered
- * explicitly in the composition root.
+ * identifier. Plugins are registered as factories explicitly in the
+ * composition root; the manager builds each instance on first use and caches
+ * it by gateway, Gateway Connection id and credentials version.
  */
 export class GatewayManager {
-  private readonly plugins = new Map<string, PaymentGateway>();
+  private readonly registrations = new Map<string, GatewayRegistration>();
+  private readonly instances = new Map<string, PaymentGateway>();
 
   constructor(
-    plugins: readonly PaymentGateway[],
+    registrations: readonly GatewayRegistration[],
     options: GatewayManagerOptions = {},
   ) {
-    plugins.forEach((plugin, index) => {
-      if (
-        !plugin ||
-        typeof plugin.gatewayId !== 'string' ||
-        !plugin.gatewayId
-      ) {
+    registrations.forEach((entry, index) => {
+      const gatewayId = entry?.factory?.gatewayId;
+      if (typeof gatewayId !== 'string' || !gatewayId) {
         throw new MissingGatewayError(
           `Gateway Plugin registration #${index} is empty or has no gateway identifier`,
         );
       }
-      if (this.plugins.has(plugin.gatewayId)) {
+      if (this.registrations.has(gatewayId)) {
         throw new DuplicateGatewayError(
-          `Duplicate Gateway Plugin registration for gateway "${plugin.gatewayId}"`,
+          `Duplicate Gateway Plugin registration for gateway "${gatewayId}"`,
         );
       }
-      this.plugins.set(plugin.gatewayId, plugin);
+      this.registrations.set(gatewayId, entry);
     });
 
     for (const gatewayId of options.requiredGatewayIds ?? []) {
-      if (!this.plugins.has(gatewayId)) {
+      if (!this.registrations.has(gatewayId)) {
         throw new MissingGatewayError(
           `No Gateway Plugin registered for required gateway "${gatewayId}"`,
         );
@@ -70,13 +75,21 @@ export class GatewayManager {
     }
   }
 
-  resolve(gatewayId: string): PaymentGateway {
-    const plugin = this.plugins.get(gatewayId);
-    if (!plugin) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
-    return plugin;
+  resolve(gatewayId: string, key?: PluginInstanceKey): PaymentGateway {
+    const entry = this.registrations.get(gatewayId);
+    if (!entry) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
+    const cacheKey = pluginCacheKey(gatewayId, key);
+    let instance = this.instances.get(cacheKey);
+    if (!instance) {
+      instance = (entry.factory as GatewayPluginFactory<unknown>).create(
+        entry.credentials,
+      );
+      this.instances.set(cacheKey, instance);
+    }
+    return instance;
   }
 
   gatewayIds(): string[] {
-    return [...this.plugins.keys()];
+    return [...this.registrations.keys()];
   }
 }
