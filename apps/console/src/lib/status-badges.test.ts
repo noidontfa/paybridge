@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ATTEMPT_STATUSES, PAYMENT_EVENT_TYPES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
+import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
 import { statusBadge } from './status-badges';
 
 describe('statusBadge', () => {
@@ -29,6 +30,12 @@ describe('statusBadge', () => {
     expect(statusBadge('transaction', 'FAILED').tone).toBe('danger');
     expect(statusBadge('transaction', 'REQUIRES_REVIEW').tone).toBe('warning');
     expect(statusBadge('review', 'AMOUNT_MISMATCH').tone).toBe('warning');
+  });
+
+  it('maps every Callback status, with failed in the danger tone', () => {
+    expect(CALLBACK_STATUSES.map((s) => statusBadge('callback', s).label)).toEqual(['Received', 'Processing', 'Processed', 'Failed']);
+    expect(statusBadge('callback', 'PROCESSED').tone).toBe('success');
+    expect(statusBadge('callback', 'FAILED').tone).toBe('danger');
   });
 
   it('falls back to a neutral badge for a value the Console does not know', () => {

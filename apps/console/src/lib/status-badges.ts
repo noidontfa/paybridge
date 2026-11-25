@@ -12,6 +12,8 @@ import {
   CircleDashedIcon,
   CircleDotIcon,
   PlusCircleIcon,
+  InboxIcon,
+  LoaderIcon,
   ClockIcon,
   CopyCheckIcon,
   HourglassIcon,
@@ -31,7 +33,7 @@ export interface BadgeSpec {
   icon: LucideIcon;
 }
 
-export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event';
+export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event' | 'callback';
 
 const SUCCEEDED: BadgeSpec = { label: 'Succeeded', tone: 'success', icon: CheckCircle2Icon };
 const PENDING: BadgeSpec = { label: 'Pending', tone: 'info', icon: HourglassIcon };
@@ -67,6 +69,12 @@ const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
     PaymentCancelled: { label: 'Payment cancelled', tone: 'neutral', icon: BanIcon },
     PaymentExpired: { label: 'Payment expired', tone: 'neutral', icon: TimerOffIcon },
     PaymentRequiresReview: { label: 'Payment requires review', tone: 'warning', icon: SearchCheckIcon },
+  },
+  callback: {
+    RECEIVED: { label: 'Received', tone: 'neutral', icon: InboxIcon },
+    PROCESSING: { label: 'Processing', tone: 'info', icon: LoaderIcon },
+    PROCESSED: { label: 'Processed', tone: 'success', icon: CheckCircle2Icon },
+    FAILED: { label: 'Failed', tone: 'danger', icon: XCircleIcon },
   },
 };
 
