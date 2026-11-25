@@ -3,6 +3,9 @@ import { ThemeProvider } from 'next-themes';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MockBanner } from '@/components/mock-banner';
 import { Providers } from '@/components/providers';
+import { OperatorProvider } from '@/lib/operator';
+import { getCurrentOperator } from '@/server/current-operator';
+import { Toaster } from '@/components/ui/sonner';
 import { DensityEffect } from '@/components/settings-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -28,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <TooltipProvider>
             {/* Providers wraps the sidebar too: its Exceptions badge is a query. */}
             <Providers>
+              <OperatorProvider operator={getCurrentOperator()}>
               <SidebarProvider>
                 <DensityEffect />
                 <AppSidebar />
@@ -36,6 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {children}
                 </SidebarInset>
               </SidebarProvider>
+              </OperatorProvider>
+              <Toaster />
             </Providers>
           </TooltipProvider>
         </ThemeProvider>

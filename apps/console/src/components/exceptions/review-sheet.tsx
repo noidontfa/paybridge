@@ -39,7 +39,7 @@ export function ReviewSheet({ paymentId, transactionId, onClose }: { paymentId: 
           ) : (
             <>
               <PaymentSummary payment={data} />
-              <TransactionTimeline attempts={[attempt]} />
+              <TransactionTimeline attempts={[attempt]} payment={data} />
             </>
           )}
         </div>
