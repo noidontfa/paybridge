@@ -19,6 +19,8 @@ test('lists stripe and fake with their state and Callback URL', async ({ page })
 });
 
 test('opens a gateway, shows its health and follows the filtered links', async ({ page }) => {
+  // The dev server compiles each route on first visit; under parallel load that can be slow.
+  test.setTimeout(60_000);
   await page.goto('/gateways');
   await page.getByRole('link', { name: 'stripe' }).click();
   await expect(page).toHaveURL('/gateways/stripe');
@@ -28,12 +30,12 @@ test('opens a gateway, shows its health and follows the filtered links', async (
   await expect(page.getByRole('region', { name: 'Last Callback' }).locator('time')).toHaveAttribute('datetime', stripe.lastCallbackAt!);
 
   await page.getByRole('link', { name: 'View Callbacks' }).click();
-  await expect(page).toHaveURL(/\/callbacks\?gatewayId=stripe$/);
+  await expect(page).toHaveURL(/\/callbacks\?gatewayId=stripe$/, { timeout: 30_000 });
   await expect(page.getByRole('combobox', { name: 'Gateway' })).toHaveValue('stripe');
 
   await page.goto('/gateways/stripe');
   await page.getByRole('link', { name: 'View Payments' }).click();
-  await expect(page).toHaveURL(/\/payments\?gatewayId=stripe$/);
+  await expect(page).toHaveURL(/\/payments\?gatewayId=stripe$/, { timeout: 30_000 });
   await expect(page.getByRole('combobox', { name: 'Gateway' })).toHaveValue('stripe');
 });
 
