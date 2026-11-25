@@ -35,3 +35,19 @@ export class EmailTakenError extends Error {
     this.name = 'EmailTakenError';
   }
 }
+
+/** Unknown, expired, already used or voided Password Reset link. */
+export class InvalidResetTokenError extends Error {
+  constructor() {
+    super('This password reset link is invalid or has expired');
+    this.name = 'InvalidResetTokenError';
+  }
+}
+
+/** Changing a password needs the current one; it did not match. */
+export class InvalidCurrentPasswordError extends Error {
+  constructor() {
+    super('The current password is not right');
+    this.name = 'InvalidCurrentPasswordError';
+  }
+}

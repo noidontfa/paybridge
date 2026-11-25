@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronsUpDownIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronsUpDownIcon, KeyRoundIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { describeOperator, useCurrentOperator } from '@/lib/operator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -88,6 +89,10 @@ export function NavUser() {
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/change-password" />}>
+              <KeyRoundIcon />
+              Change password
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void signOut()}>
               <LogOutIcon />
               Sign out

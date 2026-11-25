@@ -34,6 +34,17 @@ export class PrismaRefreshTokenRepository extends RefreshTokenRepository {
     });
   }
 
+  async revokeAllOfUserExceptFamily(
+    userId: string,
+    keepFamilyId: string,
+    at: Date,
+  ): Promise<void> {
+    await this.ctx.db.refreshToken.updateMany({
+      where: { userId, familyId: { not: keepFamilyId }, revokedAt: null },
+      data: { revokedAt: at },
+    });
+  }
+
   async revokeAllOfUser(userId: string, at: Date): Promise<void> {
     await this.ctx.db.refreshToken.updateMany({
       where: { userId, revokedAt: null },

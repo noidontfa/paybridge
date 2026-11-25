@@ -1,5 +1,12 @@
 import { getEnvironment } from '@/lib/environment';
-import { handleRefreshRedirect, handleSignIn, handleSignOut } from '@/server/auth-handlers';
+import {
+  handleChangePassword,
+  handleForgotPassword,
+  handleRefreshRedirect,
+  handleResetPassword,
+  handleSignIn,
+  handleSignOut,
+} from '@/server/auth-handlers';
 
 // The Console's sign-in endpoints. They call the API from here; the browser
 // only ever sees cookies it cannot read (ADR 0004, ADR 0008).
@@ -12,6 +19,9 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
   const options = { baseUrl: getEnvironment().apiBaseUrl };
   if (action === 'sign-in') return handleSignIn(request, options);
   if (action === 'sign-out') return handleSignOut(request, options);
+  if (action === 'forgot-password') return handleForgotPassword(request, options);
+  if (action === 'reset-password') return handleResetPassword(request, options);
+  if (action === 'change-password') return handleChangePassword(request, options);
   return new Response(null, { status: 404 });
 }
 
