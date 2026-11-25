@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] An email-sending port lives in the `identity` module (creating the module's skeleton if ticket 02 has not landed yet, without its tables)
 - [ ] The console-log adapter logs recipient, subject and the full link in one readable entry, and is the adapter used in development
