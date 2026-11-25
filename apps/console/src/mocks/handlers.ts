@@ -8,6 +8,7 @@
  * every error has the API's envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { paymentsListHandlers } from './payments-list';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -44,6 +45,9 @@ export function apiError(
 export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[] {
   const base = baseUrl.replace(/\/$/, '');
   return [
+    ...paymentsListHandlers(base, store, (request, message) =>
+      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+    ),
     http.get(`${base}/internal/overview`, ({ request }) => {
       const range = new URL(request.url).searchParams.get('range');
       const valid = OVERVIEW_RANGES.find((r) => r === range);
