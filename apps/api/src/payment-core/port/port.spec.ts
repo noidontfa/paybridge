@@ -181,7 +181,7 @@ describe('PaymentGateway port', () => {
       expectTypeOf<
         Exclude<
           keyof PaymentGateway,
-          'gatewayId' | 'capabilities' | 'callbackHeaders'
+          'gatewayId' | 'capabilities' | 'callbackHeaders' | 'mode'
         >
       >().toEqualTypeOf<'initiate' | 'query' | 'cancel' | 'parseCallback'>();
     });

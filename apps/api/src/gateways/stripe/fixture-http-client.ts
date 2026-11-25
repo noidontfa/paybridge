@@ -77,7 +77,9 @@ export class FixtureHttpClient extends Stripe.HttpClient {
     });
     const reply = this.replies.shift();
     if (!reply) {
-      return Promise.reject(new Error(`No fixture queued for ${method} ${path}`));
+      return Promise.reject(
+        new Error(`No fixture queued for ${method} ${path}`),
+      );
     }
     if (reply.kind === 'failure') return Promise.reject(reply.error);
     return Promise.resolve(new FixtureResponse(reply.status, reply.body));

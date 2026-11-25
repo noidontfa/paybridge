@@ -37,6 +37,20 @@ const envObject = z.object({
     .default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LOG_LEVEL: z.enum(LOG_LEVELS).optional(),
+  /**
+   * Public origin of this API, as the payment providers reach it. The Console
+   * shows `<PUBLIC_BASE_URL>/api/webhooks/<gatewayId>` as each gateway's
+   * Callback URL. Unset => `http://localhost:<PORT>`.
+   */
+  PUBLIC_BASE_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine((v) => /^https?:\/\/[^\s/]+/.test(v) && URL.canParse(v), {
+        message: 'must be an http(s) URL',
+      })
+      .optional(),
+  ),
   /** Swagger UI toggle. Unset => enabled everywhere except production. */
   SWAGGER_ENABLED: z.stringbool().optional(),
   DATABASE_URL: z
@@ -72,28 +86,35 @@ const envObject = z.object({
   STRIPE_PUBLISHABLE_KEY: optionalKey(['pk_'], '"pk_"'),
 });
 
-export const envSchema = envObject.superRefine((env, ctx) => {
-  const missing = STRIPE_KEYS.filter((k) => !env[k]);
-  if (missing.length > 0 && missing.length < STRIPE_KEYS.length) {
-    ctx.addIssue({
-      code: 'custom',
-      path: [missing[0]],
-      message: `Stripe is partly configured: set all of ${STRIPE_KEYS.join(', ')} or none; missing ${missing.join(', ')}`,
-    });
-    return;
-  }
-  if (env.STRIPE_SECRET_KEY && env.STRIPE_PUBLISHABLE_KEY) {
-    const secretMode = stripeMode(env.STRIPE_SECRET_KEY);
-    const publishableMode = stripeMode(env.STRIPE_PUBLISHABLE_KEY);
-    if (secretMode && publishableMode && secretMode !== publishableMode) {
+export const envSchema = envObject
+  .superRefine((env, ctx) => {
+    const missing = STRIPE_KEYS.filter((k) => !env[k]);
+    if (missing.length > 0 && missing.length < STRIPE_KEYS.length) {
       ctx.addIssue({
         code: 'custom',
-        path: ['STRIPE_PUBLISHABLE_KEY'],
-        message: `STRIPE_SECRET_KEY is a ${secretMode} key but STRIPE_PUBLISHABLE_KEY is a ${publishableMode} key`,
+        path: [missing[0]],
+        message: `Stripe is partly configured: set all of ${STRIPE_KEYS.join(', ')} or none; missing ${missing.join(', ')}`,
       });
+      return;
     }
-  }
-});
+    if (env.STRIPE_SECRET_KEY && env.STRIPE_PUBLISHABLE_KEY) {
+      const secretMode = stripeMode(env.STRIPE_SECRET_KEY);
+      const publishableMode = stripeMode(env.STRIPE_PUBLISHABLE_KEY);
+      if (secretMode && publishableMode && secretMode !== publishableMode) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['STRIPE_PUBLISHABLE_KEY'],
+          message: `STRIPE_SECRET_KEY is a ${secretMode} key but STRIPE_PUBLISHABLE_KEY is a ${publishableMode} key`,
+        });
+      }
+    }
+  })
+  .transform((env) => ({
+    ...env,
+    PUBLIC_BASE_URL: (
+      env.PUBLIC_BASE_URL ?? `http://localhost:${env.PORT}`
+    ).replace(/\/+$/, ''),
+  }));
 
 export type Env = z.infer<typeof envSchema>;
 

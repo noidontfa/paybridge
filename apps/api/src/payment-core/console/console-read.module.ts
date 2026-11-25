@@ -15,7 +15,7 @@ import { PaymentsListModule } from './payments-list.module.js';
 
 // ticket 05: OverviewModule
 
-// ticket 06: GatewaysModule
+import { GatewaysModule } from './gateways.module.js';
 
 // ticket 07: DeveloperViewsModule
 
@@ -29,7 +29,7 @@ import { PaymentsListModule } from './payments-list.module.js';
 
     // ticket 05
 
-    // ticket 06
+    GatewaysModule,
 
     // ticket 07
   ],
