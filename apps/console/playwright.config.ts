@@ -10,9 +10,10 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: `http://localhost:${port}`, trace: 'on-first-retry' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  // Serves the production build (turbo builds it first).
+  // Mock mode refuses to start in a production build, so e2e runs the dev server.
   webServer: {
-    command: `pnpm exec next start -p ${port}`,
+    command: `pnpm exec next dev -p ${port}`,
+    timeout: 120_000,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     env: { CONSOLE_API_MOCKS: 'true', CONSOLE_API_BASE_URL: 'http://api.test:3000' },

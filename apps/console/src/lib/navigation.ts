@@ -65,7 +65,7 @@ export function isActivePath(pathname: string, url: string): boolean {
 }
 
 /** Breadcrumb trail for a pathname, derived from the navigation. */
-export function breadcrumbFor(pathname: string): { title: string; url?: string }[] {
+export function breadcrumbFor(pathname: string, current?: string): { title: string; url?: string }[] {
   const all = [...mainNav.flatMap((s) => s.items), ...secondaryNav];
   const match = all.find((i) => i.url && i.url !== '/' && isActivePath(pathname, i.url));
   const section = mainNav.find((s) => s.items.some((i) => i === match))?.label;
@@ -75,6 +75,11 @@ export function breadcrumbFor(pathname: string): { title: string; url?: string }
     return trail;
   }
   if (section && section !== match.title) trail.push({ title: section });
+  if (current && match.url) {
+    // A detail page: the section links back to its list, the current item is the page.
+    trail.push({ title: match.title, url: match.url }, { title: current });
+    return trail;
+  }
   trail.push({ title: match.title });
   return trail;
 }
