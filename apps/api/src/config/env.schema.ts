@@ -51,6 +51,19 @@ const envObject = z.object({
       })
       .optional(),
   ),
+  /**
+   * Public origin of the Console, used to build the links in emails (Password
+   * Reset). Unset => `http://localhost:8888`.
+   */
+  CONSOLE_BASE_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine((v) => /^https?:\/\/[^\s/]+/.test(v) && URL.canParse(v), {
+        message: 'must be an http(s) URL',
+      })
+      .default('http://localhost:8888'),
+  ),
   /** Swagger UI toggle. Unset => enabled everywhere except production. */
   SWAGGER_ENABLED: z.stringbool().optional(),
   DATABASE_URL: z

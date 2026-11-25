@@ -4,6 +4,9 @@ import { APP_GUARD } from '@nestjs/core';
 import type { Env } from '../config/env.schema.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
 import { GetSessionUser } from './application/use-cases/get-session-user.js';
+import { ChangePassword } from './application/use-cases/change-password.js';
+import { CompletePasswordReset } from './application/use-cases/complete-password-reset.js';
+import { RequestPasswordReset } from './application/use-cases/request-password-reset.js';
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
@@ -68,6 +71,9 @@ import { UserRepository } from './port/user.repository.js';
     RefreshSession,
     SignOut,
     GetSessionUser,
+    RequestPasswordReset,
+    CompletePasswordReset,
+    ChangePassword,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })

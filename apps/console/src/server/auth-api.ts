@@ -75,3 +75,40 @@ export async function apiMe(baseUrl: string, accessToken: string, fetchImpl: Fet
     return null;
   }
 }
+
+/** The API's plain answer (status and error body) for calls that carry no session. */
+export interface PlainResult {
+  status: number;
+  body: unknown;
+}
+
+async function toPlain(response: Response): Promise<PlainResult> {
+  return { status: response.status, body: await response.json().catch(() => undefined) };
+}
+
+export async function apiRequestPasswordReset(baseUrl: string, email: string, fetchImpl: FetchLike = fetch): Promise<PlainResult> {
+  return toPlain(await post(baseUrl, '/internal/auth/password-reset/request', { email }, fetchImpl));
+}
+
+export async function apiCompletePasswordReset(
+  baseUrl: string,
+  input: { token: string; password: string },
+  fetchImpl: FetchLike = fetch,
+): Promise<PlainResult> {
+  return toPlain(await post(baseUrl, '/internal/auth/password-reset/complete', input, fetchImpl));
+}
+
+export async function apiChangePassword(
+  baseUrl: string,
+  accessToken: string,
+  input: { currentPassword: string; newPassword: string; refreshToken?: string },
+  fetchImpl: FetchLike = fetch,
+): Promise<PlainResult> {
+  const response = await fetchImpl(join(baseUrl, '/internal/auth/change-password'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+  return toPlain(response);
+}

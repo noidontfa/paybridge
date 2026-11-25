@@ -12,6 +12,8 @@ import { isMockModeEnabled } from '@/mocks/mode';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/server/session-cookies';
 
 const SIGN_IN_PATH = '/sign-in';
+/** Pages for someone who may not be signed in. */
+const PUBLIC_PATHS = ['/forgot-password', '/reset-password'];
 
 export function proxy(request: NextRequest) {
   if (isMockModeEnabled()) return NextResponse.next();
@@ -20,6 +22,8 @@ export function proxy(request: NextRequest) {
 
   const hasAccess = request.cookies.has(ACCESS_COOKIE);
   const hasRefresh = request.cookies.has(REFRESH_COOKIE);
+
+  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
 
   if (pathname === SIGN_IN_PATH) {
     return hasAccess ? NextResponse.redirect(new URL('/', request.url)) : NextResponse.next();
