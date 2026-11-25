@@ -40,6 +40,7 @@ Settled by grilling on 2026-11-25:
 - **Events and Audit log built** ([09](issues/09-events-and-audit-log.md)): `/events`, `/events/[id]`, `/audit-log` over `GET /internal/payment-events[/:id]` and `GET /internal/status-transitions` (audit rows carry a server-resolved `paymentId`); badge kind `event`; seed now has every trigger and unpublished events of every type.
 - **Exceptions built** ([05](issues/05-exceptions-list.md)): `/exceptions` over `GET /internal/reviews` and `/internal/reviews/summary` (a Review is a PaymentTransaction with a review reason; open or closed), sidebar open-Review badge, sheet state in the URL (`payment` and `transaction`); `ReviewPanel` is the shared Review component where ticket 06 adds the actions.
 - **Callbacks built** ([07](issues/07-callbacks.md)): `/callbacks` and `/callbacks/[id]` over `GET /internal/callbacks[/:id]` (filters `gatewayId`, `status`; the server resolves `paymentId` from the Attempt Key); body shown as text, JSON pretty-printed; reuse notes for Gateways are in the ticket's Answer.
+- **Gateways built** ([08](issues/08-gateways.md)): `/gateways` and `/gateways/[id]` over `GET /internal/gateways[/:id]` (read-only; mode, registration and Callback URL from the API, health derived from the store's Callbacks over 24 hours; unknown id is 404 `GATEWAY_NOT_FOUND`); links open `/payments?gatewayId=` and `/callbacks?gatewayId=`.
 
 ## Sidebar (sidebar-08)
 

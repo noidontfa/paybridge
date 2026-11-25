@@ -61,7 +61,22 @@ export interface MockCallback {
   lastError: string | null;
 }
 
+/** What the API reports about a PaymentGateway. Never holds a credential. */
+export interface MockGateway {
+  id: string;
+  registered: boolean;
+  configured: boolean;
+  mode: 'test' | 'live';
+  callbackUrl: string;
+}
+
 export class MockStore {
+  /** Only `stripe` and `fake` exist. Tests replace the contents to model other states. */
+  readonly gateways: MockGateway[] = [
+    { id: 'stripe', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/stripe' },
+    { id: 'fake', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/fake' },
+  ];
+
   constructor(
     readonly now: Date,
     readonly payments: MockPayment[] = [],
