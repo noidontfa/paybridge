@@ -53,3 +53,25 @@ export function readKeysetCursor(
     ? { value, id }
     : null;
 }
+
+export const isIsoTime = (value: string) =>
+  !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
+
+/**
+ * `readKeysetCursor` for use inside a schema `.transform`: an invalid cursor
+ * adds the `cursor` issue to `ctx` and returns `null` (the caller then returns
+ * `z.NEVER`).
+ */
+export function parseKeysetCursor(
+  ctx: z.RefinementCtx,
+  cursor: string | undefined,
+  tag: string,
+  isValue: (value: string) => boolean,
+  message = 'is not valid for this list',
+): KeysetTail | undefined | null {
+  const after = readKeysetCursor(cursor, tag, isValue);
+  if (after === null) {
+    ctx.addIssue({ code: 'custom', path: ['cursor'], message });
+  }
+  return after;
+}

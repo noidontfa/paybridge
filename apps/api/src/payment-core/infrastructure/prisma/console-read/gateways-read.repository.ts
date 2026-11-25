@@ -12,7 +12,7 @@ export type CallbackStatus = (typeof CALLBACK_STATUSES)[number];
 export interface GatewayCallbackHealth {
   /** Callbacks received since the cutoff, by status (every status present). */
   readonly counts: Record<CallbackStatus, number>;
-  /** Latest `receivedAt` over all stored Callbacks, or null when none. */
+  /** Latest `receivedAt` among Callbacks since the cutoff, or null when none. */
   readonly lastCallbackAt: Date | null;
 }
 
@@ -49,7 +49,7 @@ export class GatewaysReadRepository {
         _count: { _all: true },
       }),
       this.prisma.webhookInbox.aggregate({
-        where: { gatewayId },
+        where: { gatewayId, receivedAt: { gte: since } },
         _max: { receivedAt: true },
       }),
     ]);

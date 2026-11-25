@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { GatewayMode } from '../../../port/payment-gateway.port.js';
 import { GatewayManager } from '../../../gateway-manager/gateway-manager.js';
 import {
   GatewaysReadRepository,
@@ -14,7 +15,7 @@ export interface GatewaySummary {
   readonly id: string;
   readonly registered: boolean;
   readonly configured: boolean;
-  readonly mode: 'test' | 'live';
+  readonly mode: GatewayMode;
   readonly callbackUrl: string;
 }
 
@@ -27,8 +28,10 @@ export interface GatewayDetail extends GatewaySummary {
 /**
  * The operator Gateways views. Lists the gateways with a registered Gateway
  * Plugin plus any gateway that holds data here (so a gateway whose plugin is
- * not configured is shown as unregistered rather than hidden). A registered
- * plugin is by construction configured. No credential is ever read.
+ * not configured is shown as unregistered rather than hidden). The Gateway
+ * Manager has no separate "configured" signal: the composition root registers a
+ * plugin only when its configuration resolved, so `configured` equals
+ * `registered`. No credential is ever read.
  */
 @Injectable()
 export class GatewaysOverview {

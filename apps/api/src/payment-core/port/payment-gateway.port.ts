@@ -1,6 +1,9 @@
 import type { NextAction } from './next-action.js';
 import type { NormalizedOutcome } from './normalized-outcome.js';
 
+/** Whether a plugin talks to the provider's test or live environment. */
+export type GatewayMode = 'test' | 'live';
+
 /**
  * The provider-neutral contract every Gateway Plugin implements. Owned by
  * Core; plugins depend on it, Core never depends on a plugin.
@@ -22,7 +25,7 @@ export interface PaymentGateway {
    * Whether this plugin talks to the provider's test or live environment, for
    * the operator Gateways view. Absent means test.
    */
-  readonly mode?: 'test' | 'live';
+  readonly mode?: GatewayMode;
 
   initiate(input: InitiateInput): Promise<InitiateResult>;
   query(input: QueryInput): Promise<QueryResult>;

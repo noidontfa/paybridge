@@ -4,13 +4,11 @@ import {
   dayParam,
   optionalParam,
   pagingShape,
-  readKeysetCursor,
+  isIsoTime,
+  parseKeysetCursor,
 } from './list-query.js';
 
 const DECIMAL = /^\d+(\.\d+)?$/;
-const isIsoTime = (value: string) =>
-  !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value;
-
 export const paymentsListQuerySchema = z
   .object({
     ...pagingShape,
@@ -25,17 +23,8 @@ export const paymentsListQuerySchema = z
   .transform((query, ctx) => {
     const sort = query.sort ?? 'createdAt';
     const order = query.order ?? 'desc';
-    const after = readKeysetCursor(
-      query.cursor,
-      `${sort}:${order}`,
-      sort === 'amount' ? (v) => DECIMAL.test(v) : isIsoTime,
-    );
+    const after = parseKeysetCursor(ctx, query.cursor, `${sort}:${order}`, sort === 'amount' ? (v) => DECIMAL.test(v) : isIsoTime, 'is not valid for this list, sort and order');
     if (after === null) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['cursor'],
-        message: 'is not valid for this list, sort and order',
-      });
       return z.NEVER;
     }
     return {

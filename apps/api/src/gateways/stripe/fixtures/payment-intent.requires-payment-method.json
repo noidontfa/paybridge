@@ -15,7 +15,9 @@
     "attemptKey": "0190a1b2-c3d4-7e5f-8a6b-7c8d9e0f1a2b"
   },
   "payment_method": null,
-  "payment_method_types": ["card"],
+  "payment_method_types": [
+    "card"
+  ],
   "status": "requires_payment_method",
   "canceled_at": null,
   "cancellation_reason": null

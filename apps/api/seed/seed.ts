@@ -19,7 +19,7 @@ import {
 
 export const SEED_PREFIX = 'SEED-';
 const NAMESPACE = 'c3a1e0a0-5eed-4b1d-9c5e-0d5eed5eed01';
-const LOCAL_HOSTS = ['localhost', '127.0.0.1', 'postgres'];
+const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1', '[::1]'];
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
