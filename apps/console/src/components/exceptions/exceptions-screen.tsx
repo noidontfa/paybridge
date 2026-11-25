@@ -7,6 +7,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { REVIEW_REASONS } from '@/lib/api/schemas';
+import { useGatewayOptions } from '@/lib/queries/gateways';
 import { REVIEW_LIST_URL_CONFIG, useReviewList } from '@/lib/queries/reviews';
 import type { ReviewItem } from '@/lib/api/reviews';
 import { statusBadge } from '@/lib/status-badges';
@@ -14,8 +15,6 @@ import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
 import { reviewColumns } from './exceptions-columns';
 import { ReviewSheet } from './review-sheet';
 
-/** The gateways the Console knows (only `stripe` and `fake` exist today). */
-const GATEWAY_OPTIONS = ['stripe', 'fake'].map((id) => ({ value: id, label: id }));
 const REASON_OPTIONS = REVIEW_REASONS.map((reason) => ({ value: reason, label: statusBadge('review', reason).label }));
 
 /** The sheet is `?payment=<id>&transaction=<Attempt Key>`, next to whatever the table keeps in the URL. */
@@ -25,6 +24,7 @@ const SHEET_PARAMS = ['payment', 'transaction'] as const;
 export function ExceptionsScreen() {
   const { state, change } = useTableUrlState(REVIEW_LIST_URL_CONFIG);
   const list = useReviewList(state);
+  const gatewayOptions = useGatewayOptions();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -82,7 +82,7 @@ export function ExceptionsScreen() {
         label="Gateway"
         allLabel="All gateways"
         value={state.filters.gatewayId ?? ''}
-        options={GATEWAY_OPTIONS}
+        options={gatewayOptions}
         onChange={(gatewayId) => change({ filters: { gatewayId } })}
       />
       {/* With no rows the empty state offers the same action. */}

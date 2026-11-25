@@ -1,6 +1,6 @@
 # The Console reaches the API only through its own BFF
 
-The Operator Console (`apps/console`) never calls the NestJS API from the browser. Every request goes to Next.js Route Handlers under `apps/console/app/api/*`, which proxy to the API server-side. We chose this because Phase 1 has no authentication and protects operator routes (`/internal/*`) only by keeping them off the public ingress. A browser that calls the API directly would need `/internal` to be publicly reachable, and the API would need CORS. The cost is an extra hop and a proxy layer to maintain for every endpoint the Console uses.
+The Operator Console (`apps/console`) never calls the NestJS API from the browser. Every request goes to Next.js Route Handlers under `apps/console/src/app/api/bff/[...path]/route.ts`, which proxy to the API server-side. We chose this because Phase 1 has no authentication and protects operator routes (`/internal/*`) only by keeping them off the public ingress. A browser that calls the API directly would need `/internal` to be publicly reachable, and the API would need CORS. The cost is an extra hop and a proxy layer to maintain for every endpoint the Console uses.
 
 ## Considered Options
 

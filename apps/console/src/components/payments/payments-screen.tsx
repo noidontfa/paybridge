@@ -7,17 +7,17 @@ import { DataTable } from '@/components/data-table/data-table';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_STATUSES } from '@/lib/api/schemas';
 import { statusBadge } from '@/lib/status-badges';
+import { useGatewayOptions } from '@/lib/queries/gateways';
 import { PAYMENT_LIST_URL_CONFIG, usePaymentList } from '@/lib/queries/payments-list';
 import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
 import { paymentColumns, paymentHref } from './payments-columns';
 
-/** The gateways the Console knows (only `stripe` and `fake` exist today). */
-const GATEWAY_OPTIONS = ['stripe', 'fake'].map((id) => ({ value: id, label: id }));
 const STATUS_OPTIONS = PAYMENT_STATUSES.map((status) => ({ value: status, label: statusBadge('payment', status).label }));
 
 export function PaymentsScreen() {
   const { state, change, clear } = useTableUrlState(PAYMENT_LIST_URL_CONFIG);
   const list = usePaymentList(state);
+  const gatewayOptions = useGatewayOptions();
   const filtered = state.q !== '' || Object.keys(state.filters).length > 0;
   const hasRows = list.rows.length > 0;
 
@@ -41,7 +41,7 @@ export function PaymentsScreen() {
           label="Gateway"
           allLabel="All gateways"
           value={state.filters.gatewayId ?? ''}
-          options={GATEWAY_OPTIONS}
+          options={gatewayOptions}
           onChange={(gatewayId) => change({ filters: { gatewayId } })}
         />
         <DateFilter label="Created from" value={state.filters.createdFrom ?? ''} onChange={(createdFrom) => change({ filters: { createdFrom } })} />
@@ -50,7 +50,7 @@ export function PaymentsScreen() {
         {filtered && (hasRows || list.isPending) && <ClearFiltersButton onClick={clear} />}
       </DataTableToolbar>
     ),
-    [state, change, clear, filtered, hasRows, list.isPending],
+    [state, change, clear, filtered, hasRows, list.isPending, gatewayOptions],
   );
 
   return (

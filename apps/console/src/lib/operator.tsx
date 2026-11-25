@@ -14,12 +14,14 @@ export interface Operator {
   name: string;
 }
 
-const OperatorContext = createContext<Operator>({ id: 'operator', name: 'Operator' });
+const OperatorContext = createContext<Operator | null>(null);
 
 export function OperatorProvider({ operator, children }: { operator: Operator; children: React.ReactNode }) {
   return <OperatorContext.Provider value={operator}>{children}</OperatorContext.Provider>;
 }
 
 export function useCurrentOperator(): Operator {
-  return useContext(OperatorContext);
+  const operator = useContext(OperatorContext);
+  if (!operator) throw new Error('useCurrentOperator must be used inside <OperatorProvider>.');
+  return operator;
 }

@@ -16,3 +16,9 @@ export function useGatewayList() {
 export function useGateway(id: string) {
   return useQuery({ queryKey: gatewayKeys.detail(id), queryFn: ({ signal }) => getGateway(id, signal) });
 }
+
+/** Filter options for a gateway select, from the Gateways list the API reports. */
+export function useGatewayOptions() {
+  const { data } = useGatewayList();
+  return (data?.items ?? []).map((gateway) => ({ value: gateway.id, label: gateway.id }));
+}

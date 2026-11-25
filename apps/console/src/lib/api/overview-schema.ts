@@ -1,7 +1,7 @@
 /**
  * `GET /internal/overview?range=24h|7d|30d`: the operator Overview. Copied
  * into the Console like every response type (ADR 0004); it is also the shape
- * the backend admin read API must provide.
+ * the admin read endpoints of the API must provide.
  *
  * Definitions: Payments are counted and bucketed by creation time. `volume` is
  * the sum of the Amounts of the range's succeeded Payments (no revenue or fee).

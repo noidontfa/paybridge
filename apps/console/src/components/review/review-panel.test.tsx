@@ -1,3 +1,4 @@
+import { OperatorProvider } from '@/lib/operator';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -91,7 +92,9 @@ async function open(n: string) {
   const user = userEvent.setup();
   render(
     <QueryClientProvider client={client}>
-      <PaymentDetailScreen id={`pay-${n}`} />
+      <OperatorProvider operator={{ id: 'operator', name: 'Operator' }}>
+        <PaymentDetailScreen id={`pay-${n}`} />
+      </OperatorProvider>
     </QueryClientProvider>,
   );
   const panel = await screen.findByRole('group', { name: 'Review' });
@@ -242,7 +245,7 @@ describe('Review resolution form', () => {
     await user.click(screen.getByRole('button', { name: 'Resolve Review' }));
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Confirm SUCCEEDED' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('The Payment is no longer pending');
+    expect(await screen.findByRole('alert')).toHaveTextContent('SUCCEEDED needs a PENDING Payment');
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('My careful note');
     expect(toast.success).not.toHaveBeenCalled();

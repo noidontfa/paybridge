@@ -158,31 +158,37 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     });
     expect(await resolve('p-amb', { attemptId: 'a-mis', status: 'FAILED', note: 'n' })).toMatchObject({
       status: 404,
-      body: { code: 'PAYMENT_TRANSACTION_NOT_FOUND' },
+      body: { code: 'ATTEMPT_NOT_FOUND' },
     });
   });
 
   it('answers 409 when the attempt is not in Review any more', async () => {
     const result = await resolve('p-done', { attemptId: 'a-done', status: 'FAILED', note: 'n' });
-    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_NOT_OPEN' } });
+    expect(result).toMatchObject({ status: 409, body: { code: 'ATTEMPT_NOT_IN_REVIEW' } });
+  });
+
+  it('accepts a note on a late-success Review that has been open for less than 72 hours', async () => {
+    store.attempts.find((a) => a.id === 'a-late')!.reviewOpenedAt = at(1);
+    const result = await resolve('p-late', { attemptId: 'a-late', note: 'Will refund by hand' });
+    expect(result.status).toBe(200);
   });
 
   it('answers 409 before the Review has been open for 72 hours', async () => {
     const result = await resolve('p-young', { attemptId: 'a-young', status: 'FAILED', note: 'n' });
-    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_NOT_RESOLVABLE_YET' } });
+    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_WINDOW_OPEN' } });
     expect(result.body.message).toContain('72 hours');
   });
 
-  it('answers 409 for SUCCEEDED when the Payment is no longer PENDING', async () => {
+  it('answers 409 REVIEW_RESOLUTION_NOT_ALLOWED for SUCCEEDED when the Payment is no longer PENDING', async () => {
     store.getPayment('p-amb')!.status = 'EXPIRED';
     const result = await resolve('p-amb', { attemptId: 'a-amb', status: 'SUCCEEDED', amount: '100000', note: 'n' });
-    expect(result).toMatchObject({ status: 409, body: { code: 'PAYMENT_NOT_PENDING' } });
-    expect(result.body.message).toContain('no longer pending');
+    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_RESOLUTION_NOT_ALLOWED' } });
+    expect(result.body.message).toContain('PENDING Payment');
   });
 
-  it('answers 422 when the amount differs from the Payment Amount', async () => {
+  it('answers 409 when the amount differs from the Payment Amount', async () => {
     const result = await resolve('p-amb', { attemptId: 'a-amb', status: 'SUCCEEDED', amount: '99999', note: 'n' });
-    expect(result).toMatchObject({ status: 422, body: { code: 'AMOUNT_DOES_NOT_MATCH' } });
+    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_RESOLUTION_NOT_ALLOWED' } });
     expect(store.attempts.find((a) => a.id === 'a-amb')!.status).toBe('REQUIRES_REVIEW');
   });
 
@@ -190,8 +196,8 @@ describe('POST /internal/payments/:id/review-resolution', () => {
     ['AMOUNT_MISMATCH to SUCCEEDED', 'p-mis', { attemptId: 'a-mis', status: 'SUCCEEDED', amount: '100000', note: 'n' }],
     ['a late success to FAILED', 'p-late', { attemptId: 'a-late', status: 'FAILED', note: 'n' }],
     ['an ambiguous Review to a note only', 'p-amb', { attemptId: 'a-amb', note: 'n' }],
-  ])('answers 422 RESOLUTION_NOT_ALLOWED for %s', async (_name, paymentId, body) => {
+  ])('answers 409 REVIEW_RESOLUTION_NOT_ALLOWED for %s', async (_name, paymentId, body) => {
     const result = await resolve(paymentId, body);
-    expect(result).toMatchObject({ status: 422, body: { code: 'RESOLUTION_NOT_ALLOWED' } });
+    expect(result).toMatchObject({ status: 409, body: { code: 'REVIEW_RESOLUTION_NOT_ALLOWED' } });
   });
 });

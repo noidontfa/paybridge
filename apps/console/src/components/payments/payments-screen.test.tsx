@@ -100,7 +100,9 @@ describe('Payments list screen', () => {
     renderScreen();
     await screen.findByRole('link', { name: 'order-01' });
 
-    expect(optionNames(screen.getByRole('combobox', { name: 'Gateway' }))).toEqual(['All gateways', 'stripe', 'fake']);
+    await waitFor(() =>
+      expect(optionNames(screen.getByRole('combobox', { name: 'Gateway' }))).toEqual(['All gateways', 'fake', 'stripe']),
+    );
     await user.selectOptions(screen.getByRole('combobox', { name: 'Gateway' }), 'stripe');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'SUCCEEDED');
 
