@@ -28,9 +28,32 @@ export const reviewResolutionResultSchema = z.object({
 });
 export type ReviewResolutionResult = z.infer<typeof reviewResolutionResultSchema>;
 
-export function resolveReview(paymentId: string, body: ReviewResolutionBody): Promise<ReviewResolutionResult> {
-  return request(`/internal/payments/${encodeURIComponent(paymentId)}/review-resolution`, reviewResolutionResultSchema, {
-    method: 'POST',
-    body,
-  });
+/**
+ * The real API answers with the Payment (its attempts included), the mock with the small
+ * result above. Both are accepted; `toReviewResolutionResult` reduces either to the result.
+ */
+export const reviewResolutionResponseSchema = z.union([
+  reviewResolutionResultSchema,
+  z.object({
+    id: z.string(),
+    status: paymentStatusSchema,
+    attempts: z.array(z.object({ id: z.string(), status: attemptStatusSchema })),
+  }),
+]);
+export type ReviewResolutionResponse = z.infer<typeof reviewResolutionResponseSchema>;
+
+export function toReviewResolutionResult(response: ReviewResolutionResponse, attemptId: string): ReviewResolutionResult {
+  if ('paymentId' in response) return response;
+  const attempt = response.attempts.find((a) => a.id === attemptId);
+  if (!attempt) throw new Error(`The API response does not contain the attempt ${attemptId}.`);
+  return { paymentId: response.id, attemptId, attemptStatus: attempt.status, paymentStatus: response.status };
+}
+
+export async function resolveReview(paymentId: string, body: ReviewResolutionBody): Promise<ReviewResolutionResult> {
+  const response = await request(
+    `/internal/payments/${encodeURIComponent(paymentId)}/review-resolution`,
+    reviewResolutionResponseSchema,
+    { method: 'POST', body },
+  );
+  return toReviewResolutionResult(response, body.attemptId);
 }

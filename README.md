@@ -98,6 +98,29 @@ are loaded for `NODE_ENV` (default `development`), first match wins:
 | `QUEUE_PREFIX`    | `paybridge`                                   | Prefix of every BullMQ key, no `:`        |
 | `LOG_LEVEL`       | `debug` (dev), `info` (prod), `silent` (test) |                                           |
 | `SWAGGER_ENABLED` | `true` outside production, `false` in prod    |                                           |
+| `PUBLIC_BASE_URL` | `http://localhost:<PORT>`                     | Public origin; builds each gateway's Callback URL (`<PUBLIC_BASE_URL>/api/webhooks/<gatewayId>`) |
+
+## Console against the real API
+
+The Operator Console (`apps/console`, Next.js) reads the API through its BFF. In development it uses the
+real API by default (`apps/console/.env.development`: `CONSOLE_API_MOCKS=false`,
+`CONSOLE_API_BASE_URL=http://localhost:3000`). The API listens on 3000 and the Console dev server on 3001.
+
+```bash
+pnpm docker:up                              # PostgreSQL + Redis
+pnpm db:deploy                              # apply migrations
+pnpm db:seed                                # 22 Payments, Callbacks, Events (`--bulk N` for more; re-run to reset)
+pnpm --filter @paybridge/api dev            # API on :3000
+pnpm --filter @paybridge/console dev        # Console on :3001
+```
+
+- **Mock mode** (no backend, in-process MSW data): put `CONSOLE_API_MOCKS=true` in `apps/console/.env.local`
+  (git-ignored) and restart the Console. Mock mode is refused in a production build.
+- **Playwright**: `pnpm --filter @paybridge/console test:e2e` always runs in mock mode (this is what CI runs; no CI job
+  starts an API). `pnpm --filter @paybridge/console test:e2e:real` is local only: it needs the API running and a seeded
+  database, starts its own Console on :3200 with mocks off, and its last test resolves a seeded Review (run
+  `pnpm db:seed` again before the next run).
+- Every variable is documented in `apps/console/.env.example` and `apps/api/.env.example`.
 
 ## Integrations
 
