@@ -48,6 +48,15 @@ describe('StripeGatewayPlugin', () => {
       expect(plugin.capabilities.supportsCancel).toBe(true);
       expect(plugin.callbackHeaders).toEqual(['stripe-signature']);
       expect(typeof plugin.cancel).toBe('function');
+      expect(plugin.mode).toBe('test');
+      expect(
+        new StripeGatewayPlugin({
+          secretKey: 'sk_live_fixture',
+          publishableKey: 'pk_live_fixture',
+          webhookSecret: WEBHOOK_SECRET,
+          httpClient: http,
+        }).mode,
+      ).toBe('live');
     });
   });
 
@@ -96,31 +105,39 @@ describe('StripeGatewayPlugin', () => {
 
       const result = await plugin.initiate(initiateInput);
 
-      expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'requires_payment_method' });
+      expect(result.rawPayload).toMatchObject({
+        id: PI_ID,
+        status: 'requires_payment_method',
+      });
       expect(JSON.stringify(result.rawPayload)).not.toContain('client_secret');
-      expect(JSON.stringify(result.rawPayload)).not.toContain('TestSecretValue123');
+      expect(JSON.stringify(result.rawPayload)).not.toContain(
+        'TestSecretValue123',
+      );
     });
 
     it('is OutcomeUnknown when Stripe returns no client secret', async () => {
       http.respond(200, 'payment-intent.no-client-secret');
 
-      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(OutcomeUnknownError);
+      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(
+        OutcomeUnknownError,
+      );
     });
 
     it.each(['1500.5', '100.25', 'abc', ''])(
       'rejects non-integer amount %j without calling Stripe',
       async (amount) => {
-        await expect(plugin.initiate({ ...initiateInput, amount })).rejects.toBeInstanceOf(
-          GatewayRejectedError,
-        );
+        await expect(
+          plugin.initiate({ ...initiateInput, amount }),
+        ).rejects.toBeInstanceOf(GatewayRejectedError);
         expect(http.requests).toHaveLength(0);
       },
     );
   });
 
   describe('query', () => {
-    const query = (providerMetadata: Record<string, unknown> = { paymentIntentId: PI_ID }) =>
-      plugin.query({ attemptKey: ATTEMPT_KEY, providerMetadata });
+    const query = (
+      providerMetadata: Record<string, unknown> = { paymentIntentId: PI_ID },
+    ) => plugin.query({ attemptKey: ATTEMPT_KEY, providerMetadata });
 
     it('retrieves the PaymentIntent by id', async () => {
       http.respond(200, 'payment-intent.succeeded');
@@ -180,7 +197,9 @@ describe('StripeGatewayPlugin', () => {
       const result = await query({});
 
       expect(result.providerRef).toBe('pi_3QxTest2Newer0000000000');
-      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(ATTEMPT_KEY));
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining(ATTEMPT_KEY),
+      );
     });
 
     it('does not warn when the search returns one match', async () => {
@@ -214,7 +233,9 @@ describe('StripeGatewayPlugin', () => {
         method: 'POST',
         path: `/v1/payment_intents/${PI_ID}/cancel`,
       });
-      expect(http.requests[0]?.headers['Idempotency-Key']).toBe(`${ATTEMPT_KEY}:cancel`);
+      expect(http.requests[0]?.headers['Idempotency-Key']).toBe(
+        `${ATTEMPT_KEY}:cancel`,
+      );
       expect(JSON.stringify(result.rawPayload)).not.toContain('client_secret');
     });
 
@@ -223,7 +244,10 @@ describe('StripeGatewayPlugin', () => {
 
       const result = await cancel();
 
-      expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
+      expect(result.rawPayload).toMatchObject({
+        id: PI_ID,
+        status: 'canceled',
+      });
     });
 
     it('retrieves the PaymentIntent when the error body does not carry it', async () => {
@@ -236,7 +260,10 @@ describe('StripeGatewayPlugin', () => {
         method: 'GET',
         path: `/v1/payment_intents/${PI_ID}`,
       });
-      expect(result.rawPayload).toMatchObject({ id: PI_ID, status: 'canceled' });
+      expect(result.rawPayload).toMatchObject({
+        id: PI_ID,
+        status: 'canceled',
+      });
     });
 
     it('rejects when the error body is bare and the PaymentIntent succeeded', async () => {
@@ -250,7 +277,10 @@ describe('StripeGatewayPlugin', () => {
       http.respond(200, 'search.one-match');
       http.respond(200, 'payment-intent.canceled');
 
-      const result = await plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: {} });
+      const result = await plugin.cancel!({
+        attemptKey: ATTEMPT_KEY,
+        providerMetadata: {},
+      });
 
       expect(http.requests[0]?.path).toContain('/v1/payment_intents/search');
       expect(http.requests[1]).toMatchObject({
@@ -291,17 +321,29 @@ describe('StripeGatewayPlugin', () => {
       ['idempotency error', 400, 'error.idempotency'],
     ];
 
-    it.each(fixtureErrors)('%s is GatewayRejected on initiate', async (_n, status, fixture) => {
-      http.respond(status, fixture);
-      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(GatewayRejectedError);
-    });
+    it.each(fixtureErrors)(
+      '%s is GatewayRejected on initiate',
+      async (_n, status, fixture) => {
+        http.respond(status, fixture);
+        await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(
+          GatewayRejectedError,
+        );
+      },
+    );
 
     it('rate limiting is retryable GatewayUnavailable on every operation', async () => {
       for (const run of [
         () => plugin.initiate(initiateInput),
-        () => plugin.query({ attemptKey: ATTEMPT_KEY, providerMetadata: { paymentIntentId: PI_ID } }),
         () =>
-          plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: { paymentIntentId: PI_ID } }),
+          plugin.query({
+            attemptKey: ATTEMPT_KEY,
+            providerMetadata: { paymentIntentId: PI_ID },
+          }),
+        () =>
+          plugin.cancel!({
+            attemptKey: ATTEMPT_KEY,
+            providerMetadata: { paymentIntentId: PI_ID },
+          }),
       ]) {
         http.respond(429, 'error.rate-limit');
         const error = await run().catch((e: unknown) => e);
@@ -312,26 +354,39 @@ describe('StripeGatewayPlugin', () => {
 
     it('a 5xx on initiate or cancel is OutcomeUnknown', async () => {
       http.respond(500, 'error.api-500');
-      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(OutcomeUnknownError);
+      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(
+        OutcomeUnknownError,
+      );
 
       http.respond(500, 'error.api-500');
       await expect(
-        plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: { paymentIntentId: PI_ID } }),
+        plugin.cancel!({
+          attemptKey: ATTEMPT_KEY,
+          providerMetadata: { paymentIntentId: PI_ID },
+        }),
       ).rejects.toBeInstanceOf(OutcomeUnknownError);
     });
 
     it('a connection error on initiate or cancel is OutcomeUnknown', async () => {
       http.failWith(connectionFailure());
-      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(OutcomeUnknownError);
+      await expect(plugin.initiate(initiateInput)).rejects.toBeInstanceOf(
+        OutcomeUnknownError,
+      );
 
       http.failWith(connectionFailure());
       await expect(
-        plugin.cancel!({ attemptKey: ATTEMPT_KEY, providerMetadata: { paymentIntentId: PI_ID } }),
+        plugin.cancel!({
+          attemptKey: ATTEMPT_KEY,
+          providerMetadata: { paymentIntentId: PI_ID },
+        }),
       ).rejects.toBeInstanceOf(OutcomeUnknownError);
     });
 
     it('a 5xx or connection error on query is retryable GatewayUnavailable', async () => {
-      const input = { attemptKey: ATTEMPT_KEY, providerMetadata: { paymentIntentId: PI_ID } };
+      const input = {
+        attemptKey: ATTEMPT_KEY,
+        providerMetadata: { paymentIntentId: PI_ID },
+      };
 
       http.respond(500, 'error.api-500');
       const fromServer = await plugin.query(input).catch((e: unknown) => e);
@@ -382,11 +437,14 @@ describe('StripeGatewayPlugin', () => {
       payload: Record<string, unknown> | string,
       options: { secret?: string; timestamp?: number } = {},
     ) {
-      const body = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const body =
+        typeof payload === 'string' ? payload : JSON.stringify(payload);
       const header = stripe.webhooks.generateTestHeaderString({
         payload: body,
         secret: options.secret ?? WEBHOOK_SECRET,
-        ...(options.timestamp === undefined ? {} : { timestamp: options.timestamp }),
+        ...(options.timestamp === undefined
+          ? {}
+          : { timestamp: options.timestamp }),
       });
       return {
         rawBody: new TextEncoder().encode(body),
@@ -431,10 +489,14 @@ describe('StripeGatewayPlugin', () => {
     });
 
     it.each([
-      ['a missing header', () => ({ ...signed(event('payment_intent.succeeded')), headers: {} })],
+      [
+        'a missing header',
+        () => ({ ...signed(event('payment_intent.succeeded')), headers: {} }),
+      ],
       [
         'a bad signature',
-        () => signed(event('payment_intent.succeeded'), { secret: 'whsec_other' }),
+        () =>
+          signed(event('payment_intent.succeeded'), { secret: 'whsec_other' }),
       ],
       [
         'a stale timestamp',
@@ -445,10 +507,15 @@ describe('StripeGatewayPlugin', () => {
       ],
       ['an unparseable body', () => signed('not json')],
     ])('rejects %s with a 400 acknowledgement', async (_name, build) => {
-      const error = await plugin.parseCallback(build()).catch((e: unknown) => e);
+      const error = await plugin
+        .parseCallback(build())
+        .catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(InvalidCallbackError);
-      expect((error as InvalidCallbackError).ack).toEqual({ httpStatus: 400, body: '' });
+      expect((error as InvalidCallbackError).ack).toEqual({
+        httpStatus: 400,
+        body: '',
+      });
     });
 
     it('verifies over the exact raw bytes', async () => {
@@ -467,12 +534,20 @@ describe('StripeGatewayPlugin', () => {
 
     it.each([
       ['another event type', event('charge.succeeded')],
-      ['a missing attemptKey', event('payment_intent.succeeded', { metadata: {} })],
+      [
+        'a missing attemptKey',
+        event('payment_intent.succeeded', { metadata: {} }),
+      ],
       [
         'a non-UUID attemptKey',
-        event('payment_intent.succeeded', { metadata: { attemptKey: 'order-7' } }),
+        event('payment_intent.succeeded', {
+          metadata: { attemptKey: 'order-7' },
+        }),
       ],
-      ['a live-mode event on test keys', event('payment_intent.succeeded', {}, true)],
+      [
+        'a live-mode event on test keys',
+        event('payment_intent.succeeded', {}, true),
+      ],
     ])('ignores %s', async (_name, payload) => {
       await expect(plugin.parseCallback(signed(payload))).resolves.toEqual({
         ignored: true,

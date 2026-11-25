@@ -99,7 +99,10 @@ describe('Gateway composition root', () => {
 
     await expect(
       plugin.parseCallback(sign(STRIPE_ENV.STRIPE_WEBHOOK_SECRET)),
-    ).resolves.toMatchObject({ status: 'SUCCEEDED', providerRef: 'pi_3QxModule' });
+    ).resolves.toMatchObject({
+      status: 'SUCCEEDED',
+      providerRef: 'pi_3QxModule',
+    });
     await expect(plugin.parseCallback(sign('whsec_wrong'))).rejects.toThrow(
       /Invalid Stripe webhook/,
     );

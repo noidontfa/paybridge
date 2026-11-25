@@ -203,7 +203,9 @@ describe('seed contents', () => {
       'PROCESSING',
       'RECEIVED',
     ]);
-    expect(callbacks.find((c) => c.status === 'FAILED')?.lastError).toBeTruthy();
+    expect(
+      callbacks.find((c) => c.status === 'FAILED')?.lastError,
+    ).toBeTruthy();
     expect(callbacks.some((c) => c.providerEventId === null)).toBe(true);
     const keys = new Set(
       (await prisma.paymentTransaction.findMany()).map((t) => t.id),
@@ -229,7 +231,9 @@ describe('seed contents', () => {
 
   it('covers every status-transition trigger', async () => {
     expect(
-      distinct((await prisma.statusTransition.findMany()).map((t) => t.trigger)),
+      distinct(
+        (await prisma.statusTransition.findMany()).map((t) => t.trigger),
+      ),
     ).toEqual([
       'create_payment',
       'expiry',
