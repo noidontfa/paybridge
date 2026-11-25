@@ -50,6 +50,7 @@ pnpm dev                # generates the Prisma client, then starts the API with 
 | `pnpm test:int`                    | Vitest integration tests on real PostgreSQL     |
 | `pnpm db:migrate`                  | `prisma migrate dev` (create + apply migration) |
 | `pnpm db:deploy`                   | `prisma migrate deploy` (CI / production)       |
+| `pnpm db:seed`                     | Seed demo data for the Console (`--bulk N`, `--force`; `SEED-` rows only) |
 | `pnpm db:studio`                   | Prisma Studio                                   |
 | `pnpm docker:up` / `down` / `logs` | Manage PostgreSQL and Redis                     |
 

@@ -20,6 +20,7 @@
     "db:generate": "turbo run db:generate",
     "db:migrate": "pnpm --filter @paybridge/api db:migrate",
     "db:deploy": "pnpm --filter @paybridge/api db:deploy",
+    "db:seed": "pnpm --filter @paybridge/api db:seed",
     "db:studio": "pnpm --filter @paybridge/api db:studio",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
