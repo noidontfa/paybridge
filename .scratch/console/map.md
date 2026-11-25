@@ -37,6 +37,7 @@ Settled by grilling on 2026-11-25:
 - **Payment detail built** ([02](issues/02-payment-detail.md)): `/payments/[id]` through the BFF (`/api/bff`, path-preserving) and MSW mock mode over a seeded store; operator detail is `GET /internal/payments/:id`; mock mode refuses production builds, so Playwright runs `next dev`. Extension points for the mock store, handlers, API client, formatters and badges are in the ticket's Answer.
 - **Payments list built** ([03](issues/03-payments-list.md)): `GET /internal/payments` (filters, sort, cursor) mocked; shared `DataTable` (TanStack Table v9), toolbar and URL-state module (`useTableUrlState`) for every later list; the URL cursor is the start page and "Load more" accumulates in memory. Reuse notes are in the ticket's Answer.
 - **Overview built** ([04](issues/04-overview.md)): `/` with `GET /internal/overview?range=` (computed from the store in `src/mocks/overview.ts`), range in the URL, Recharts through the shadcn Chart wrapper; definitions (success rate, volume, buckets) are in the ticket's Answer.
+- **Callbacks built** ([07](issues/07-callbacks.md)): `/callbacks` and `/callbacks/[id]` over `GET /internal/callbacks[/:id]` (filters `gatewayId`, `status`; the server resolves `paymentId` from the Attempt Key); body shown as text, JSON pretty-printed; reuse notes for Gateways are in the ticket's Answer.
 
 ## Sidebar (sidebar-08)
 
