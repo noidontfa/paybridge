@@ -23,6 +23,28 @@ describe('seeded mock store', () => {
     );
   });
 
+  it('reports a different amount for every AMOUNT_MISMATCH Review and for no other', () => {
+    for (const attempt of store.attempts) {
+      const payment = store.getPayment(attempt.paymentId);
+      if (attempt.reviewReason === 'AMOUNT_MISMATCH') {
+        expect(attempt.providerReportedAmount).toBeDefined();
+        expect(attempt.providerReportedAmount).not.toBe(payment?.amount);
+      } else {
+        expect(attempt.providerReportedAmount).toBeUndefined();
+      }
+    }
+  });
+
+  it('holds open and closed Reviews, a closed one being resolved by an Operator', () => {
+    const open = store.attempts.filter((a) => a.reviewReason && a.status === 'REQUIRES_REVIEW');
+    const closed = store.attempts.filter((a) => a.reviewReason && a.status !== 'REQUIRES_REVIEW');
+    expect(open.length).toBeGreaterThan(0);
+    expect(closed.length).toBeGreaterThan(0);
+    for (const attempt of closed) {
+      expect(store.transitionsOf(attempt.id).at(-1)).toMatchObject({ trigger: 'operator_resolution', actor: 'operator' });
+    }
+  });
+
   it('uses only the stripe and fake gateways', () => {
     expect(new Set(store.attempts.map((a) => a.gatewayId))).toEqual(new Set(['stripe', 'fake']));
   });

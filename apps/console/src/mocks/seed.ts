@@ -319,9 +319,7 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
       const resolved = cause.trigger === 'operator_resolution';
       transition('PAYMENT_TRANSACTION', attempt.id, previous, status, cause, clock, resolved ? plan.resolutionNote! : (review ?? null));
       if (resolved) {
-        // The Review is over: its reason no longer applies.
-        delete attempt.reviewReason;
-        delete attempt.reviewOpenedAt;
+        // The Review is over; its reason stays (that is what makes it a closed Review) but nothing is owed.
         attempt.refundRequired = false;
         resolution = cause;
         resolutionNote = plan.resolutionNote ?? null;
@@ -336,6 +334,8 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
         attempt.reviewReason = review;
         attempt.reviewOpenedAt = iso(clock);
         attempt.refundRequired = review !== 'AMBIGUOUS_PROVIDER_STATUS';
+        // The provider reported less than the Payment Amount (decimal strings, no float drift for whole VND).
+        if (review === 'AMOUNT_MISMATCH') attempt.providerReportedAmount = String(Math.floor(Number(payment.amount) * 0.9));
         emit('PaymentRequiresReview', clock, {
           status: payment.status,
           attemptId: attempt.id,

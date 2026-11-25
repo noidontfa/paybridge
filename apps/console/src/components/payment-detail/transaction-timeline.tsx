@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { OperatorAttempt } from '@/lib/api/schemas';
 import { humanizeCode } from '@/lib/format';
-import { ReviewNotice } from './review-notice';
+import { ReviewPanel } from '@/components/review/review-panel';
 import { StatusHistory } from './status-history';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -67,7 +67,7 @@ export function TransactionTimeline({ attempts }: { attempts: OperatorAttempt[] 
                     <TimeText iso={attempt.updatedAt} />
                   </Field>
                 </dl>
-                <ReviewNotice attempt={attempt} />
+                <ReviewPanel attempt={attempt} />
                 <div className="flex flex-col gap-1">
                   <h3 className="text-xs font-medium text-muted-foreground">Status history</h3>
                   <StatusHistory transitions={attempt.transitions} />

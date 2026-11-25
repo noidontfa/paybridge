@@ -108,6 +108,8 @@ export const operatorAttemptSchema = z.object({
   reviewReason: reviewReasonSchema.optional(),
   reviewOpenedAt: isoTimeSchema.optional(),
   refundRequired: z.boolean(),
+  /** What the provider reported, when a Review is about an amount (AMOUNT_MISMATCH). */
+  providerReportedAmount: decimalStringSchema.optional(),
   createdAt: isoTimeSchema,
   updatedAt: isoTimeSchema,
   /** Oldest first. */

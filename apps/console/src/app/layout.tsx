@@ -26,14 +26,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider>
-            <SidebarProvider>
-              <DensityEffect />
-              <AppSidebar />
-              <SidebarInset className="min-w-0 overflow-x-hidden">
-                {getEnvironment().mockMode && <MockBanner />}
-                <Providers>{children}</Providers>
-              </SidebarInset>
-            </SidebarProvider>
+            {/* Providers wraps the sidebar too: its Exceptions badge is a query. */}
+            <Providers>
+              <SidebarProvider>
+                <DensityEffect />
+                <AppSidebar />
+                <SidebarInset className="min-w-0 overflow-x-hidden">
+                  {getEnvironment().mockMode && <MockBanner />}
+                  {children}
+                </SidebarInset>
+              </SidebarProvider>
+            </Providers>
           </TooltipProvider>
         </ThemeProvider>
       </body>

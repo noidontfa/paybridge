@@ -11,6 +11,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { eventsAuditHandlers } from './events-audit';
 import { callbacksHandlers } from './callbacks';
 import { paymentsListHandlers } from './payments-list';
+import { reviewHandlers } from './reviews';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -56,6 +57,9 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
       (request, message) =>
         apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
       (request, code, message) => apiError(request, { status: 404, error: 'Not Found', code, message }, store.now),
+    ),
+    ...reviewHandlers(base, store, (request, message) =>
+      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
     ),
     ...callbacksHandlers(
       base,

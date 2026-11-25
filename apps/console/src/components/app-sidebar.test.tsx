@@ -1,8 +1,11 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'next-themes';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import type { ReviewSummary } from '@/lib/api/reviews';
+import { reviewKeys } from '@/lib/queries/reviews';
 import { AppSidebar } from './app-sidebar';
 
 const pathname = vi.hoisted(() => ({ current: '/' }));
@@ -21,16 +24,29 @@ beforeAll(() => {
   })) as typeof window.matchMedia;
 });
 
-function renderShell(path = '/') {
+function summary(open: number): ReviewSummary {
+  return {
+    open,
+    total: open,
+    byReason: { AMBIGUOUS_PROVIDER_STATUS: open, AMOUNT_MISMATCH: 0, LATE_SUCCESS_ON_CLOSED_PAYMENT: 0, DUPLICATE_SUCCESS: 0 },
+  };
+}
+
+/** The Review summary is served from the query cache, so no network is needed. */
+function renderShell(path = '/', openReviews: number | null = null) {
   pathname.current = path;
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  if (openReviews !== null) client.setQueryData(reviewKeys.summary(), summary(openReviews));
   return render(
-    <ThemeProvider attribute="class" defaultTheme="system">
-      <TooltipProvider>
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>
-      </TooltipProvider>
-    </ThemeProvider>,
+    <QueryClientProvider client={client}>
+      <ThemeProvider attribute="class" defaultTheme="system">
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -86,5 +102,28 @@ describe('Console sidebar', () => {
   it('offers the Operator menu in the footer', () => {
     renderShell();
     expect(screen.getByRole('button', { name: /operator/i })).toBeInTheDocument();
+  });
+
+  describe('Exceptions badge', () => {
+    it('shows the number of open Reviews on the Exceptions item', () => {
+      renderShell('/', 7);
+      expect(screen.getByLabelText('7 open Reviews')).toHaveTextContent('7');
+      expect(screen.getByRole('link', { name: /Exceptions/ })).toBeInTheDocument();
+    });
+
+    it('says "1 open Review" for a single one', () => {
+      renderShell('/', 1);
+      expect(screen.getByLabelText('1 open Review')).toBeInTheDocument();
+    });
+
+    it('is hidden at zero', () => {
+      renderShell('/', 0);
+      expect(screen.queryByLabelText(/open Review/)).not.toBeInTheDocument();
+    });
+
+    it('is hidden until the count is known', () => {
+      renderShell('/');
+      expect(screen.queryByLabelText(/open Review/)).not.toBeInTheDocument();
+    });
   });
 });
