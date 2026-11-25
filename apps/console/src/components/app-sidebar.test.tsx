@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { ReviewSummary } from '@/lib/api/reviews';
-import { OperatorProvider } from '@/lib/operator';
+import { OperatorProvider, type Operator } from '@/lib/operator';
 import { reviewKeys } from '@/lib/queries/reviews';
 import { AppSidebar } from './app-sidebar';
 
@@ -34,7 +34,7 @@ function summary(open: number): ReviewSummary {
 }
 
 /** The Review summary is served from the query cache, so no network is needed. */
-function renderShell(path = '/', openReviews: number | null = null, operator = { id: 'operator', name: 'Operator' }) {
+function renderShell(path = '/', openReviews: number | null = null, operator: Operator = { id: 'operator', name: 'Operator' }) {
   pathname.current = path;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   if (openReviews !== null) client.setQueryData(reviewKeys.summary(), summary(openReviews));
@@ -112,6 +112,17 @@ describe('Console sidebar', () => {
     const footer = screen.getByRole('button', { name: 'Linh Tran menu' });
     expect(within(footer).getByText('Linh Tran')).toBeInTheDocument();
     expect(within(footer).getByText('op-9')).toBeInTheDocument();
+  });
+
+  it('shows the Role and Organization of the signed-in User', () => {
+    renderShell('/', null, { id: 'u-1', name: 'Una Ops', role: 'OPERATOR', organization: 'Acme Retail' });
+    const footer = screen.getByRole('button', { name: 'Una Ops menu' });
+    expect(within(footer).getByText('Operator · Acme Retail')).toBeInTheDocument();
+  });
+
+  it('shows only the Role for a Super Admin, who has no Organization', () => {
+    renderShell('/', null, { id: 'u-2', name: 'Sam', role: 'SUPER_ADMIN', organization: null });
+    expect(within(screen.getByRole('button', { name: 'Sam menu' })).getByText('Super Admin')).toBeInTheDocument();
   });
 
   describe('Exceptions badge', () => {

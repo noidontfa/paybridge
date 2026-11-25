@@ -11,24 +11,24 @@ function recordingFetch(respond: () => Response = () => Response.json({ ok: true
 }
 
 describe('forwardToApi', () => {
-  it('sends the same path, method and query, and the body with the Operator as actor, to the API base URL', async () => {
+  it('sends the same path, method, query and body to the API base URL', async () => {
     const { calls, fetchImpl } = recordingFetch();
     const request = new Request('http://console.test/api/bff/internal/payments/p%201/other-write?a=1&b=x%20y', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', cookie: 'secret=1' },
+      headers: { 'content-type': 'application/json', cookie: 'secret=1; pb_access=a' },
       body: JSON.stringify({ note: 'n' }),
     });
 
     const response = await forwardToApi(request, ['internal', 'payments', 'p 1', 'other-write'], {
       baseUrl: 'http://api.internal:3000/',
       fetch: fetchImpl,
-      operator: () => ({ id: 'op-1', name: 'Op' }),
+      authenticate: false,
     });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe('http://api.internal:3000/internal/payments/p%201/other-write?a=1&b=x%20y');
     expect(calls[0]?.init.method).toBe('POST');
-    expect(new TextDecoder().decode(calls[0]?.init.body as ArrayBuffer)).toBe('{"note":"n","actor":"op-1"}');
+    expect(new TextDecoder().decode(calls[0]?.init.body as ArrayBuffer)).toBe('{"note":"n"}');
     expect(new Headers(calls[0]?.init.headers).get('content-type')).toBe('application/json');
     expect(new Headers(calls[0]?.init.headers).get('cookie')).toBeNull();
     expect(await response.json()).toEqual({ ok: true });
@@ -39,6 +39,7 @@ describe('forwardToApi', () => {
     const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
       baseUrl: 'http://api.internal:3000',
       fetch: fetchImpl,
+      authenticate: false,
     });
     expect(calls[0]?.init.body).toBeUndefined();
     expect(response.status).toBe(404);
@@ -47,6 +48,7 @@ describe('forwardToApi', () => {
   it('answers 502 in the API error shape when the API is unreachable', async () => {
     const response = await forwardToApi(new Request('http://console.test/api/bff/internal/payments/x'), ['internal', 'payments', 'x'], {
       baseUrl: 'http://api.internal:3000',
+      authenticate: false,
       fetch: (async () => {
         throw new TypeError('fetch failed');
       }) as typeof fetch,
@@ -55,44 +57,128 @@ describe('forwardToApi', () => {
     expect(await response.json()).toMatchObject({ statusCode: 502, code: 'API_UNREACHABLE' });
   });
 
-  describe('review resolution', () => {
-    const OPERATOR = { id: 'op-7', name: 'Dana Operator' };
-    const send = async (body: BodyInit | undefined, path = ['internal', 'payments', 'p1', 'review-resolution'], method = 'POST') => {
+  describe('the signed-in User', () => {
+    const cookie = (access?: string, refresh?: string) =>
+      [access && `pb_access=${access}`, refresh && `pb_refresh=${refresh}`].filter(Boolean).join('; ');
+    const sessionFrom = (n: number) => ({
+      accessToken: `access-${n}`,
+      refreshToken: `refresh-${n}`,
+      expiresIn: 300,
+      user: { id: 'u1', email: 'u@x.test', name: 'U', role: 'OPERATOR', organization: null, permissions: [] },
+    });
+    const bearerOf = (call: { init: RequestInit }) => new Headers(call.init.headers).get('authorization');
+    const setCookies = (response: Response) => response.headers.getSetCookie();
+
+    const call = async (fetchImpl: typeof fetch, cookies: string, body?: string, method = 'POST') =>
+      forwardToApi(
+        new Request('http://console.test/api/bff/internal/payments/p1/review-resolution', {
+          method,
+          headers: { cookie: cookies, 'content-type': 'application/json' },
+          body,
+        }),
+        ['internal', 'payments', 'p1', 'review-resolution'],
+        { baseUrl: 'http://api.internal:3000', fetch: fetchImpl },
+      );
+
+    it('forwards the access token as a bearer token, and does not forward the cookie', async () => {
       const { calls, fetchImpl } = recordingFetch();
-      await forwardToApi(new Request(`http://console.test/api/bff/${path.join('/')}`, { method, body }), path, {
+      await call(fetchImpl, cookie('access-A', 'refresh-A'), '{"note":"n"}');
+      expect(bearerOf(calls[0]!)).toBe('Bearer access-A');
+      expect(new Headers(calls[0]!.init.headers).get('cookie')).toBeNull();
+    });
+
+    it('sends the body unchanged: the API takes the actor from the token, whatever the browser says', async () => {
+      const { calls, fetchImpl } = recordingFetch();
+      await call(fetchImpl, cookie('access-A', 'refresh-A'), '{"note":"n","actor":"someone-else"}');
+      expect(new TextDecoder().decode(calls[0]!.init.body as ArrayBuffer)).toBe('{"note":"n","actor":"someone-else"}');
+    });
+
+    it('leaves reads without a body', async () => {
+      const { calls, fetchImpl } = recordingFetch();
+      await call(fetchImpl, cookie('access-A', 'refresh-A'), undefined, 'GET');
+      expect(calls[0]!.init.body).toBeUndefined();
+    });
+
+    it('refreshes when the access cookie has expired, forwards the new token and sets new httpOnly cookies', async () => {
+      const calls: string[] = [];
+      let upstreamBearer: string | null = null;
+      const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+        calls.push(url.toString());
+        if (url.toString().endsWith('/internal/auth/refresh')) return Response.json(sessionFrom(1));
+        upstreamBearer = new Headers(init?.headers).get('authorization');
+        return Response.json({ ok: true });
+      }) as typeof fetch;
+
+      const response = await call(fetchImpl, cookie(undefined, 'refresh-expired-access'), '{}');
+
+      expect(calls.map((u) => new URL(u).pathname)).toEqual(['/internal/auth/refresh', '/internal/payments/p1/review-resolution']);
+      expect(upstreamBearer).toBe('Bearer access-1');
+      const cookies = setCookies(response);
+      expect(cookies).toHaveLength(2);
+      for (const c of cookies) expect(c).toMatch(/HttpOnly/);
+      expect(cookies.join('\n')).toContain('pb_access=access-1');
+      expect(cookies.join('\n')).toContain('pb_refresh=refresh-1');
+      expect(await response.text()).not.toContain('access-1');
+    });
+
+    it('refreshes and retries once when the API refuses the access token', async () => {
+      const bearers: (string | null)[] = [];
+      const fetchImpl = (async (url: string | URL, init?: RequestInit) => {
+        if (url.toString().endsWith('/internal/auth/refresh')) return Response.json(sessionFrom(2));
+        bearers.push(new Headers(init?.headers).get('authorization'));
+        return bearers.length === 1 ? Response.json({ code: 'UNAUTHENTICATED' }, { status: 401 }) : Response.json({ ok: true });
+      }) as typeof fetch;
+
+      const response = await call(fetchImpl, cookie('access-old', 'refresh-retry'), '{}');
+
+      expect(bearers).toEqual(['Bearer access-old', 'Bearer access-2']);
+      expect(response.status).toBe(200);
+      expect(setCookies(response).join('\n')).toContain('pb_refresh=refresh-2');
+    });
+
+    it('shares one refresh between simultaneous requests, so the refresh token is used once', async () => {
+      let refreshCalls = 0;
+      const fetchImpl = (async (url: string | URL) => {
+        if (url.toString().endsWith('/internal/auth/refresh')) {
+          refreshCalls++;
+          return Response.json(sessionFrom(3));
+        }
+        return Response.json({ ok: true });
+      }) as typeof fetch;
+
+      await Promise.all([1, 2, 3].map(() => call(fetchImpl, cookie(undefined, 'refresh-shared'), '{}')));
+
+      expect(refreshCalls).toBe(1);
+    });
+
+    it('answers 401 SESSION_EXPIRED and clears the cookies when the refresh fails', async () => {
+      const { calls, fetchImpl } = recordingFetch(() => Response.json({ code: 'INVALID_REFRESH_TOKEN' }, { status: 401 }));
+
+      const response = await call(fetchImpl, cookie(undefined, 'refresh-dead'), '{}');
+
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ code: 'SESSION_EXPIRED' });
+      const cleared = setCookies(response).join('\n');
+      expect(cleared).toMatch(/pb_access=; .*Max-Age=0/);
+      expect(cleared).toMatch(/pb_refresh=; .*Max-Age=0/);
+      expect(calls.map((c) => new URL(c.url).pathname)).toEqual(['/internal/auth/refresh']);
+    });
+
+    it('answers 401 SESSION_EXPIRED without calling the API when there is no session at all', async () => {
+      const { calls, fetchImpl } = recordingFetch();
+      const response = await call(fetchImpl, '', '{}');
+      expect(response.status).toBe(401);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('sends no token in mock mode, where there is no sign-in', async () => {
+      const { calls, fetchImpl } = recordingFetch();
+      await forwardToApi(new Request('http://console.test/api/bff/internal/x'), ['internal', 'x'], {
         baseUrl: 'http://api.internal:3000',
         fetch: fetchImpl,
-        operator: () => OPERATOR,
+        authenticate: false,
       });
-      return calls[0]!;
-    };
-    const sentBody = (call: { init: RequestInit }) => JSON.parse(new TextDecoder().decode(call.init.body as ArrayBuffer));
-
-    it('sets actor from the current Operator', async () => {
-      const call = await send(JSON.stringify({ attemptId: 'a1', note: 'n', status: 'FAILED' }));
-      expect(sentBody(call)).toEqual({ attemptId: 'a1', note: 'n', status: 'FAILED', actor: 'op-7' });
-    });
-
-    it('ignores an actor sent by the browser', async () => {
-      const call = await send(JSON.stringify({ attemptId: 'a1', note: 'n', actor: 'someone-else' }));
-      expect(sentBody(call).actor).toBe('op-7');
-    });
-
-    it('sets actor on every operator write, whatever the path', async () => {
-      const other = await send(JSON.stringify({ actor: 'x', note: 'n' }), ['internal', 'payments', 'p1', 'something']);
-      expect(sentBody(other)).toEqual({ actor: 'op-7', note: 'n' });
-      const put = await send(JSON.stringify({ actor: 'x' }), ['internal', 'a', 'b', 'c', 'd', 'e'], 'POST');
-      expect(sentBody(put).actor).toBe('op-7');
-    });
-
-    it('leaves reads untouched', async () => {
-      const get = await send(undefined, ['internal', 'payments', 'p1', 'review-resolution'], 'GET');
-      expect(get.init.body).toBeUndefined();
-    });
-
-    it('forwards a body that is not a JSON object unchanged, for the API to reject', async () => {
-      const call = await send('not json');
-      expect(new TextDecoder().decode(call.init.body as ArrayBuffer)).toBe('not json');
+      expect(bearerOf(calls[0]!)).toBeNull();
     });
   });
 
@@ -102,6 +188,7 @@ describe('forwardToApi', () => {
       const response = await forwardToApi(new Request('http://console.test/api/bff/x', { method, body: method === 'GET' ? undefined : '{}' }), path, {
         baseUrl: 'http://api.internal:3000',
         fetch: fetchImpl,
+        authenticate: false,
       });
       return { calls, response };
     };
@@ -140,6 +227,7 @@ describe('forwardToApi', () => {
       const response = await forwardToApi(new Request('http://console.test/api/bff/internal/x'), ['internal', 'x'], {
         baseUrl: 'http://api.internal:3000',
         fetch: fetchImpl,
+        authenticate: false,
       });
       expect(response.headers.get('set-cookie')).toBeNull();
       expect(response.headers.get('content-type')).toBe('application/json');

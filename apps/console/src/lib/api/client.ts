@@ -72,7 +72,14 @@ export async function request<S extends z.ZodType>(
       details: cause,
     });
   }
-  if (!response.ok) throw await toApiError(response);
+  if (!response.ok) {
+    const error = await toApiError(response);
+    // The session has ended (the BFF cleared its cookies): back to sign-in.
+    if (error.status === 401 && error.code === 'SESSION_EXPIRED' && typeof window !== 'undefined') {
+      window.location.assign('/sign-in');
+    }
+    throw error;
+  }
 
   const parsed = schema.safeParse(await response.json().catch(() => undefined));
   if (!parsed.success) {
