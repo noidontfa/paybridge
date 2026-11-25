@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { handleRefreshRedirect, handleSignIn, handleSignOut, safeNextPath } from './auth-handlers';
+import {
+  handleChangePassword,
+  handleForgotPassword,
+  handleRefreshRedirect,
+  handleResetPassword,
+  handleSignIn,
+  handleSignOut,
+  safeNextPath,
+} from './auth-handlers';
 
 const options = (fetchImpl: typeof fetch) => ({ baseUrl: 'http://api.internal:3000', fetch: fetchImpl });
 const session = {
@@ -87,5 +95,51 @@ describe('refresh redirect', () => {
 
   it.each(['//evil.test', 'https://evil.test', '/\\evil.test', '', 'payments'])('only sends the browser to a path on this site: %j', (next) => {
     expect(safeNextPath(next)).toBe('/');
+  });
+});
+
+describe('password reset and change', () => {
+  const calls = () => {
+    const sent: Array<[string, unknown, unknown]> = [];
+    const impl = (async (url: string | URL, init?: RequestInit) => {
+      sent.push([url.toString(), init?.body, (init?.headers as Record<string, string> | undefined)?.authorization]);
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    return { sent, impl };
+  };
+
+  it('forwards a reset request and answers as the API does', async () => {
+    const { sent, impl } = calls();
+    const response = await handleForgotPassword(post('/api/auth/forgot-password', { email: 'u@x.test' }), options(impl));
+    expect(response.status).toBe(204);
+    expect(sent).toEqual([['http://api.internal:3000/internal/auth/password-reset/request', '{"email":"u@x.test"}', undefined]]);
+  });
+
+  it("passes the API's refusal of a reset link through", async () => {
+    const response = await handleResetPassword(
+      post('/api/auth/reset-password', { token: 't', password: 'a-long-enough-password' }),
+      options((async () => Response.json({ statusCode: 400, code: 'INVALID_RESET_TOKEN' }, { status: 400 })) as typeof fetch),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: 'INVALID_RESET_TOKEN' });
+  });
+
+  it('adds the access token and the refresh token from the cookies to a password change', async () => {
+    const { sent, impl } = calls();
+    const response = await handleChangePassword(
+      post('/api/auth/change-password', { currentPassword: 'old', newPassword: 'a-long-enough-password' }, 'pb_access=a-1; pb_refresh=r-1'),
+      options(impl),
+    );
+    expect(response.status).toBe(204);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]![0]).toBe('http://api.internal:3000/internal/auth/change-password');
+    expect(JSON.parse(sent[0]![1] as string)).toEqual({ currentPassword: 'old', newPassword: 'a-long-enough-password', refreshToken: 'r-1' });
+    expect(sent[0]![2]).toBe('Bearer a-1');
+  });
+
+  it('ends the session when there is no way to sign the call', async () => {
+    const response = await handleChangePassword(post('/api/auth/change-password', { currentPassword: 'a', newPassword: 'b' }), options(fetch));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ code: 'SESSION_EXPIRED' });
   });
 });

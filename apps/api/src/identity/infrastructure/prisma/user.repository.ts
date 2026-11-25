@@ -49,6 +49,10 @@ export class PrismaUserRepository extends UserRepository {
     }
   }
 
+  async setPasswordHash(id: string, passwordHash: string): Promise<void> {
+    await this.ctx.db.user.update({ where: { id }, data: { passwordHash } });
+  }
+
   async resetPassword(id: string, passwordHash: string): Promise<void> {
     await this.ctx.db.user.update({
       where: { id },

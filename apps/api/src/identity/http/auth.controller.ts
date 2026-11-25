@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -20,11 +21,17 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../constants.js';
 import { GetSessionUser } from '../application/use-cases/get-session-user.js';
 import { RefreshSession } from '../application/use-cases/refresh-session.js';
+import { ChangePassword } from '../application/use-cases/change-password.js';
+import { CompletePasswordReset } from '../application/use-cases/complete-password-reset.js';
+import { RequestPasswordReset } from '../application/use-cases/request-password-reset.js';
 import { SignIn } from '../application/use-cases/sign-in.js';
 import { SignOut } from '../application/use-cases/sign-out.js';
 import type { Session, SessionUser } from '../application/session.js';
+import { WeakPasswordError } from '../domain/user.js';
 import {
   InvalidCredentialsError,
+  InvalidCurrentPasswordError,
+  InvalidResetTokenError,
   InvalidRefreshTokenError,
   OrganizationSuspendedError,
   UserDeactivatedError,
@@ -40,10 +47,41 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1).max(512),
 });
 
+const resetRequestSchema = z.object({
+  email: z.string().trim().min(1).max(320),
+});
+const resetCompleteSchema = z.object({
+  token: z.string().min(1).max(512),
+  password: z.string().max(1024),
+});
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(1024),
+  newPassword: z.string().max(1024),
+  refreshToken: z.string().min(1).max(512).optional(),
+});
+
 type SignInBody = z.output<typeof signInSchema>;
 type RefreshTokenBody = z.output<typeof refreshTokenSchema>;
 
 function rethrow(error: unknown): never {
+  if (error instanceof InvalidResetTokenError) {
+    throw new BadRequestException({
+      message: error.message,
+      code: 'INVALID_RESET_TOKEN',
+    });
+  }
+  if (error instanceof InvalidCurrentPasswordError) {
+    throw new BadRequestException({
+      message: error.message,
+      code: 'INVALID_CURRENT_PASSWORD',
+    });
+  }
+  if (error instanceof WeakPasswordError) {
+    throw new BadRequestException({
+      message: error.message,
+      code: 'WEAK_PASSWORD',
+    });
+  }
   if (error instanceof InvalidCredentialsError) {
     throw new UnauthorizedException({
       message: error.message,
@@ -84,6 +122,12 @@ export class AuthController {
     @Inject(RefreshSession) private readonly refresh: RefreshSession,
     @Inject(SignOut) private readonly signOut: SignOut,
     @Inject(GetSessionUser) private readonly sessionUser: GetSessionUser,
+    @Inject(RequestPasswordReset)
+    private readonly requestReset: RequestPasswordReset,
+    @Inject(CompletePasswordReset)
+    private readonly completeReset: CompletePasswordReset,
+    @Inject(ChangePassword)
+    private readonly changePasswordUseCase: ChangePassword,
   ) {}
 
   @Public()
@@ -122,6 +166,58 @@ export class AuthController {
     @Body(new ZodValidationPipe(refreshTokenSchema)) body: RefreshTokenBody,
   ): Promise<void> {
     await this.signOut.execute(body.refreshToken);
+  }
+
+  @Public()
+  @Post('password-reset/request')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary: 'Email a Password Reset link (same answer for any address)',
+  })
+  async requestPasswordReset(
+    @Body(new ZodValidationPipe(resetRequestSchema))
+    body: z.output<typeof resetRequestSchema>,
+  ): Promise<Record<string, never>> {
+    await this.requestReset.execute(body.email);
+    return {};
+  }
+
+  @Public()
+  @Post('password-reset/complete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Set a new password from a Password Reset link' })
+  async completePasswordReset(
+    @Body(new ZodValidationPipe(resetCompleteSchema))
+    body: z.output<typeof resetCompleteSchema>,
+  ): Promise<void> {
+    try {
+      await this.completeReset.execute(body.token, body.password);
+    } catch (error) {
+      rethrow(error);
+    }
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Change the signed-in User password (sensitive write)',
+  })
+  async changePassword(
+    @Req() request: Record<string, unknown>,
+    @Body(new ZodValidationPipe(changePasswordSchema))
+    body: z.output<typeof changePasswordSchema>,
+  ): Promise<void> {
+    const principal = request[PRINCIPAL_REQUEST_KEY] as Principal;
+    try {
+      await this.changePasswordUseCase.execute({
+        userId: principal.user!.id,
+        currentPassword: body.currentPassword,
+        newPassword: body.newPassword,
+        keepRefreshToken: body.refreshToken,
+      });
+    } catch (error) {
+      rethrow(error);
+    }
   }
 
   @Get('me')
