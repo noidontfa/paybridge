@@ -6,14 +6,15 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --type-aware src/ e2e/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:real": "playwright test -c playwright.real.config.ts"
   },
   "devDependencies": {
     "@paybridge/typescript-config": "workspace:*",
