@@ -32,7 +32,7 @@ test('shows how long a Review has been open', async ({ page }) => {
   await page.goto(`/payments/${inReview.id}`);
   const review = page.getByRole('group', { name: 'Review' });
   await expect(review).toContainText('Ambiguous status');
-  await expect(review).toContainText(/Open for/);
+  await expect(review).toContainText(/Opened .* ago/);
 });
 
 test('shows a not-found state for an unknown id', async ({ page }) => {
