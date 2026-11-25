@@ -34,6 +34,7 @@ Settled by grilling on 2026-11-25:
 - **Settings**: client-side preferences only (theme, table density) and a read-only Environment panel (API base URL, mock-mode flag, build version).
 - **Tests**: Vitest and Testing Library for formatters, schemas and components with logic. Playwright smoke tests against mock mode (Overview loads, filtering Payments, resolving a Review).
 - **Skeleton built** ([01](issues/01-console-skeleton.md)): `apps/console` with the adapted sidebar-08 shell, themes, Settings and CI. Navigation is data in `src/lib/navigation.ts`; server-only configuration is `CONSOLE_API_BASE_URL` and `CONSOLE_API_MOCKS`.
+- **Payment detail built** ([02](issues/02-payment-detail.md)): `/payments/[id]` through the BFF (`/api/bff`, path-preserving) and MSW mock mode over a seeded store; operator detail is `GET /internal/payments/:id`; mock mode refuses production builds, so Playwright runs `next dev`. Extension points for the mock store, handlers, API client, formatters and badges are in the ticket's Answer.
 
 ## Sidebar (sidebar-08)
 

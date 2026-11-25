@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from 'next-themes';
 import { AppSidebar } from '@/components/app-sidebar';
+import { MockBanner } from '@/components/mock-banner';
+import { Providers } from '@/components/providers';
 import { DensityEffect } from '@/components/settings-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { getEnvironment } from '@/lib/environment';
 import { PRODUCT_NAME } from '@/lib/navigation';
 import './globals.css';
 
@@ -14,6 +17,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
+// The mock-mode banner reads the server environment at request time, never the build.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -23,7 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SidebarProvider>
               <DensityEffect />
               <AppSidebar />
-              <SidebarInset className="min-w-0 overflow-x-hidden">{children}</SidebarInset>
+              <SidebarInset className="min-w-0 overflow-x-hidden">
+                {getEnvironment().mockMode && <MockBanner />}
+                <Providers>{children}</Providers>
+              </SidebarInset>
             </SidebarProvider>
           </TooltipProvider>
         </ThemeProvider>

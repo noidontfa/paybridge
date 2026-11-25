@@ -1,0 +1,58 @@
+/**
+ * MSW handlers: the mocked API. One handler set over one `MockStore`, used by
+ * the BFF in mock mode and by screen tests (with `baseUrl` pointed at the BFF
+ * prefix, because the BFF preserves paths).
+ *
+ * Extension point: add a handler to the array in `createHandlers`. Answer
+ * success with `HttpResponse.json(...)` and failure with `apiError(...)` so
+ * every error has the API's envelope.
+ */
+import { http, HttpResponse, type HttpHandler } from 'msw';
+import type { MockStore } from './store';
+
+export interface HandlerOptions {
+  /** Where the API is, or the BFF prefix (with a wildcard origin) for a screen test. */
+  baseUrl: string;
+  store: MockStore;
+}
+
+/** The API's error envelope (apps/api AllExceptionsFilter). */
+export function apiError(
+  request: Request,
+  init: { status: number; error: string; code?: string; message: string; details?: unknown },
+  now: Date,
+) {
+  const url = new URL(request.url);
+  return HttpResponse.json(
+    {
+      statusCode: init.status,
+      error: init.error,
+      message: init.message,
+      ...(init.code && { code: init.code }),
+      ...(init.details !== undefined && { details: init.details }),
+      path: url.pathname + url.search,
+      method: request.method,
+      timestamp: now.toISOString(),
+      requestId: 'mock-request',
+    },
+    { status: init.status },
+  );
+}
+
+export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[] {
+  const base = baseUrl.replace(/\/$/, '');
+  return [
+    http.get(`${base}/internal/payments/:id`, ({ request, params }) => {
+      const id = String(params.id);
+      const payment = store.getOperatorPayment(id);
+      if (!payment) {
+        return apiError(
+          request,
+          { status: 404, error: 'Not Found', code: 'PAYMENT_NOT_FOUND', message: `Payment ${id} was not found` },
+          store.now,
+        );
+      }
+      return HttpResponse.json(payment);
+    }),
+  ];
+}

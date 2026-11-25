@@ -15,8 +15,9 @@ import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { breadcrumbFor } from '@/lib/navigation';
 
-export function PageHeader({ title, description }: { title: string; description?: string }) {
-  const trail = breadcrumbFor(usePathname());
+/** `current` names the item a detail page shows (an id), added after the section crumb. */
+export function PageHeader({ title, description, current }: { title: string; description?: string; current?: string }) {
+  const trail = breadcrumbFor(usePathname(), current);
   return (
     <>
       <header className="flex h-14 shrink-0 items-center gap-2 px-4">
