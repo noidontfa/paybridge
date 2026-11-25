@@ -18,6 +18,11 @@ export interface PaymentGateway {
    * Every other header is dropped. Absent means none are stored.
    */
   readonly callbackHeaders?: readonly string[];
+  /**
+   * Whether this plugin talks to the provider's test or live environment, for
+   * the operator Gateways view. Absent means test.
+   */
+  readonly mode?: 'test' | 'live';
 
   initiate(input: InitiateInput): Promise<InitiateResult>;
   query(input: QueryInput): Promise<QueryResult>;

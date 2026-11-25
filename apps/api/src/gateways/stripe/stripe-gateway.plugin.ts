@@ -72,6 +72,8 @@ export class StripeGatewayPlugin implements PaymentGateway {
   readonly gatewayId = STRIPE_GATEWAY_ID;
   readonly capabilities: GatewayCapabilities = { supportsCancel: true };
   readonly callbackHeaders = ['stripe-signature'] as const;
+  /** From the secret key prefix: `sk_live_`/`rk_live_` is live, anything else test. */
+  readonly mode: 'test' | 'live';
 
   private readonly stripe: Stripe;
   private readonly publishableKey: string;
@@ -84,6 +86,7 @@ export class StripeGatewayPlugin implements PaymentGateway {
     this.webhookSecret = options.webhookSecret;
     this.logger = options.logger ?? new Logger(StripeGatewayPlugin.name);
     this.livemode = /^(sk|rk)_live_/.test(options.secretKey);
+    this.mode = this.livemode ? 'live' : 'test';
     this.stripe = new Stripe(options.secretKey, {
       apiVersion: STRIPE_API_VERSION,
       maxNetworkRetries: options.maxNetworkRetries ?? 2,

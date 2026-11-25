@@ -9,13 +9,13 @@ import { PaymentsListModule } from './payments-list.module.js';
 // branches then edit lines that are not adjacent, so they merge without
 // conflicts. Do not reorder, reflow or delete other lines.
 
-// ticket 03: PaymentDetailModule
+import { PaymentDetailModule } from './payment-detail.module.js';
 
-// ticket 04: ReviewsModule
+import { ReviewsModule } from './reviews.module.js';
 
 // ticket 05: OverviewModule
 
-// ticket 06: GatewaysModule
+import { GatewaysModule } from './gateways.module.js';
 
 import { DeveloperViewsModule } from './developer-views.module.js';
 
@@ -23,13 +23,13 @@ import { DeveloperViewsModule } from './developer-views.module.js';
   imports: [
     PaymentsListModule,
 
-    // ticket 03
+    PaymentDetailModule,
 
-    // ticket 04
+    ReviewsModule,
 
     // ticket 05
 
-    // ticket 06
+    GatewaysModule,
 
     DeveloperViewsModule,
   ],

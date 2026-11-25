@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import type Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { isProduction, resolveStripeConfig, type Env } from '../config/env.schema.js';
+import {
+  isProduction,
+  resolveStripeConfig,
+  type Env,
+} from '../config/env.schema.js';
 import { GATEWAY_PLUGINS } from '../payment-core/gateway-manager/gateway-plugins.token.js';
 import type { PaymentGateway } from '../payment-core/port/index.js';
 import { FakeGatewayPlugin } from './fake/fake-gateway.plugin.js';
@@ -36,7 +40,9 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
         httpClient: Stripe.HttpClient | undefined,
       ): PaymentGateway[] => {
         const plugins: PaymentGateway[] = [];
-        if (!isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) })) {
+        if (
+          !isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) })
+        ) {
           plugins.push(fake);
         }
         const stripe = resolveStripeConfig({
