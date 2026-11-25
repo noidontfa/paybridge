@@ -33,6 +33,7 @@ export class PrismaStatusTransitionRepository {
         trigger: transition.trigger,
         actor: transition.actor,
         actorRole: transition.actorRole ?? null,
+        actorName: transition.actorName ?? null,
         reason: transition.reason ?? null,
       },
     });

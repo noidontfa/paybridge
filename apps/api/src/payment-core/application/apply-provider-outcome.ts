@@ -174,6 +174,7 @@ export async function succeedPayment(
     trigger: cause.trigger,
     actor: cause.actor,
     actorRole: cause.actorRole ?? null,
+    actorName: cause.actorName ?? null,
     reason: `attempt ${attempt.id} succeeded`,
   });
   await repos.outbox.add(scope, {
@@ -205,6 +206,7 @@ export async function cancelOtherOpenAttempts(
         trigger: cause.trigger,
         actor: cause.actor,
         actorRole: cause.actorRole,
+        actorName: cause.actorName,
         reason: `payment succeeded through attempt ${succeededId}`,
       }),
     );

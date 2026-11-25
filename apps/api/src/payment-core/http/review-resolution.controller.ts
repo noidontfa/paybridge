@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { RequireSensitivePermission } from '../../common/principal/access-policy.js';
 import { ErrorResponseDto } from '../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../constants.js';
@@ -43,6 +44,7 @@ import {
  * access token, never from the body.
  */
 @ApiTags('internal')
+@RequireSensitivePermission('reviews:resolve')
 @Controller(`${INTERNAL_PREFIX}/payments/:paymentId/review-resolution`)
 export class ReviewResolutionController {
   constructor(
@@ -77,6 +79,7 @@ export class ReviewResolutionController {
       ...body,
       actor: actor.userId,
       actorRole: actor.role,
+      actorName: actor.name,
     });
     return toPaymentDetailResponse(payment);
   }

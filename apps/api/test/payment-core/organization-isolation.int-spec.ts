@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
+import { permissionsOf } from '../../src/identity/domain/permissions.js';
 import { PrincipalResolver } from '../../src/identity/port/principal-resolver.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
@@ -16,6 +17,7 @@ import {
   OTHER_ORGANIZATION_ID,
 } from '../setup/organizations.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { createUser } from '../setup/users.js';
 
 // Ticket 02 (ADR 0006): nothing in one Organization is visible from another.
 // The tests act as Organization A (the default one) or B by changing what the
@@ -27,19 +29,34 @@ const OPENED = new Date('2026-05-01T10:00:00.000Z');
 const prisma = createTestPrismaClient();
 const clock = new FakeClock(new Date(OPENED.getTime() + 73 * HOUR));
 let actingAs = DEFAULT_ORGANIZATION_ID;
+/** A real Operator per Organization: sensitive writes re-read the User. */
+const operators: Record<string, string> = {};
 let app: INestApplication;
 let service: PaymentService;
 let runner: TransactionRunner;
 
 beforeAll(async () => {
+  await ensureOtherOrganization(prisma);
+  for (const organizationId of [DEFAULT_ORGANIZATION_ID, OTHER_ORGANIZATION_ID]) {
+    operators[organizationId] = (
+      await createUser(prisma, { role: 'OPERATOR', organizationId })
+    ).id;
+  }
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(Clock)
     .useValue(clock)
     .overrideProvider(PrincipalResolver)
     .useValue({
-      resolve: () => ({
+      // Like the real resolver: only operator routes have a User.
+      resolve: (req: { path: string }) => ({
         organizationId: actingAs,
-        user: { id: 'ops.bob', role: 'OPERATOR', permissions: [] },
+        user: req.path.startsWith('/internal/')
+          ? {
+              id: operators[actingAs]!,
+              role: 'OPERATOR',
+              permissions: permissionsOf('OPERATOR'),
+            }
+          : null,
       }),
     })
     .compile();

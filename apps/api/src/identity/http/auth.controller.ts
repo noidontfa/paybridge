@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { SessionOnly } from '../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
@@ -124,6 +125,7 @@ export class AuthController {
     await this.signOut.execute(body.refreshToken);
   }
 
+  @SessionOnly()
   @Get('me')
   @ApiOperation({ summary: 'The signed-in User, their Role and Organization' })
   async me(
