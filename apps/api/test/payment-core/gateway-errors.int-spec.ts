@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
@@ -74,7 +75,9 @@ beforeAll(async () => {
   startAttempt = moduleRef.get(StartAttempt);
   requery = moduleRef.get(RequeryAttempt);
   cancels = moduleRef.get(BestEffortCancel);
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {

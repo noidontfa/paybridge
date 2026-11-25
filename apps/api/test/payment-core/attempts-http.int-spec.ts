@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -27,7 +28,9 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
-  fake = app.get(FakeGatewayPlugin, { strict: false });
+  fake = app
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {

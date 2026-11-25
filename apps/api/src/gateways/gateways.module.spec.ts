@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import Stripe from 'stripe';
+import { fixedPlugin } from '../payment-core/gateway-manager/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../payment-core/gateway-manager/gateway-plugins.token.js';
 import { GatewayManagerModule } from '../payment-core/gateway-manager/gateway-manager.module.js';
 import { GatewayManager } from '../payment-core/gateway-manager/gateway-manager.js';
@@ -33,7 +34,8 @@ describe('Gateway composition root', () => {
     }).compile();
 
     const manager = moduleRef.get(GatewayManager);
-    expect(manager.resolve('fake')).toBe(moduleRef.get(FakeGatewayPlugin));
+    expect(manager.resolve('fake')).toBeInstanceOf(FakeGatewayPlugin);
+    expect(manager.resolve('fake')).toBe(manager.resolve('fake'));
   });
 
   it('does not register the fake plugin in production', async () => {
@@ -99,7 +101,10 @@ describe('Gateway composition root', () => {
 
     await expect(
       plugin.parseCallback(sign(STRIPE_ENV.STRIPE_WEBHOOK_SECRET)),
-    ).resolves.toMatchObject({ status: 'SUCCEEDED', providerRef: 'pi_3QxModule' });
+    ).resolves.toMatchObject({
+      status: 'SUCCEEDED',
+      providerRef: 'pi_3QxModule',
+    });
     await expect(plugin.parseCallback(sign('whsec_wrong'))).rejects.toThrow(
       /Invalid Stripe webhook/,
     );
@@ -132,7 +137,10 @@ describe('Gateway composition root', () => {
       providers: [
         {
           provide: GATEWAY_PLUGINS,
-          useValue: [new FakeGatewayPlugin(), new FakeGatewayPlugin()],
+          useValue: [
+            fixedPlugin(new FakeGatewayPlugin()),
+            fixedPlugin(new FakeGatewayPlugin()),
+          ],
         },
       ],
       exports: [GATEWAY_PLUGINS],

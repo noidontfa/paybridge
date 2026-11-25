@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
@@ -51,7 +52,9 @@ beforeAll(async () => {
   expirePayment = moduleRef.get(ExpirePayment);
   payments = moduleRef.get(PaymentService);
   repos = moduleRef.get(TransactionRunner).repositories;
-  fake = moduleRef.get(FakeGatewayPlugin);
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {

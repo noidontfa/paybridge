@@ -3,7 +3,7 @@ import {
   type DynamicModule,
   type ModuleMetadata,
 } from '@nestjs/common';
-import type { PaymentGateway } from '../port/index.js';
+import type { GatewayRegistration } from './gateway-plugin-factory.js';
 import { GatewayManager } from './gateway-manager.js';
 import { GATEWAY_PLUGINS } from './gateway-plugins.token.js';
 
@@ -28,8 +28,8 @@ export class GatewayManagerModule {
         {
           provide: GatewayManager,
           inject: [GATEWAY_PLUGINS],
-          useFactory: (plugins: PaymentGateway[]) =>
-            new GatewayManager(plugins, {
+          useFactory: (registrations: GatewayRegistration[]) =>
+            new GatewayManager(registrations, {
               requiredGatewayIds: options.requiredGatewayIds,
             }),
         },

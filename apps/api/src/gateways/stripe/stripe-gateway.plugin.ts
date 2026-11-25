@@ -19,6 +19,7 @@ import {
   type QueryInput,
   type QueryResult,
 } from '../../payment-core/port/index.js';
+import type { GatewayPluginFactory } from '../../payment-core/gateway-manager/gateway-plugin-factory.js';
 
 export const STRIPE_GATEWAY_ID = 'stripe';
 
@@ -331,3 +332,10 @@ function translateError(error: unknown, operation: StripeOperation): Error {
   }
   return error instanceof Error ? error : new Error(String(error));
 }
+
+/** Registers the Stripe plugin: one instance per set of Stripe credentials. */
+export const stripeGatewayFactory: GatewayPluginFactory<StripeGatewayOptions> =
+  {
+    gatewayId: STRIPE_GATEWAY_ID,
+    create: (options) => new StripeGatewayPlugin(options),
+  };

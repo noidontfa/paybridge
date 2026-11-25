@@ -1,5 +1,9 @@
 import type { PaymentGateway } from '../port/index.js';
 import {
+  fixedPlugin,
+  type GatewayRegistration,
+} from './gateway-plugin-factory.js';
+import {
   DuplicateGatewayError,
   GatewayManager,
   MissingGatewayError,
@@ -16,11 +20,25 @@ function plugin(gatewayId: string): PaymentGateway {
   };
 }
 
+function reg(
+  gatewayId: string,
+  credentials: unknown = {},
+): { registration: GatewayRegistration; create: ReturnType<typeof vi.fn> } {
+  const create = vi.fn((_credentials: unknown) => plugin(gatewayId));
+  return {
+    registration: { factory: { gatewayId, create }, credentials },
+    create,
+  };
+}
+
 describe('GatewayManager', () => {
   it('resolves each registered plugin by its gateway identifier', () => {
     const vnpay = plugin('vnpay');
     const zalopay = plugin('zalopay');
-    const manager = new GatewayManager([vnpay, zalopay]);
+    const manager = new GatewayManager([
+      fixedPlugin(vnpay),
+      fixedPlugin(zalopay),
+    ]);
 
     expect(manager.resolve('vnpay')).toBe(vnpay);
     expect(manager.resolve('zalopay')).toBe(zalopay);
@@ -29,17 +47,25 @@ describe('GatewayManager', () => {
 
   it('fails at boot on a duplicate gateway identifier', () => {
     expect(
-      () => new GatewayManager([plugin('vnpay'), plugin('vnpay')]),
+      () =>
+        new GatewayManager([
+          fixedPlugin(plugin('vnpay')),
+          fixedPlugin(plugin('vnpay')),
+        ]),
     ).toThrow(DuplicateGatewayError);
     expect(
-      () => new GatewayManager([plugin('vnpay'), plugin('vnpay')]),
+      () =>
+        new GatewayManager([
+          fixedPlugin(plugin('vnpay')),
+          fixedPlugin(plugin('vnpay')),
+        ]),
     ).toThrow(/Duplicate Gateway Plugin registration for gateway "vnpay"/);
   });
 
   it('fails at boot when a required gateway has no plugin', () => {
     expect(
       () =>
-        new GatewayManager([plugin('vnpay')], {
+        new GatewayManager([fixedPlugin(plugin('vnpay'))], {
           requiredGatewayIds: ['vnpay', 'stripe'],
         }),
     ).toThrow(/No Gateway Plugin registered for required gateway "stripe"/);
@@ -47,17 +73,66 @@ describe('GatewayManager', () => {
 
   it('fails at boot when a registration is empty or has no gateway identifier', () => {
     expect(
-      () => new GatewayManager([undefined as unknown as PaymentGateway]),
+      () => new GatewayManager([undefined as unknown as GatewayRegistration]),
     ).toThrow(MissingGatewayError);
-    expect(() => new GatewayManager([plugin('')])).toThrow(MissingGatewayError);
+    expect(() => new GatewayManager([fixedPlugin(plugin(''))])).toThrow(
+      MissingGatewayError,
+    );
   });
 
   it('fails with a clear error when resolving an unregistered gateway', () => {
-    const manager = new GatewayManager([plugin('vnpay')]);
+    const manager = new GatewayManager([fixedPlugin(plugin('vnpay'))]);
 
     expect(() => manager.resolve('momo')).toThrow(UnknownGatewayError);
     expect(() => manager.resolve('momo')).toThrow(
       'No Gateway Plugin registered for gateway "momo" (registered: vnpay)',
     );
+  });
+
+  it('builds an instance from the registered credentials, once, on first use', () => {
+    const { registration: stripe, create } = reg('stripe', {
+      secretKey: 'sk_1',
+    });
+    const manager = new GatewayManager([stripe]);
+    expect(create).not.toHaveBeenCalled();
+
+    const first = manager.resolve('stripe');
+    const second = manager.resolve('stripe');
+
+    expect(first.gatewayId).toBe('stripe');
+    expect(second).toBe(first);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledWith({ secretKey: 'sk_1' });
+  });
+
+  it('builds a separate instance per gateway', () => {
+    const a = reg('a');
+    const b = reg('b');
+    const manager = new GatewayManager([a.registration, b.registration]);
+
+    expect(manager.resolve('a')).not.toBe(manager.resolve('b'));
+    expect(a.create).toHaveBeenCalledTimes(1);
+    expect(b.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('caches by a key that distinguishes connections and credentials versions', () => {
+    const { registration: stripe, create } = reg('stripe');
+    const manager = new GatewayManager([stripe]);
+
+    const base = manager.resolve('stripe');
+    const conn1v1 = manager.resolve('stripe', {
+      connectionId: 'c1',
+      credentialsVersion: 1,
+    });
+    const conn1v2 = manager.resolve('stripe', {
+      connectionId: 'c1',
+      credentialsVersion: 2,
+    });
+
+    expect(new Set([base, conn1v1, conn1v2]).size).toBe(3);
+    expect(
+      manager.resolve('stripe', { connectionId: 'c1', credentialsVersion: 1 }),
+    ).toBe(conn1v1);
+    expect(create).toHaveBeenCalledTimes(3);
   });
 });
