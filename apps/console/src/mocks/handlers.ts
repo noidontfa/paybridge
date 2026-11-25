@@ -8,6 +8,8 @@
  * every error has the API's envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { OVERVIEW_RANGES } from '@/lib/overview-range';
+import { computeOverview } from './overview';
 import type { MockStore } from './store';
 
 export interface HandlerOptions {
@@ -42,6 +44,18 @@ export function apiError(
 export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[] {
   const base = baseUrl.replace(/\/$/, '');
   return [
+    http.get(`${base}/internal/overview`, ({ request }) => {
+      const range = new URL(request.url).searchParams.get('range');
+      const valid = OVERVIEW_RANGES.find((r) => r === range);
+      if (!valid) {
+        return apiError(
+          request,
+          { status: 400, error: 'Bad Request', code: 'INVALID_RANGE', message: `range must be one of ${OVERVIEW_RANGES.join(', ')}` },
+          store.now,
+        );
+      }
+      return HttpResponse.json(computeOverview(store, valid));
+    }),
     http.get(`${base}/internal/payments/:id`, ({ request, params }) => {
       const id = String(params.id);
       const payment = store.getOperatorPayment(id);
