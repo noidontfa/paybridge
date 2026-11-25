@@ -38,6 +38,8 @@ export interface MockAttempt {
   reviewReason?: ReviewReason;
   reviewOpenedAt?: string;
   refundRequired: boolean;
+  /** What the provider reported, when the Review is about an amount (AMOUNT_MISMATCH). */
+  providerReportedAmount?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -9,6 +9,7 @@
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { paymentsListHandlers } from './payments-list';
+import { reviewHandlers } from './reviews';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -46,6 +47,9 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
   const base = baseUrl.replace(/\/$/, '');
   return [
     ...paymentsListHandlers(base, store, (request, message) =>
+      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+    ),
+    ...reviewHandlers(base, store, (request, message) =>
       apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
     ),
     http.get(`${base}/internal/overview`, ({ request }) => {

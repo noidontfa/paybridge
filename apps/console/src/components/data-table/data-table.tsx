@@ -46,8 +46,10 @@ export interface DataTableProps<Row extends RowData> {
   columns: DataTableColumns<Row>;
   rows: Row[];
   getRowId: (row: Row) => string;
-  /** Where a click on the row goes. */
-  getRowHref: (row: Row) => string;
+  /** Where a click on the row goes (ignored when `onRowOpen` is given). */
+  getRowHref?: (row: Row) => string;
+  /** Opens the row in place (a side sheet) instead of navigating. Give the row a button for the keyboard. */
+  onRowOpen?: (row: Row) => void;
   sort: SortState;
   onSortChange: (sort: SortState) => void;
   /** First load, or a new query with nothing to show yet. */
@@ -71,6 +73,7 @@ export function DataTable<Row extends RowData>({
   rows,
   getRowId,
   getRowHref,
+  onRowOpen,
   sort,
   onSortChange,
   isLoading,
@@ -109,7 +112,8 @@ export function DataTable<Row extends RowData>({
   const openRow = (event: MouseEvent, row: Row) => {
     // Links and buttons inside the row keep their own behaviour.
     if ((event.target as HTMLElement).closest('a, button')) return;
-    router.push(getRowHref(row));
+    if (onRowOpen) onRowOpen(row);
+    else if (getRowHref) router.push(getRowHref(row));
   };
 
   return (

@@ -98,6 +98,13 @@ const SCENARIOS: Scenario[] = [
     ageHours: [2, 150],
     attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'], reviewReason: 'AMOUNT_MISMATCH' }],
   },
+  // Closed Reviews: an Operator resolved them earlier.
+  {
+    weight: 1,
+    payment: 'PENDING',
+    ageHours: [20, 300],
+    attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW', 'FAILED'], reviewReason: 'AMBIGUOUS_PROVIDER_STATUS' }],
+  },
   {
     weight: 2,
     payment: 'EXPIRED',
@@ -139,6 +146,7 @@ interface Cause {
 /** What caused an attempt to move from one status to the next. */
 function attemptCause(from: AttemptStatus | null, to: AttemptStatus): Cause {
   if (from === null) return { trigger: 'start_attempt', actor: 'system' };
+  if (from === 'REQUIRES_REVIEW') return { trigger: 'operator_resolution', actor: 'operator' };
   switch (to) {
     case 'PENDING':
       return { trigger: 'gateway_accepted', actor: 'system' };
@@ -263,6 +271,8 @@ function seedPayment(store: MockStore, random: Random, scenario: Scenario, index
         attempt.reviewReason = review;
         attempt.reviewOpenedAt = iso(clock);
         attempt.refundRequired = review !== 'AMBIGUOUS_PROVIDER_STATUS';
+        // The provider reported less than the Payment Amount (decimal strings, no float drift for whole VND).
+        if (review === 'AMOUNT_MISMATCH') attempt.providerReportedAmount = String(Math.floor(Number(payment.amount) * 0.9));
         emit('PaymentRequiresReview', clock, {
           status: payment.status,
           attemptId: attempt.id,

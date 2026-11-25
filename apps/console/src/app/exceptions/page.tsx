@@ -1,7 +1,16 @@
-import { PlaceholderPage } from '@/components/placeholder-page';
+import { Suspense } from 'react';
+import { ExceptionsScreen } from '@/components/exceptions/exceptions-screen';
+import { PageHeader } from '@/components/page-header';
 
 export const metadata = { title: 'Exceptions' };
 
 export default function Page() {
-  return <PlaceholderPage title="Exceptions" description="Reviews that need an Operator." />;
+  return (
+    <>
+      <PageHeader title="Exceptions" description="Reviews that need an Operator, longest-waiting first." />
+      <Suspense>
+        <ExceptionsScreen />
+      </Suspense>
+    </>
+  );
 }

@@ -18,6 +18,8 @@ export interface NavItem {
   url?: string;
   icon: LucideIcon;
   badge?: string;
+  /** A count the sidebar fetches and shows beside the item. */
+  liveBadge?: 'openReviews';
 }
 
 export interface NavSection {
@@ -35,7 +37,7 @@ export const mainNav: NavSection[] = [
     label: 'Payments',
     items: [
       { title: 'Payments', url: '/payments', icon: CreditCardIcon },
-      { title: 'Exceptions', url: '/exceptions', icon: OctagonAlertIcon },
+      { title: 'Exceptions', url: '/exceptions', icon: OctagonAlertIcon, liveBadge: 'openReviews' },
     ],
   },
   {

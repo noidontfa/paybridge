@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { OpenReviewsBadge } from '@/components/open-reviews-badge';
 import { isActivePath, type NavSection } from '@/lib/navigation';
 
 export function NavMain({ sections }: { sections: NavSection[] }) {
@@ -53,6 +54,7 @@ export function NavMain({ sections }: { sections: NavSection[] }) {
                       <Icon />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
+                    {item.liveBadge === 'openReviews' && <OpenReviewsBadge />}
                   </SidebarMenuItem>
                 );
               })}
