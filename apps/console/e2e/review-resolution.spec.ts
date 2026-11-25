@@ -20,8 +20,8 @@ test('resolves an ambiguous Review to FAILED with a note and sees the badge, lis
   // The sidebar footer shows who resolutions are recorded as.
   await expect(page.getByRole('button', { name: 'Operator menu' })).toContainText('operator');
 
-  await page.goto(`/exceptions?payment=${target.payment.id}&transaction=${target.id}`);
-  const sheet = page.getByRole('dialog');
+  await page.goto(`/exceptions/${target.payment.id}/${target.id}`);
+  const sheet = page;
   await sheet.getByRole('radio', { name: 'Resolve to FAILED' }).check();
   // A note is mandatory.
   await sheet.getByRole('button', { name: 'Resolve Review' }).click();
@@ -39,7 +39,7 @@ test('resolves an ambiguous Review to FAILED with a note and sees the badge, lis
   if (remaining > 0) {
     await expect(page.getByLabel(`${remaining} open ${remaining === 1 ? 'Review' : 'Reviews'}`)).toBeVisible();
   }
-  await page.keyboard.press('Escape');
+  await page.goto('/exceptions');
   await expect(table.getByText(target.payment.upstreamReference)).toHaveCount(0);
   await page.getByRole('button', { name: 'Closed' }).click();
   await expect(table.getByText(target.payment.upstreamReference)).toBeVisible();

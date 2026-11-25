@@ -3,7 +3,7 @@
 import { SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_EVENT_TYPES } from '@/lib/api/schemas';
 import { PAYMENT_EVENT_URL_CONFIG, usePaymentEventList } from '@/lib/queries/payment-events';
@@ -22,12 +22,18 @@ const NEWEST_FIRST = { id: 'createdAt', desc: true };
 export function EventsScreen() {
   const { state, change, clear } = useTableUrlState(PAYMENT_EVENT_URL_CONFIG);
   const list = usePaymentEventList(state);
-  const filtered = Object.keys(state.filters).length > 0;
+  const filtered = state.q !== '' || Object.keys(state.filters).length > 0;
   const hasRows = list.rows.length > 0;
 
   const toolbar = useMemo(
     () => (
       <DataTableToolbar>
+        <SearchInput
+          label="Search Payment Events"
+          placeholder="Event id, Payment id or Upstream Reference"
+          value={state.q}
+          onChange={(q) => change({ q })}
+        />
         <FilterSelect
           label="Type"
           allLabel="All types"
@@ -73,7 +79,7 @@ export function EventsScreen() {
               {filtered ? 'No Payment Events match these filters' : 'No Payment Events yet'}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {filtered ? 'Try another type, or clear the filters.' : 'Events Core emits for a Payment appear here.'}
+              {filtered ? 'Try a different search or type, or clear the filters.' : 'Events Core emits for a Payment appear here.'}
             </p>
             {filtered && (
               <Button variant="outline" onClick={clear}>

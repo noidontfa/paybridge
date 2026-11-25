@@ -18,7 +18,7 @@ test('shows the open Review count on the sidebar and lists Reviews, oldest first
   await expect(table.getByRole('row').nth(1)).toContainText(open[0]!.payment.upstreamReference);
 });
 
-test('filters by reason, opens a Review sheet that survives a reload, and closes it with Escape', async ({ page }) => {
+test('filters by reason, opens a Review modal, shows the full page on a reload, and closes the modal with Escape', async ({ page }) => {
   const first = mismatch[0]!;
   await page.goto('/exceptions');
   const table = page.getByRole('table', { name: 'Exceptions' });
@@ -29,19 +29,24 @@ test('filters by reason, opens a Review sheet that survives a reload, and closes
   await expect(table.getByRole('row')).toHaveCount(mismatch.length + 1);
 
   await table.getByRole('button', { name: `Review ${first.payment.upstreamReference}` }).click();
-  await expect(page).toHaveURL(new RegExp(`transaction=${first.id}`));
+  await expect(page).toHaveURL(new RegExp(`/exceptions/${first.payment.id}/${first.id}$`));
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByRole('region', { name: 'Payment summary' })).toBeVisible();
   await expect(sheet.getByRole('group', { name: 'Review' })).toContainText('Amount mismatch');
   await expect(sheet.getByRole('table', { name: 'Status history' })).toBeVisible();
 
-  await page.reload();
-  await expect(page.getByRole('dialog').getByRole('group', { name: 'Review' })).toBeVisible();
-
+  // Escape closes the modal and goes back to the list with its filters.
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(page).not.toHaveURL(/transaction=/);
-  await expect(page).toHaveURL(/reason=AMOUNT_MISMATCH/);
+  await expect(page).toHaveURL(/\/exceptions\?.*reason=AMOUNT_MISMATCH/);
+
+  // A reload of the Review URL is the full page, not a modal.
+  await table.getByRole('button', { name: `Review ${first.payment.upstreamReference}` }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Review' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Exceptions' })).toHaveCount(0);
 });
 
 test('switches to closed Reviews', async ({ page }) => {

@@ -19,6 +19,8 @@ export interface AuditListQuery extends ListQuery {
   entityId?: string;
   trigger?: string;
   actor?: string;
+  /** Payment id, Upstream Reference or entity id (substring, case-insensitive). */
+  q?: string;
 }
 
 export function listStatusTransitions(query: AuditListQuery, signal?: AbortSignal): Promise<AuditList> {

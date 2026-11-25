@@ -23,7 +23,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 // The mock-mode banner reads the server environment at request time, never the build.
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
@@ -38,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <SidebarInset className="min-w-0 overflow-x-hidden">
                   {getEnvironment().mockMode && <MockBanner />}
                   {children}
+                  {modal}
                 </SidebarInset>
               </SidebarProvider>
               </OperatorProvider>

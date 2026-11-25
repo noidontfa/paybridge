@@ -1,10 +1,10 @@
 'use client';
 
 import { InboxIcon, SearchXIcon } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { REVIEW_REASONS } from '@/lib/api/schemas';
 import { useGatewayOptions } from '@/lib/queries/gateways';
@@ -13,12 +13,8 @@ import type { ReviewItem } from '@/lib/api/reviews';
 import { statusBadge } from '@/lib/status-badges';
 import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
 import { reviewColumns } from './exceptions-columns';
-import { ReviewSheet } from './review-sheet';
 
 const REASON_OPTIONS = REVIEW_REASONS.map((reason) => ({ value: reason, label: statusBadge('review', reason).label }));
-
-/** The sheet is `?payment=<id>&transaction=<Attempt Key>`, next to whatever the table keeps in the URL. */
-const SHEET_PARAMS = ['payment', 'transaction'] as const;
 
 /** "Exceptions" in the UI; the domain term is Review. */
 export function ExceptionsScreen() {
@@ -26,38 +22,27 @@ export function ExceptionsScreen() {
   const list = useReviewList(state);
   const gatewayOptions = useGatewayOptions();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const closed = state.filters.state === 'closed';
-  const filtered = Boolean(state.filters.reason || state.filters.gatewayId);
+  const filtered = Boolean(state.q || state.filters.reason || state.filters.gatewayId);
   const hasRows = list.rows.length > 0;
-  const paymentId = searchParams.get('payment');
-  const transactionId = searchParams.get('transaction');
 
-  const writeSheet = useCallback(
-    (review: { paymentId: string; transactionId: string } | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const name of SHEET_PARAMS) params.delete(name);
-      if (review) {
-        params.set('payment', review.paymentId);
-        params.set('transaction', review.transactionId);
-      }
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
+  /** A Review is its own route: a modal from here (intercepted), a full page on a reload. */
   const openReview = useCallback(
-    (review: ReviewItem) => writeSheet({ paymentId: review.payment.id, transactionId: review.id }),
-    [writeSheet],
+    (review: ReviewItem) => router.push(`/exceptions/${encodeURIComponent(review.payment.id)}/${encodeURIComponent(review.id)}`),
+    [router],
   );
-  const closeSheet = useCallback(() => writeSheet(null), [writeSheet]);
   const columns = useMemo(() => reviewColumns(openReview), [openReview]);
-  const clearFilters = () => change({ filters: { reason: '', gatewayId: '' } });
+  const clearFilters = () => change({ q: '', filters: { reason: '', gatewayId: '' } });
 
   const toolbar = (
     <DataTableToolbar>
+      <SearchInput
+        label="Search Exceptions"
+        placeholder="Payment id or Upstream Reference"
+        value={state.q}
+        onChange={(q) => change({ q })}
+      />
       <div role="group" aria-label="Review state" className="flex gap-1">
         {(['open', 'closed'] as const).map((value) => (
           <Button
@@ -116,7 +101,7 @@ export function ExceptionsScreen() {
             </h2>
             <p className="text-sm text-muted-foreground">
               {filtered
-                ? 'Try a different reason or gateway, or clear the filters.'
+                ? 'Try a different search, or clear the filters.'
                 : closed
                   ? 'Reviews that an Operator has resolved appear here.'
                   : 'Nothing needs an Operator right now.'}
@@ -129,7 +114,6 @@ export function ExceptionsScreen() {
           </div>
         }
       />
-      {paymentId && transactionId && <ReviewSheet paymentId={paymentId} transactionId={transactionId} onClose={closeSheet} />}
     </div>
   );
 }

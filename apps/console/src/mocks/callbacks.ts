@@ -26,9 +26,15 @@ export function queryCallbacks(store: MockStore, params: URLSearchParams) {
     throw new BadQueryError(`status must be one of ${CALLBACK_STATUSES.join(', ')}`);
   }
   const gatewayId = params.get('gatewayId') || null;
+  const q = (params.get('q') ?? '').trim().toLowerCase();
+  const matches = (c: MockCallback) => {
+    const payment = store.getPayment(store.attempts.find((a) => a.id === c.attemptKey)?.paymentId ?? '');
+    return [c.id, c.providerEventId, c.attemptKey, payment?.id, payment?.upstreamReference].some((value) => value?.toLowerCase().includes(q));
+  };
   const rows = store.callbacks
     .filter((c) => !status || c.status === status)
     .filter((c) => !gatewayId || c.gatewayId === gatewayId)
+    .filter((c) => !q || matches(c))
     .sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt) || (a.id < b.id ? -1 : 1))
     .map(toListItem);
   return pageOf(rows, window);

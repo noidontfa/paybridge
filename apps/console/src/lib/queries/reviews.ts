@@ -36,6 +36,7 @@ export function reviewListQuery(state: TableUrlState): ReviewListQuery {
   return {
     reason: reason as ReviewReason | undefined,
     gatewayId,
+    q: state.q || undefined,
     state: reviewState === 'closed' ? ('closed' satisfies ReviewState) : undefined,
     sort: 'reviewOpenedAt',
     order: state.sort.desc ? 'desc' : 'asc',

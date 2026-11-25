@@ -3,7 +3,7 @@
 import { SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { STATUS_TRANSITION_ENTITY_TYPES } from '@/lib/api/schemas';
 import { AUDIT_ACTORS, AUDIT_TRIGGERS, AUDIT_URL_CONFIG, useAuditList } from '@/lib/queries/audit-log';
@@ -19,12 +19,18 @@ const NEWEST_FIRST = { id: 'createdAt', desc: true };
 export function AuditScreen() {
   const { state, change, clear } = useTableUrlState(AUDIT_URL_CONFIG);
   const list = useAuditList(state);
-  const filtered = Object.keys(state.filters).length > 0;
+  const filtered = state.q !== '' || Object.keys(state.filters).length > 0;
   const hasRows = list.rows.length > 0;
 
   const toolbar = useMemo(
     () => (
       <DataTableToolbar>
+        <SearchInput
+          label="Search Audit log"
+          placeholder="Payment id or Upstream Reference"
+          value={state.q}
+          onChange={(q) => change({ q })}
+        />
         <FilterSelect
           label="Entity type"
           allLabel="All entity types"
@@ -77,7 +83,7 @@ export function AuditScreen() {
               {filtered ? 'No status transitions match these filters' : 'No status transitions yet'}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {filtered ? 'Try another trigger or actor, or clear the filters.' : 'Every status change Core makes is recorded here.'}
+              {filtered ? 'Try a different search, trigger or actor, or clear the filters.' : 'Every status change Core makes is recorded here.'}
             </p>
             {filtered && (
               <Button variant="outline" onClick={clear}>

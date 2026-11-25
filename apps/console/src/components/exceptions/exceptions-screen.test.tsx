@@ -9,7 +9,9 @@ import type { ReviewReason, StatusTransition } from '@/lib/api/schemas';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore, type MockAttempt, type MockPayment } from '@/mocks/store';
 import { currentLocation, resetNavigation } from '@/test/fake-navigation';
+import { ReviewDetail } from '@/components/review/review-detail';
 import { ExceptionsScreen } from './exceptions-screen';
+import { ReviewModal } from './review-modal';
 
 vi.mock('next/navigation', async () => await import('@/test/fake-navigation'));
 
@@ -206,11 +208,28 @@ describe('Exceptions list screen', () => {
   });
 });
 
-describe('Review sheet', () => {
-  async function openSheet(user: ReturnType<typeof userEvent.setup>, reference: string) {
-    await screen.findByText(reference);
-    await user.click(within(screen.getByText(reference).closest('tr')!).getByRole('button', { name: /Review/ }));
-    return await screen.findByRole('dialog');
+describe('opening a Review', () => {
+  it('goes to the Review route (a modal from the list, a full page on a reload) and keeps the filters for the way back', async () => {
+    const user = userEvent.setup();
+    resetNavigation('/exceptions?gatewayId=stripe');
+    renderScreen();
+    await screen.findByText('order-late');
+    await user.click(within(screen.getByText('order-late').closest('tr')!).getByRole('button', { name: /Review/ }));
+    expect(currentLocation()).toBe('/exceptions/pay-late/att-late');
+  });
+});
+
+describe('Review modal', () => {
+  function renderModal(n: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <OperatorProvider operator={{ id: 'operator', name: 'Operator' }}>
+          <ReviewModal paymentId={`pay-${n}`} transactionId={`att-${n}`} />
+        </OperatorProvider>
+      </QueryClientProvider>,
+    );
+    return screen.findByRole('dialog');
   }
 
   it.each([
@@ -218,10 +237,8 @@ describe('Review sheet', () => {
     ['mismatch', 'Amount mismatch', 'order-mismatch'],
     ['late', 'Late success', 'order-late'],
     ['duplicate', 'Duplicate success', 'order-duplicate'],
-  ])('opens from the %s row with the Payment summary, the PaymentTransaction and its history', async (n, label, reference) => {
-    const user = userEvent.setup();
-    renderScreen();
-    const sheet = await openSheet(user, reference);
+  ])('shows the %s Review with the Payment summary, the PaymentTransaction and its history', async (n, label, reference) => {
+    const sheet = await renderModal(n);
 
     expect(await within(sheet).findByRole('heading', { name: `Review: ${label}` })).toBeInTheDocument();
     const summary = await within(sheet).findByRole('region', { name: 'Payment summary' });
@@ -233,57 +250,34 @@ describe('Review sheet', () => {
     expect(within(review).getByText(label)).toBeInTheDocument();
     const history = within(transaction).getByRole('table', { name: 'Status history' });
     expect(within(history).getByText('status_query')).toBeInTheDocument();
-    expect(currentLocation()).toBe(`/exceptions?payment=pay-${n}&transaction=att-${n}`);
-  });
-
-  it('keeps the filters in the URL while the sheet is open, and closes with Escape', async () => {
-    const user = userEvent.setup();
-    resetNavigation('/exceptions?gatewayId=stripe');
-    renderScreen();
-    await openSheet(user, 'order-late');
-    expect(currentLocation()).toBe('/exceptions?gatewayId=stripe&payment=pay-late&transaction=att-late');
-
-    await user.keyboard('{Escape}');
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(currentLocation()).toBe('/exceptions?gatewayId=stripe');
-  });
-
-  it('opens from the URL, on reload, even when the Review is not in the list page', async () => {
-    resetNavigation('/exceptions?state=closed&payment=pay-late&transaction=att-late');
-    renderScreen();
-    const sheet = await screen.findByRole('dialog');
-    expect(await within(sheet).findByRole('group', { name: 'Review' })).toBeInTheDocument();
-    expect(within(sheet).getByText('ref-late')).toBeInTheDocument();
   });
 
   it('says so when the PaymentTransaction is not on the Payment', async () => {
-    resetNavigation('/exceptions?payment=pay-late&transaction=att-nope');
-    renderScreen();
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <OperatorProvider operator={{ id: 'operator', name: 'Operator' }}>
+          <ReviewDetail paymentId="pay-late" transactionId="att-nope" />
+        </OperatorProvider>
+      </QueryClientProvider>,
+    );
     expect(await screen.findByText('Review not found')).toBeInTheDocument();
   });
 
   it('shows the resolution form of an open Review', async () => {
-    const user = userEvent.setup();
-    renderScreen();
-    const sheet = await openSheet(user, 'order-ambiguous');
+    const sheet = await renderModal('ambiguous');
     await within(sheet).findByRole('group', { name: 'Review' });
     expect(within(sheet).getByRole('form', { name: 'Resolve Review' })).toBeInTheDocument();
     expect(within(sheet).getByRole('radio', { name: 'Resolve to FAILED' })).toBeEnabled();
   });
 
   it('tells when a Review under 72 hours old becomes resolvable', async () => {
-    const user = userEvent.setup();
-    renderScreen();
-    const fresh = await openSheet(user, 'order-duplicate');
+    const fresh = await renderModal('duplicate');
     // Opened 10 hours ago: resolvable in 62 hours.
     expect(await within(fresh).findByText(/Resolvable from/)).toBeInTheDocument();
   });
 
   it('shows no resolvable hint once a Review is older than 72 hours', async () => {
-    const user = userEvent.setup();
-    renderScreen();
-    const old = await openSheet(user, 'order-ambiguous');
+    const old = await renderModal('ambiguous');
     await within(old).findByRole('group', { name: 'Review' });
     expect(within(old).queryByText(/Resolvable from/)).not.toBeInTheDocument();
   });

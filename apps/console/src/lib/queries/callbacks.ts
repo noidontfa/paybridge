@@ -10,7 +10,7 @@ export const callbackKeys = {
   detail: (id: string) => [...callbackKeys.all, 'detail', id] as const,
 };
 
-/** Callbacks are always newest first; there is no search or sort, only two filters. */
+/** Callbacks are always newest first; searchable, with two filters and no sort. */
 export const CALLBACK_LIST_URL_CONFIG: TableUrlConfig = {
   filters: ['gatewayId', 'status'],
   sortable: [],
@@ -20,7 +20,7 @@ export const CALLBACK_LIST_URL_CONFIG: TableUrlConfig = {
 const EMPTY: CallbackListItem[] = [];
 
 export function useCallbackList(state: TableUrlState) {
-  const query: CallbackListQuery = { gatewayId: state.filters.gatewayId, status: state.filters.status };
+  const query: CallbackListQuery = { gatewayId: state.filters.gatewayId, status: state.filters.status, q: state.q || undefined };
   const result = useInfiniteQuery({
     queryKey: callbackKeys.list({ ...query, cursor: state.cursor ?? undefined }),
     queryFn: ({ pageParam, signal }) => listCallbacks({ ...query, cursor: pageParam }, signal),

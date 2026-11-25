@@ -8,7 +8,7 @@ import { StatusHistory } from './status-history';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-0.5">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="flex items-center gap-1 text-sm">{children}</dd>
     </div>

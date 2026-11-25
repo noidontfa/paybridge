@@ -53,6 +53,7 @@ export function queryReviews(store: MockStore, params: URLSearchParams) {
     throw new BadQueryError(`reason must be one of ${REVIEW_REASONS.join(', ')}`);
   }
   const gatewayId = params.get('gatewayId') || null;
+  const q = (params.get('q') ?? '').trim().toLowerCase();
   const sort = params.get('sort') ?? REVIEW_SORT_COLUMNS[0];
   if (!REVIEW_SORT_COLUMNS.some((column) => column === sort)) {
     throw new BadQueryError(`sort must be one of ${REVIEW_SORT_COLUMNS.join(', ')}`);
@@ -63,6 +64,7 @@ export function queryReviews(store: MockStore, params: URLSearchParams) {
     .filter((r) => r.state === state)
     .filter((r) => !reason || r.reason === reason)
     .filter((r) => !gatewayId || r.gatewayId === gatewayId)
+    .filter((r) => !q || [r.payment.id, r.payment.upstreamReference, r.id].some((value) => value.toLowerCase().includes(q)))
     // The id breaks ties so a page boundary never repeats or skips a row.
     .sort((a, b) => direction * (Date.parse(a.reviewOpenedAt) - Date.parse(b.reviewOpenedAt)) || (a.id < b.id ? -1 : 1));
   return pageOf(rows, window);

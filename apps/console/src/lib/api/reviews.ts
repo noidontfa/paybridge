@@ -64,6 +64,8 @@ export type ReviewSummary = z.infer<typeof reviewSummarySchema>;
 export interface ReviewListQuery extends ListQuery {
   reason?: ReviewReason;
   gatewayId?: string;
+  /** Payment id, Upstream Reference or Attempt Key (substring, case-insensitive). */
+  q?: string;
   /** Defaults to `open`. */
   state?: ReviewState;
   sort?: (typeof REVIEW_SORT_COLUMNS)[number];

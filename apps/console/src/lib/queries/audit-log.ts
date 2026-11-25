@@ -42,6 +42,7 @@ export function auditListQuery(state: TableUrlState): AuditListQuery {
     entityType: entityType.success ? entityType.data : undefined,
     trigger: state.filters.trigger,
     actor: state.filters.actor,
+    q: state.q || undefined,
   };
 }
 

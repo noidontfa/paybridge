@@ -3,7 +3,7 @@
 import { InboxIcon, SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
 import { CALLBACK_LIST_URL_CONFIG, useCallbackList } from '@/lib/queries/callbacks';
@@ -18,12 +18,18 @@ const STATUS_OPTIONS = CALLBACK_STATUSES.map((status) => ({ value: status, label
 export function CallbacksScreen() {
   const { state, change, clear } = useTableUrlState(CALLBACK_LIST_URL_CONFIG);
   const list = useCallbackList(state);
-  const filtered = Object.keys(state.filters).length > 0;
+  const filtered = state.q !== '' || Object.keys(state.filters).length > 0;
   const hasRows = list.rows.length > 0;
 
   const toolbar = useMemo(
     () => (
       <DataTableToolbar>
+        <SearchInput
+          label="Search Callbacks"
+          placeholder="Callback id, Attempt Key or Payment"
+          value={state.q}
+          onChange={(q) => change({ q })}
+        />
         <FilterSelect
           label="Gateway"
           allLabel="All gateways"
@@ -67,7 +73,7 @@ export function CallbacksScreen() {
             {filtered ? <SearchXIcon className="size-8 text-muted-foreground" aria-hidden /> : <InboxIcon className="size-8 text-muted-foreground" aria-hidden />}
             <h2 className="text-base font-medium">{filtered ? 'No Callbacks match these filters' : 'No Callbacks yet'}</h2>
             <p className="text-sm text-muted-foreground">
-              {filtered ? 'Try a different gateway or status, or clear the filters.' : 'Notifications a PaymentGateway sends to PayBridge appear here.'}
+              {filtered ? 'Try a different search, gateway or status, or clear the filters.' : 'Notifications a PaymentGateway sends to PayBridge appear here.'}
             </p>
             {filtered && (
               <Button variant="outline" onClick={clear}>

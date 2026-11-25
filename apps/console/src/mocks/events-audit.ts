@@ -26,9 +26,13 @@ export function queryPaymentEvents(store: MockStore, params: URLSearchParams) {
   const window = readListWindow(params);
   const type = oneOf(params, 'type', PAYMENT_EVENT_TYPES);
   const published = oneOf(params, 'published', ['true', 'false']);
+  const q = (params.get('q') ?? '').trim().toLowerCase();
+  const matches = (e: (typeof store.events)[number]) =>
+    [e.id, e.paymentId, store.getPayment(e.paymentId)?.upstreamReference].some((value) => value?.toLowerCase().includes(q));
   const rows = store.events
     .filter((e) => !type || e.type === type)
     .filter((e) => !published || (e.publishedAt !== null) === (published === 'true'))
+    .filter((e) => !q || matches(e))
     .sort(newestFirst)
     .map(({ payload: _payload, ...summary }) => summary);
   return pageOf(rows, window);
@@ -49,11 +53,18 @@ export function queryStatusTransitions(store: MockStore, params: URLSearchParams
   const entityId = params.get('entityId') || null;
   const trigger = params.get('trigger') || null;
   const actor = params.get('actor') || null;
+  const q = (params.get('q') ?? '').trim().toLowerCase();
+  const matches = (t: StatusTransition) => {
+    const paymentId = paymentIdOf(store, t);
+    const reference = paymentId ? store.getPayment(paymentId)?.upstreamReference : undefined;
+    return [t.entityId, paymentId, reference].some((value) => value?.toLowerCase().includes(q));
+  };
   const rows = store.transitions
     .filter((t) => !entityType || t.entityType === entityType)
     .filter((t) => !entityId || t.entityId === entityId)
     .filter((t) => !trigger || t.trigger === trigger)
     .filter((t) => !actor || t.actor === actor)
+    .filter((t) => !q || matches(t))
     .sort(newestFirst)
     .map((t): AuditEntry => ({ ...t, paymentId: paymentIdOf(store, t) }));
   return pageOf(rows, window);

@@ -30,6 +30,7 @@ export function paymentEventListQuery(state: TableUrlState): PaymentEventListQue
   return {
     type: type.success ? type.data : undefined,
     published: published === 'true' || published === 'false' ? published : undefined,
+    q: state.q || undefined,
   };
 }
 

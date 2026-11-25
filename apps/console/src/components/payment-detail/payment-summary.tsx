@@ -6,7 +6,7 @@ import { formatMoney } from '@/lib/format';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="flex items-center gap-1 text-sm">{children}</dd>
     </div>

@@ -18,6 +18,8 @@ export interface PaymentEventListQuery extends ListQuery {
   type?: PaymentEventType;
   /** `true` or `false`; unpublished events are the ones the relay has not sent. */
   published?: 'true' | 'false';
+  /** Event id, Payment id or Upstream Reference (substring, case-insensitive). */
+  q?: string;
 }
 
 export function listPaymentEvents(query: PaymentEventListQuery, signal?: AbortSignal): Promise<PaymentEventList> {

@@ -45,6 +45,8 @@ export type CallbackList = ListPage<CallbackListItem>;
 export interface CallbackListQuery extends ListQuery {
   gatewayId?: string;
   status?: string;
+  /** Callback id, Provider Event id, Attempt Key, or the Payment id / Upstream Reference it resolves to. */
+  q?: string;
 }
 
 export function listCallbacks(query: CallbackListQuery, signal?: AbortSignal): Promise<CallbackList> {
