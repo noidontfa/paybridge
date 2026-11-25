@@ -8,8 +8,9 @@
     },
     "build": {
       "dependsOn": ["^build", "db:generate"],
-      "inputs": ["$TURBO_DEFAULT$", "!**/*.spec.ts", "!test/**"],
-      "outputs": ["dist/**"]
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.spec.ts", "!**/*.test.ts", "!**/*.test.tsx", "!test/**", "!e2e/**"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["CONSOLE_API_BASE_URL", "CONSOLE_API_MOCKS"]
     },
     "dev": {
       "dependsOn": ["db:generate"],
@@ -27,6 +28,10 @@
     },
     "test:e2e": {
       "dependsOn": ["db:generate"],
+      "cache": false
+    },
+    "@paybridge/console#test:e2e": {
+      "dependsOn": ["build"],
       "cache": false
     },
     "test:int": {
