@@ -28,7 +28,7 @@ export function PaymentDetailScreen({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-6 px-4 pb-6">
       <PaymentSummary payment={data} />
-      <TransactionTimeline attempts={data.attempts} />
+      <TransactionTimeline attempts={data.attempts} payment={data} />
       <PaymentEvents events={data.events} />
     </div>
   );

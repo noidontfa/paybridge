@@ -77,6 +77,14 @@ export class MockStore {
     { id: 'fake', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/fake' },
   ];
 
+  /**
+   * The time the mocked API treats as "now" when a request changes something
+   * (the 72-hour rule, transition times). `now` stays the seed's fixed clock;
+   * the real clock is the default because the Console compares against the
+   * browser clock. Tests replace it.
+   */
+  clock: () => Date = () => new Date();
+
   constructor(
     readonly now: Date,
     readonly payments: MockPayment[] = [],

@@ -9,7 +9,16 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: `http://localhost:${port}`, trace: 'on-first-retry' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /review-resolution\.spec\.ts/ },
+    // Changes the mock store (resolves a Review), so it runs after every read-only spec.
+    {
+      name: 'mutations',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /review-resolution\.spec\.ts/,
+      dependencies: ['chromium'],
+    },
+  ],
   // Mock mode refuses to start in a production build, so e2e runs the dev server.
   webServer: {
     command: `pnpm exec next dev -p ${port}`,

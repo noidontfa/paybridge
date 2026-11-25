@@ -260,12 +260,13 @@ describe('Review sheet', () => {
     expect(await screen.findByText('Review not found')).toBeInTheDocument();
   });
 
-  it('shows no actions yet', async () => {
+  it('shows the resolution form of an open Review', async () => {
     const user = userEvent.setup();
     renderScreen();
     const sheet = await openSheet(user, 'order-ambiguous');
     await within(sheet).findByRole('group', { name: 'Review' });
-    expect(within(sheet).queryByRole('button', { name: /resolve|note/i })).not.toBeInTheDocument();
+    expect(within(sheet).getByRole('form', { name: 'Resolve Review' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('radio', { name: 'Resolve to FAILED' })).toBeEnabled();
   });
 
   it('tells when a Review under 72 hours old becomes resolvable', async () => {

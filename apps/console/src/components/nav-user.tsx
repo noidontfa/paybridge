@@ -2,6 +2,7 @@
 
 import { ChevronsUpDownIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useCurrentOperator } from '@/lib/operator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -26,10 +27,20 @@ export const THEME_OPTIONS = [
   { value: 'system', label: 'System', icon: MonitorIcon },
 ] as const;
 
-// Placeholder identity until the auth seam exists (a later ticket).
-const operator = { name: 'Operator', detail: 'Internal network' };
+
+function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0]!.toUpperCase())
+      .join('') || 'OP'
+  );
+}
 
 export function NavUser() {
+  const operator = useCurrentOperator();
   const { isMobile } = useSidebar();
   const { theme = 'system', setTheme } = useTheme();
   return (
@@ -41,11 +52,11 @@ export function NavUser() {
             aria-label={`${operator.name} menu`}
           >
             <Avatar>
-              <AvatarFallback>OP</AvatarFallback>
+              <AvatarFallback>{initials(operator.name)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{operator.name}</span>
-              <span className="truncate text-xs">{operator.detail}</span>
+              <span className="truncate text-xs">{operator.id}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>

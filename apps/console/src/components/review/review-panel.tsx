@@ -1,5 +1,7 @@
 import { StatusBadge } from '@/components/status-badge';
-import type { OperatorAttempt } from '@/lib/api/schemas';
+import type { OperatorAttempt, OperatorPayment } from '@/lib/api/schemas';
+import { reviewActions } from '@/lib/review-resolution-rules';
+import { ResolutionForm } from './resolution-form';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
 import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/lib/format';
 
@@ -18,10 +20,20 @@ export function resolvableFrom(openedAt: string, now: Date = new Date()): Date |
  * resolvable. One component for the Exceptions sheet and the Payment detail
  * timeline. Read-only for now; ticket 06 adds the resolution actions here.
  */
-export function ReviewPanel({ attempt }: { attempt: OperatorAttempt }) {
+export function ReviewPanel({
+  attempt,
+  payment,
+}: {
+  attempt: OperatorAttempt;
+  payment: Pick<OperatorPayment, 'id' | 'status' | 'amount' | 'currency'>;
+}) {
   if (!attempt.reviewReason) return null;
   const open = attempt.status === 'REQUIRES_REVIEW';
   const resolvable = open && attempt.reviewOpenedAt ? resolvableFrom(attempt.reviewOpenedAt) : null;
+  const actions = reviewActions(
+    { reason: attempt.reviewReason, attemptStatus: attempt.status, reviewOpenedAt: attempt.reviewOpenedAt, paymentStatus: payment.status },
+    new Date(),
+  );
   return (
     <div role="group" aria-label="Review" className="flex flex-col gap-2 rounded-lg bg-amber-500/10 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -36,6 +48,7 @@ export function ReviewPanel({ attempt }: { attempt: OperatorAttempt }) {
           re-query runs first.
         </p>
       )}
+      {open && <ResolutionForm attempt={attempt} payment={payment} actions={actions} />}
     </div>
   );
 }

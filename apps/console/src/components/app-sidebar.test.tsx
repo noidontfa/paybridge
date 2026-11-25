@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { ReviewSummary } from '@/lib/api/reviews';
+import { OperatorProvider } from '@/lib/operator';
 import { reviewKeys } from '@/lib/queries/reviews';
 import { AppSidebar } from './app-sidebar';
 
@@ -33,7 +34,7 @@ function summary(open: number): ReviewSummary {
 }
 
 /** The Review summary is served from the query cache, so no network is needed. */
-function renderShell(path = '/', openReviews: number | null = null) {
+function renderShell(path = '/', openReviews: number | null = null, operator = { id: 'operator', name: 'Operator' }) {
   pathname.current = path;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   if (openReviews !== null) client.setQueryData(reviewKeys.summary(), summary(openReviews));
@@ -41,9 +42,11 @@ function renderShell(path = '/', openReviews: number | null = null) {
     <QueryClientProvider client={client}>
       <ThemeProvider attribute="class" defaultTheme="system">
         <TooltipProvider>
-          <SidebarProvider>
-            <AppSidebar />
-          </SidebarProvider>
+          <OperatorProvider operator={operator}>
+            <SidebarProvider>
+              <AppSidebar />
+            </SidebarProvider>
+          </OperatorProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -102,6 +105,13 @@ describe('Console sidebar', () => {
   it('offers the Operator menu in the footer', () => {
     renderShell();
     expect(screen.getByRole('button', { name: /operator/i })).toBeInTheDocument();
+  });
+
+  it('shows who the Operator is signed in as, from the current Operator', () => {
+    renderShell('/', null, { id: 'op-9', name: 'Linh Tran' });
+    const footer = screen.getByRole('button', { name: 'Linh Tran menu' });
+    expect(within(footer).getByText('Linh Tran')).toBeInTheDocument();
+    expect(within(footer).getByText('op-9')).toBeInTheDocument();
   });
 
   describe('Exceptions badge', () => {

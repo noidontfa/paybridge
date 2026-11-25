@@ -13,6 +13,7 @@ import { callbacksHandlers } from './callbacks';
 import { gatewaysHandlers } from './gateways';
 import { paymentsListHandlers } from './payments-list';
 import { reviewHandlers } from './reviews';
+import { reviewResolutionHandlers } from './review-resolution';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -62,6 +63,7 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ...reviewHandlers(base, store, (request, message) =>
       apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
     ),
+    ...reviewResolutionHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...callbacksHandlers(
       base,
       store,
