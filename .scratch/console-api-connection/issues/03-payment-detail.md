@@ -4,15 +4,15 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] The response matches the Console's operator Payment detail contract
-- [ ] Each PaymentTransaction carries its Provider Reference (when present), NextAction, review fields and its status transitions with from status, to status, trigger, actor, note and time
-- [ ] The Payment's Payment Events are listed
-- [ ] The gateway-switch Payment in the seed shows both attempts in order
-- [ ] An unknown or non-UUID id returns 404 with the API's standard error response
-- [ ] Integration tests over HTTP validate the response against the copied Console schema
-- [ ] The Console's Payment detail page, with mocks turned off, renders a seeded Payment including a Review
+- [x] The response matches the Console's operator Payment detail contract
+- [x] Each PaymentTransaction carries its Provider Reference (when present), NextAction, review fields and its status transitions with from status, to status, trigger, actor, note and time
+- [x] The Payment's Payment Events are listed
+- [x] The gateway-switch Payment in the seed shows both attempts in order
+- [x] An unknown or non-UUID id returns 404 with the API's standard error response
+- [x] Integration tests over HTTP validate the response against the copied Console schema
+- [x] The Console's Payment detail page, with mocks turned off, renders a seeded Payment including a Review
 
 ## Answer
 
