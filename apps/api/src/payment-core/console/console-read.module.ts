@@ -13,7 +13,7 @@ import { PaymentDetailModule } from './payment-detail.module.js';
 
 import { ReviewsModule } from './reviews.module.js';
 
-// ticket 05: OverviewModule
+import { OverviewModule } from './overview.module.js';
 
 import { GatewaysModule } from './gateways.module.js';
 
@@ -27,7 +27,7 @@ import { GatewaysModule } from './gateways.module.js';
 
     ReviewsModule,
 
-    // ticket 05
+    OverviewModule,
 
     GatewaysModule,
 
