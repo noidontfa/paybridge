@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   CallbacksReadRepository,
   type CallbackDetailRow,
@@ -16,8 +17,11 @@ export class ListCallbacks {
     private readonly callbacks: CallbacksReadRepository,
   ) {}
 
-  async execute(query: CallbackListQuery): Promise<Page<CallbackListRow>> {
-    const rows = await this.callbacks.list(query);
+  async execute(
+    scope: ReadScope,
+    query: CallbackListQuery,
+  ): Promise<Page<CallbackListRow>> {
+    const rows = await this.callbacks.list(scope, query);
     return toPage(rows, query.limit, (last) =>
       encodeCursor(['callbacks', last.receivedAt.toISOString(), last.id]),
     );
@@ -32,7 +36,10 @@ export class GetCallback {
     private readonly callbacks: CallbacksReadRepository,
   ) {}
 
-  async execute(id: string): Promise<CallbackDetailRow | null> {
-    return isUuid(id) ? this.callbacks.findById(id.toLowerCase()) : null;
+  async execute(
+    scope: ReadScope,
+    id: string,
+  ): Promise<CallbackDetailRow | null> {
+    return isUuid(id) ? this.callbacks.findById(scope, id.toLowerCase()) : null;
   }
 }

@@ -12,6 +12,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
+import { CurrentScope } from '../current-scope.decorator.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { GetPaymentDetail } from '../../application/use-cases/console/get-payment-detail.js';
 
@@ -33,8 +35,11 @@ export class PaymentDetailController {
   })
   @ApiOkResponse({ description: 'The operator Payment detail' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async detail(@Param('id') id: string) {
-    const p = await this.getPayment.execute(id);
+  async detail(
+    @CurrentScope() scope: OrganizationScope,
+    @Param('id') id: string,
+  ) {
+    const p = await this.getPayment.execute(scope, id);
     if (!p) throw new NotFoundException(`Payment "${id}" not found`);
     return {
       id: p.id,

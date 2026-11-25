@@ -5,6 +5,7 @@ import type {
 } from '../domain/payment-transaction.js';
 import { canTransitionAttempt } from '../domain/rules/attempt-transitions.js';
 import type { AttemptStatus } from '../domain/statuses.js';
+import { organizationScope } from '../domain/organization-scope.js';
 import type { Repositories } from '../infrastructure/prisma/repositories.js';
 
 /** What caused an attempt transition, written to the status-transition trail. */
@@ -39,11 +40,12 @@ export async function recordAttemptTransition(
   if (!canTransitionAttempt(attempt.status, to)) {
     throw new InvalidAttemptTransitionError(attempt.id, attempt.status, to);
   }
-  const updated = await repos.payments.updateAttempt(attempt.id, {
+  const scope = organizationScope(attempt.organizationId);
+  const updated = await repos.payments.updateAttempt(scope, attempt.id, {
     ...changes,
     status: to,
   });
-  await repos.statusTransitions.record({
+  await repos.statusTransitions.record(scope, {
     entityType: 'PAYMENT_TRANSACTION',
     entityId: attempt.id,
     fromStatus: attempt.status,

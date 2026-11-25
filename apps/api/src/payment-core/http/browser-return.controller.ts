@@ -16,6 +16,8 @@ import {
 import { validate as isUuid } from 'uuid';
 import { ErrorResponseDto } from '../../common/filters/error-response.dto.js';
 import { PaymentService } from '../application/payment.service.js';
+import type { OrganizationScope } from '../domain/organization-scope.js';
+import { CurrentScope } from './current-scope.decorator.js';
 import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,
@@ -38,6 +40,7 @@ export class BrowserReturnController {
   @ApiOkResponse({ type: PaymentDetailResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async handle(
+    @CurrentScope() scope: OrganizationScope,
     @Param('paymentId', new ParseUUIDPipe()) paymentId: string,
     @Query('attemptId') attemptId?: unknown,
   ): Promise<PaymentDetailResponseDto> {
@@ -46,7 +49,7 @@ export class BrowserReturnController {
       typeof attemptId === 'string' && isUuid(attemptId)
         ? attemptId
         : undefined;
-    const payment = await this.payments.handleBrowserReturn({
+    const payment = await this.payments.handleBrowserReturn(scope, {
       paymentId,
       attemptId: wanted,
     });

@@ -1,3 +1,7 @@
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../domain/organization-scope.js';
 import type { Payment } from '../domain/payment.js';
 import type {
   PaymentTransaction,
@@ -17,6 +21,7 @@ const NOW = new Date('2026-05-01T10:00:00.000Z');
 function attempt(id: string, status: PaymentTransaction['status']) {
   return {
     id,
+    organizationId: 'org-1',
     paymentId: 'pay-1',
     gatewayId: 'fake',
     status,
@@ -35,7 +40,12 @@ function inMemory(payment: Payment) {
   let current = payment;
   const transitions: NewStatusTransition[] = [];
   const outbox: NewOutboxEvent[] = [];
-  const updateAttempt = (id: string, changes: PaymentTransactionChanges) => {
+  const scopes: OrganizationScope[] = [];
+  const updateAttempt = (
+    _scope: ReadScope,
+    id: string,
+    changes: PaymentTransactionChanges,
+  ) => {
     let updated!: PaymentTransaction;
     current = {
       ...current,
@@ -48,28 +58,31 @@ function inMemory(payment: Payment) {
   const repos = {
     payments: {
       updateAttempt,
-      update: (_id: string, changes: Partial<Payment>) =>
+      update: (_scope: ReadScope, _id: string, changes: Partial<Payment>) =>
         Promise.resolve((current = { ...current, ...changes })),
       findById: () => Promise.resolve(current),
     },
     statusTransitions: {
-      record: (t: NewStatusTransition) => {
+      record: (scope: OrganizationScope, t: NewStatusTransition) => {
+        scopes.push(scope);
         transitions.push(t);
         return Promise.resolve(t);
       },
     },
     outbox: {
-      add: (e: NewOutboxEvent) => {
+      add: (scope: OrganizationScope, e: NewOutboxEvent) => {
+        scopes.push(scope);
         outbox.push(e);
         return Promise.resolve(e);
       },
     },
   } as unknown as Repositories;
-  return { repos, transitions, outbox };
+  return { repos, transitions, outbox, scopes };
 }
 
 const payment: Payment = {
   id: 'pay-1',
+  organizationId: 'org-1',
   merchantOrderId: 'order-1',
   amount: '150000',
   currency: 'VND',
@@ -85,7 +98,7 @@ const payment: Payment = {
 };
 
 it('a success cancels the other open attempts locally and returns them for the provider cancel', async () => {
-  const { repos, transitions, outbox } = inMemory(payment);
+  const { repos, transitions, outbox, scopes } = inMemory(payment);
 
   const result = await applyProviderOutcome(repos, {
     payment,
@@ -111,6 +124,11 @@ it('a success cancels the other open attempts locally and returns them for the p
     ['other', 'CANCELLED'],
   ]);
   expect(outbox.map((e) => e.eventType)).toEqual(['PaymentSucceeded']);
+  // Every row the outcome writes belongs to the Payment's own Organization.
+  expect(scopes.length).toBeGreaterThan(0);
+  expect(scopes).toEqual(
+    scopes.map(() => ({ kind: 'organization', organizationId: 'org-1' })),
+  );
 });
 
 it('a failure cancels nothing and leaves the Payment as it is', async () => {

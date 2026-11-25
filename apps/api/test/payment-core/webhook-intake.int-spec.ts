@@ -15,6 +15,7 @@ import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
+import { IdentityModule } from '../../src/identity/identity.module.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import type { CallbackInput } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
@@ -59,6 +60,7 @@ beforeAll(async () => {
       AppConfigModule,
       PrismaModule,
       GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+      IdentityModule,
       PaymentCoreModule,
     ],
   })

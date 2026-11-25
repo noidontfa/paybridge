@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   PaymentDetailReadRepository,
   type PaymentDetailRow,
@@ -15,7 +16,7 @@ export class GetPaymentDetail {
     private readonly payments: PaymentDetailReadRepository,
   ) {}
 
-  execute(id: string): Promise<PaymentDetailRow | null> {
-    return this.payments.find(id);
+  execute(scope: ReadScope, id: string): Promise<PaymentDetailRow | null> {
+    return this.payments.find(scope, id);
   }
 }

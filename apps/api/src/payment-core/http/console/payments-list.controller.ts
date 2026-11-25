@@ -7,6 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentScope } from '../current-scope.decorator.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { ListPayments } from '../../application/use-cases/console/list-payments.js';
 import {
@@ -37,10 +39,11 @@ export class PaymentsListController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentScope() scope: OrganizationScope,
     @Query(new ZodValidationPipe(paymentsListQuerySchema))
     query: PaymentsListQuery,
   ) {
-    const page = await this.listPayments.execute(query);
+    const page = await this.listPayments.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,

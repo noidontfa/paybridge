@@ -3,6 +3,7 @@ import {
   PaymentNotFoundError,
   PaymentNotPendingError,
 } from '../../domain/errors.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
@@ -35,9 +36,9 @@ export class CancelPayment {
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
-  async execute(paymentId: string): Promise<Payment> {
+  async execute(scope: OrganizationScope, paymentId: string): Promise<Payment> {
     const { payment, cancelled } = await this.runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(paymentId);
+      const locked = await repos.payments.findForUpdate(scope, paymentId);
       if (!locked) throw new PaymentNotFoundError(paymentId);
       if (locked.status === 'CANCELLED') {
         return { payment: locked, cancelled: [] };
@@ -58,17 +59,17 @@ export class CancelPayment {
         );
       }
 
-      const updated = await repos.payments.update(locked.id, {
+      const updated = await repos.payments.update(scope, locked.id, {
         status: 'CANCELLED',
       });
-      await repos.statusTransitions.record({
+      await repos.statusTransitions.record(scope, {
         entityType: 'PAYMENT',
         entityId: locked.id,
         fromStatus: locked.status,
         toStatus: updated.status,
         ...CANCEL_CAUSE,
       });
-      await repos.outbox.add({
+      await repos.outbox.add(scope, {
         eventType: 'PaymentCancelled',
         paymentId: locked.id,
         payload: {
@@ -79,7 +80,7 @@ export class CancelPayment {
           status: updated.status,
         },
       });
-      const reloaded = await repos.payments.findById(locked.id);
+      const reloaded = await repos.payments.findById(scope, locked.id);
       return { payment: reloaded ?? updated, cancelled };
     });
 

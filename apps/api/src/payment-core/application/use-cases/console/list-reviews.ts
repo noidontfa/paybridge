@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   ReviewsReadRepository,
   type ReviewListFilters,
@@ -32,8 +33,11 @@ export class ListReviews {
     private readonly reviews: ReviewsReadRepository,
   ) {}
 
-  async execute(input: ListReviewsInput): Promise<Page<ReviewItem>> {
-    const rows = await this.reviews.list(input);
+  async execute(
+    scope: ReadScope,
+    input: ListReviewsInput,
+  ): Promise<Page<ReviewItem>> {
+    const rows = await this.reviews.list(scope, input);
     const page = toPage(rows, input.limit, (last) =>
       encodeCursor([
         `reviewOpenedAt:${input.order}`,

@@ -1,6 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { Clock } from '../../domain/clock.js';
+import {
+  ALL_ORGANIZATIONS,
+  organizationScope,
+  type OrganizationScope,
+} from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
@@ -89,10 +94,17 @@ export class RequeryAttempt {
     recheckUnderLock?: (attempt: PaymentTransaction) => boolean,
   ): Promise<RequeryAttemptResult> {
     const repos = this.runner.repositories;
+    // The queued job holds only the attempt id, so the first reads look
+    // across Organizations; the rest stays in the Payment's own one.
     const paymentId = isUuid(attemptId)
-      ? await repos.payments.findPaymentIdByAttemptId(attemptId)
+      ? await repos.payments.findPaymentIdByAttemptId(
+          ALL_ORGANIZATIONS,
+          attemptId,
+        )
       : null;
-    const payment = paymentId ? await repos.payments.findById(paymentId) : null;
+    const payment = paymentId
+      ? await repos.payments.findById(ALL_ORGANIZATIONS, paymentId)
+      : null;
     const attempt = payment?.attempts.find((a) => a.id === attemptId);
     if (!payment || !attempt || !eligible(attempt)) {
       return 'skipped';
@@ -122,13 +134,15 @@ export class RequeryAttempt {
       // attempt is untouched and the queue retries the job.
       throw error;
     }
-    await repos.gatewayRawResponses.record({
+    const scope = organizationScope(payment.organizationId);
+    await repos.gatewayRawResponses.record(scope, {
       attemptId: attempt.id,
       operation: 'query',
       payload: result.rawPayload,
     });
 
     const applied = await this.apply(
+      scope,
       payment.id,
       attempt.id,
       result,
@@ -142,14 +156,17 @@ export class RequeryAttempt {
   }
 
   private apply(
+    scope: OrganizationScope,
     paymentId: string,
     attemptId: string,
     outcome: QueryResult,
     recheck?: (attempt: PaymentTransaction) => boolean,
   ): Promise<AppliedProviderOutcome | null> {
     return this.runner.run(async (repos) => {
-      const locked: Payment | null =
-        await repos.payments.findForUpdate(paymentId);
+      const locked: Payment | null = await repos.payments.findForUpdate(
+        scope,
+        paymentId,
+      );
       if (!locked) throw new Error(`Payment ${paymentId} vanished`);
       // The state may have moved since the unlocked read: review re-queries
       // check again. Other queries do not: a late success must never be

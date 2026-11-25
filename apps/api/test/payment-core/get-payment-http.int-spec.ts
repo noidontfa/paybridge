@@ -9,6 +9,7 @@ import type { Repositories } from '../../src/payment-core/infrastructure/prisma/
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // GET /api/payments/:id over HTTP: the Payment with all its attempts.
 
@@ -72,7 +73,7 @@ describe('GET /api/payments/:id', () => {
     const failedId = newId();
     const reviewId = newId();
     const pendingId = newId();
-    await repos().payments.createAttempt({
+    await repos().payments.createAttempt(defaultScope, {
       id: failedId,
       paymentId: id,
       gatewayId: 'fake',
@@ -80,20 +81,22 @@ describe('GET /api/payments/:id', () => {
       providerRef: 'prov-1',
       providerMetadata: { secretish: 'internal-1' },
     });
-    await repos().payments.updateAttempt(failedId, { status: 'FAILED' });
-    await repos().payments.createAttempt({
+    await repos().payments.updateAttempt(defaultScope, failedId, {
+      status: 'FAILED',
+    });
+    await repos().payments.createAttempt(defaultScope, {
       id: reviewId,
       paymentId: id,
       gatewayId: 'fake',
       status: 'CREATED',
     });
-    await repos().payments.updateAttempt(reviewId, {
+    await repos().payments.updateAttempt(defaultScope, reviewId, {
       status: 'REQUIRES_REVIEW',
       reviewReason: 'AMOUNT_MISMATCH',
       reviewOpenedAt: new Date('2026-05-01T10:05:00.000Z'),
       refundRequired: true,
     });
-    await repos().payments.createAttempt({
+    await repos().payments.createAttempt(defaultScope, {
       id: pendingId,
       paymentId: id,
       gatewayId: 'other-gateway',
@@ -101,7 +104,7 @@ describe('GET /api/payments/:id', () => {
       providerMetadata: { secretish: 'internal-3' },
       nextAction: { type: 'REDIRECT', url: 'https://pay.example/abc' },
     });
-    await repos().gatewayRawResponses.record({
+    await repos().gatewayRawResponses.record(defaultScope, {
       attemptId: pendingId,
       operation: 'initiate',
       payload: { rawSecret: 'raw-payload' },

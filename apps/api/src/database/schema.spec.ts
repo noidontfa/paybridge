@@ -51,7 +51,7 @@ describe('schema ownership', () => {
     expect(findUnownedModels(text, OWNER_PREFIXES)).toEqual(['Ledger']);
   });
 
-  it('declares the eight Payment Core tables', () => {
+  it('declares the Payment Core tables and the identity tables', () => {
     expect(listModelTables(schema).sort()).toEqual([
       'core_gateway_raw_responses',
       'core_idempotency_keys',
@@ -61,6 +61,7 @@ describe('schema ownership', () => {
       'core_refunds',
       'core_status_transitions',
       'core_webhook_inbox',
+      'iam_organizations',
     ]);
   });
 });

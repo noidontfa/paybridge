@@ -20,6 +20,7 @@ import {
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // createPayment through PaymentService against the migrated test database.
 
@@ -80,7 +81,10 @@ describe('PaymentService.createPayment', () => {
     const expiresAt = new Date('2026-05-01T12:00:00.000Z');
     const input = request({ expiresAt });
 
-    const { payment: created } = await service.createPayment(input);
+    const { payment: created } = await service.createPayment(
+      defaultScope,
+      input,
+    );
 
     expect(created).toMatchObject({
       status: 'PENDING',
@@ -90,7 +94,9 @@ describe('PaymentService.createPayment', () => {
       expiresAt,
       attempts: [],
     });
-    expect(await repos.payments.findById(created.id)).toMatchObject({
+    expect(
+      await repos.payments.findById(defaultScope, created.id),
+    ).toMatchObject({
       status: 'PENDING',
       amount: '150000',
       expiresAt,
@@ -99,15 +105,21 @@ describe('PaymentService.createPayment', () => {
   });
 
   it('defaults the expiry to 30 minutes after creation', async () => {
-    const { payment: created } = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(
+      defaultScope,
+      request(),
+    );
 
     expect(created.expiresAt).toEqual(new Date('2026-05-01T10:30:00.000Z'));
   });
 
   it('writes one PaymentCreated outbox event and no attempt', async () => {
-    const { payment: created } = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(
+      defaultScope,
+      request(),
+    );
 
-    const events = await repos.outbox.listForPayment(created.id);
+    const events = await repos.outbox.listForPayment(defaultScope, created.id);
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       eventType: 'PaymentCreated',
@@ -126,10 +138,17 @@ describe('PaymentService.createPayment', () => {
   });
 
   it('records the creation in the status trail', async () => {
-    const { payment: created } = await service.createPayment(request());
+    const { payment: created } = await service.createPayment(
+      defaultScope,
+      request(),
+    );
 
     expect(
-      await repos.statusTransitions.listForEntity('PAYMENT', created.id),
+      await repos.statusTransitions.listForEntity(
+        defaultScope,
+        'PAYMENT',
+        created.id,
+      ),
     ).toMatchObject([
       { fromStatus: null, toStatus: 'PENDING', actor: 'merchant' },
     ]);
@@ -137,10 +156,10 @@ describe('PaymentService.createPayment', () => {
 
   it('rejects a duplicate upstream reference and stores nothing for it', async () => {
     const input = request();
-    await service.createPayment(input);
+    await service.createPayment(defaultScope, input);
 
     await expect(
-      service.createPayment({ ...input, amount: '99000' }),
+      service.createPayment(defaultScope, { ...input, amount: '99000' }),
     ).rejects.toMatchObject({ code: 'UPSTREAM_REFERENCE_EXISTS' });
 
     expect(await storedRowCounts()).toEqual({
@@ -176,9 +195,9 @@ describe('PaymentService.createPayment', () => {
       InvalidExpiryError,
     ],
   ])('rejects a %s and stores nothing', async (_label, overrides, error) => {
-    await expect(service.createPayment(request(overrides))).rejects.toThrow(
-      error,
-    );
+    await expect(
+      service.createPayment(defaultScope, request(overrides)),
+    ).rejects.toThrow(error);
     expect(await storedRowCounts()).toEqual({
       payments: 0,
       outbox: 0,
@@ -217,7 +236,7 @@ describe('createPayment atomicity', () => {
 
     try {
       await expect(
-        failing.get(PaymentService).createPayment(request()),
+        failing.get(PaymentService).createPayment(defaultScope, request()),
       ).rejects.toThrow('outbox down');
       expect(await storedRowCounts()).toEqual({
         payments: 0,

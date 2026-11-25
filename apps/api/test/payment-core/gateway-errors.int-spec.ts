@@ -20,6 +20,7 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 22: each gateway error category has one defined effect on the
 // attempt. A provider outage or a timeout never fails a payment.
@@ -91,7 +92,7 @@ beforeEach(async () => {
 });
 
 async function createPayment() {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -101,7 +102,7 @@ async function createPayment() {
 
 async function start(description?: string) {
   const payment = await createPayment();
-  const result = await service.startAttempt({
+  const result = await service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId: fake.gatewayId,
     returnUrl: RETURN_URL,
@@ -310,6 +311,7 @@ describe('cancel errors', () => {
         cancels.cancel([
           {
             id: attempt.id,
+            organizationId: attempt.organizationId,
             gatewayId: attempt.gatewayId,
             providerMetadata: null,
           },

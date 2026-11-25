@@ -7,6 +7,7 @@ import type { AttemptStatus, ReviewReason } from './statuses.js';
  */
 export interface PaymentTransaction {
   readonly id: string;
+  readonly organizationId: string;
   readonly paymentId: string;
   readonly gatewayId: string;
   readonly status: AttemptStatus;

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 
@@ -16,9 +17,9 @@ export class GetPayment {
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
   ) {}
 
-  async execute(paymentId: string): Promise<Payment> {
+  async execute(scope: OrganizationScope, paymentId: string): Promise<Payment> {
     const payment = isUuid(paymentId)
-      ? await this.runner.repositories.payments.findById(paymentId)
+      ? await this.runner.repositories.payments.findById(scope, paymentId)
       : null;
     if (!payment) throw new PaymentNotFoundError(paymentId);
     return payment;

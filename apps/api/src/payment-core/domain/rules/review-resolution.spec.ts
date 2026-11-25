@@ -14,6 +14,7 @@ function attempt(
 ): PaymentTransaction {
   return {
     id: 'a1',
+    organizationId: 'org-1',
     paymentId: 'p1',
     gatewayId: 'fake',
     status: 'REQUIRES_REVIEW',
@@ -32,6 +33,7 @@ function attempt(
 function payment(status: Payment['status'] = 'PENDING'): Payment {
   return {
     id: 'p1',
+    organizationId: 'org-1',
     merchantOrderId: 'o1',
     amount: '150000',
     currency: 'VND',

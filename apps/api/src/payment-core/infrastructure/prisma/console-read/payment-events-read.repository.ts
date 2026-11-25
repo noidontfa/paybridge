@@ -3,6 +3,8 @@ import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
 import type { OutboxEventType } from '../../../domain/records.js';
 import { escapeLike, uuidNeedle } from './developer-views.shared.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export interface PaymentEventListFilters {
   readonly type?: OutboxEventType;
@@ -37,9 +39,12 @@ export class PaymentEventsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first, without payloads. */
-  async list(query: PaymentEventListQuery): Promise<PaymentEventSummaryRow[]> {
+  async list(
+    scope: ReadScope,
+    query: PaymentEventListQuery,
+  ): Promise<PaymentEventSummaryRow[]> {
     const rows = await this.prisma.outboxEvent.findMany({
-      where: this.where(query),
+      where: this.where(scope, query),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
       select: {
@@ -53,8 +58,13 @@ export class PaymentEventsReadRepository {
     return rows.map(({ eventType, ...row }) => ({ ...row, type: eventType }));
   }
 
-  async findById(id: string): Promise<PaymentEventDetailRow | null> {
-    const row = await this.prisma.outboxEvent.findUnique({ where: { id } });
+  async findById(
+    scope: ReadScope,
+    id: string,
+  ): Promise<PaymentEventDetailRow | null> {
+    const row = await this.prisma.outboxEvent.findUnique({
+      where: { id, ...scopeWhere(scope) },
+    });
     if (!row) return null;
     return {
       id: row.id,
@@ -71,9 +81,12 @@ export class PaymentEventsReadRepository {
     };
   }
 
-  private where(query: PaymentEventListQuery): Prisma.OutboxEventWhereInput {
+  private where(
+    scope: ReadScope,
+    query: PaymentEventListQuery,
+  ): Prisma.OutboxEventWhereInput {
     const { filters, after } = query;
-    const and: Prisma.OutboxEventWhereInput[] = [];
+    const and: Prisma.OutboxEventWhereInput[] = [scopeWhere(scope)];
     if (filters.type) and.push({ eventType: filters.type });
     if (filters.published !== undefined) {
       and.push({ publishedAt: filters.published ? { not: null } : null });

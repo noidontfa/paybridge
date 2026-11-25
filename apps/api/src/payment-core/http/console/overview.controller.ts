@@ -7,6 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentScope } from '../current-scope.decorator.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetOverview,
@@ -32,9 +34,10 @@ export class OverviewController {
   @ApiOkResponse({ description: 'The Console overview shape' })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async overview(
+    @CurrentScope() scope: OrganizationScope,
     @Query(new ZodValidationPipe(overviewQuerySchema)) query: OverviewQuery,
   ) {
-    const view = await this.getOverview.execute(query.range);
+    const view = await this.getOverview.execute(scope, query.range);
     const { data } = view;
     return {
       range: view.range,

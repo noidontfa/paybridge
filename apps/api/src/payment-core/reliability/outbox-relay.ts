@@ -1,3 +1,4 @@
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   Inject,
@@ -156,6 +157,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
       let rows: OutboxEvent[];
       try {
         rows = await this.runner.repositories.outbox.findUnpublished(
+          ALL_ORGANIZATIONS,
           this.options.batchSize,
         );
       } catch (error) {
@@ -224,6 +226,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     }
     try {
       await this.runner.repositories.outbox.markPublished(
+        ALL_ORGANIZATIONS,
         row.id,
         this.clock.now(),
       );

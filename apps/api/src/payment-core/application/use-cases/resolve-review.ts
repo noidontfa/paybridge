@@ -4,6 +4,7 @@ import {
   PaymentNotFoundError,
 } from '../../domain/errors.js';
 import { Clock } from '../../domain/clock.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import {
   decideReviewResolution,
@@ -53,9 +54,12 @@ export class ResolveReview {
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
-  async execute(input: ResolveReviewInput): Promise<Payment> {
+  async execute(
+    scope: OrganizationScope,
+    input: ResolveReviewInput,
+  ): Promise<Payment> {
     const { payment, cancelled } = await this.runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(input.paymentId);
+      const locked = await repos.payments.findForUpdate(scope, input.paymentId);
       if (!locked) throw new PaymentNotFoundError(input.paymentId);
       const attempt = locked.attempts.find((a) => a.id === input.attemptId);
       if (!attempt) {
@@ -78,7 +82,7 @@ export class ResolveReview {
 
       switch (decision.kind) {
         case 'note':
-          await repos.statusTransitions.record({
+          await repos.statusTransitions.record(scope, {
             entityType: 'PAYMENT_TRANSACTION',
             entityId: attempt.id,
             fromStatus: attempt.status,
@@ -113,7 +117,7 @@ export class ResolveReview {
         }
       }
 
-      const reloaded = await repos.payments.findById(locked.id);
+      const reloaded = await repos.payments.findById(scope, locked.id);
       return { payment: reloaded ?? locked, cancelled };
     });
 

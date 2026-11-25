@@ -12,6 +12,7 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 20: the browser return writes nothing and queues a status query; the
 // status query applies the provider answer through the shared outcome rules.
@@ -71,12 +72,12 @@ beforeEach(async () => {
 });
 
 async function pendingAttempt() {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
-  const { attempt } = await service.startAttempt({
+  const { attempt } = await service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId: fake.gatewayId,
     returnUrl: 'https://shop.example/return',

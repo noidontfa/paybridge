@@ -7,7 +7,9 @@ import type { PaymentStatus } from './statuses.js';
  */
 export interface Payment {
   readonly id: string;
-  /** Upstream Reference: unique across PayBridge, immutable. */
+  /** The Organization this Payment belongs to; set once. */
+  readonly organizationId: string;
+  /** Upstream Reference: unique within the Organization, immutable. */
   readonly merchantOrderId: string;
   /** Decimal string in the currency's major unit (VND: whole dong). */
   readonly amount: string;

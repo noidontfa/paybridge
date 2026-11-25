@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   ReviewsReadRepository,
   type ReviewCounts,
@@ -12,7 +13,7 @@ export class GetReviewSummary {
     private readonly reviews: ReviewsReadRepository,
   ) {}
 
-  execute(): Promise<ReviewCounts> {
-    return this.reviews.counts();
+  execute(scope: ReadScope): Promise<ReviewCounts> {
+    return this.reviews.counts(scope);
   }
 }

@@ -31,6 +31,7 @@ import {
 } from '../../src/payment-core/reliability/webhook-inbox-sweep.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 26: the inbox sweep resets lost PROCESSING rows, dispatches RECEIVED
 // and FAILED rows, and alerts on rows that used up their retries. Both inbox
@@ -106,7 +107,7 @@ async function storeUnprocessable(): Promise<string> {
   });
   const { entry } = await moduleRef
     .get(TransactionRunner)
-    .repositories.webhookInbox.record({
+    .repositories.webhookInbox.record(defaultScope, {
       gatewayId: fake.gatewayId,
       dedupeKey: newId(),
       rawBody: callback.rawBody,
@@ -176,12 +177,12 @@ describe('RECEIVED rows', () => {
   });
 
   it('are processed by the worker the sweep dispatched them to', async () => {
-    const { payment } = await service.createPayment({
+    const { payment } = await service.createPayment(defaultScope, {
       amount: '1000',
       currency: 'VND',
       upstreamReference: `order-${newId()}`,
     });
-    const { attempt } = await service.startAttempt({
+    const { attempt } = await service.startAttempt(defaultScope, {
       paymentId: payment.id,
       gatewayId: fake.gatewayId,
       returnUrl: 'https://shop.example/return',
@@ -193,7 +194,7 @@ describe('RECEIVED rows', () => {
     });
     const { entry } = await moduleRef
       .get(TransactionRunner)
-      .repositories.webhookInbox.record({
+      .repositories.webhookInbox.record(defaultScope, {
         gatewayId: fake.gatewayId,
         dedupeKey: newId(),
         rawBody: callback.rawBody,
@@ -268,12 +269,12 @@ describe('FAILED rows', () => {
 
 describe('processing the same row twice', () => {
   it('applies its change once', async () => {
-    const { payment } = await service.createPayment({
+    const { payment } = await service.createPayment(defaultScope, {
       amount: '1000',
       currency: 'VND',
       upstreamReference: `order-${newId()}`,
     });
-    const { attempt } = await service.startAttempt({
+    const { attempt } = await service.startAttempt(defaultScope, {
       paymentId: payment.id,
       gatewayId: fake.gatewayId,
       returnUrl: 'https://shop.example/return',
@@ -285,7 +286,7 @@ describe('processing the same row twice', () => {
     });
     const { entry } = await moduleRef
       .get(TransactionRunner)
-      .repositories.webhookInbox.record({
+      .repositories.webhookInbox.record(defaultScope, {
         gatewayId: fake.gatewayId,
         dedupeKey: newId(),
         rawBody: callback.rawBody,

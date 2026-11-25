@@ -10,6 +10,7 @@ import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { testDatabaseUrl } from '../../setup/test-database.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 05: GET /internal/overview over HTTP on real PostgreSQL. Every
 // success response is parsed with the Console's copied schema (getValid).
@@ -50,6 +51,7 @@ async function insertPayment(input: PaymentInput): Promise<string> {
   await prisma.payment.create({
     data: {
       id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: `OV-${++seq}`,
       amount: new Prisma.Decimal(input.amount ?? '1000'),
       currency: 'VND',
@@ -63,6 +65,7 @@ async function insertPayment(input: PaymentInput): Promise<string> {
     await prisma.paymentTransaction.create({
       data: {
         id: newId(),
+        organizationId: DEFAULT_ORGANIZATION_ID,
         paymentId: id,
         gatewayId: attempt.gatewayId,
         status: attempt.status ?? 'FAILED',

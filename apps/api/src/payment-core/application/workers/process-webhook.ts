@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Clock } from '../../domain/clock.js';
+import {
+  ALL_ORGANIZATIONS,
+  organizationScope,
+} from '../../domain/organization-scope.js';
 import type { WebhookInboxEntry } from '../../domain/records.js';
 import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
@@ -63,14 +67,21 @@ export class ProcessWebhook {
 
   async execute(inboxId: string): Promise<ProcessWebhookResult> {
     const inbox = this.runner.repositories.webhookInbox;
-    const entry = await inbox.claim(inboxId, this.clock.now());
+    // The job holds only the row id, so the claim looks across Organizations;
+    // everything after it stays inside the row's own Organization.
+    const entry = await inbox.claim(
+      ALL_ORGANIZATIONS,
+      inboxId,
+      this.clock.now(),
+    );
     if (!entry) return 'skipped';
+    const scope = organizationScope(entry.organizationId);
 
     let applied: AppliedProviderOutcome;
     try {
       const callback = await this.parse(entry);
       if (callback.ignored) {
-        await inbox.markProcessed(entry.id, this.clock.now());
+        await inbox.markProcessed(scope, entry.id, this.clock.now());
         return 'processed';
       }
       applied = await this.apply(entry, callback);
@@ -79,7 +90,7 @@ export class ProcessWebhook {
       this.logger.error(
         `Processing webhook inbox row ${entry.id} (${entry.gatewayId}) failed: ${message}`,
       );
-      await inbox.markFailed(entry.id, message);
+      await inbox.markFailed(scope, entry.id, message);
       return 'failed';
     }
 
@@ -103,12 +114,13 @@ export class ProcessWebhook {
     callback: HandledCallback,
   ): Promise<AppliedProviderOutcome> {
     const attemptKey = callback.attemptKey;
+    const scope = organizationScope(entry.organizationId);
     return this.runner.run(async (repos) => {
       const paymentId = UUID.test(attemptKey)
-        ? await repos.payments.findPaymentIdByAttemptId(attemptKey)
+        ? await repos.payments.findPaymentIdByAttemptId(scope, attemptKey)
         : null;
       if (!paymentId) throw new UnknownCallbackAttemptError(attemptKey);
-      const payment = await repos.payments.findForUpdate(paymentId);
+      const payment = await repos.payments.findForUpdate(scope, paymentId);
       if (!payment) throw new UnknownCallbackAttemptError(attemptKey);
 
       const now = this.clock.now();
@@ -119,7 +131,7 @@ export class ProcessWebhook {
         cause: { trigger: 'webhook', actor: 'system' },
         now,
       });
-      await repos.webhookInbox.markProcessed(entry.id, now);
+      await repos.webhookInbox.markProcessed(scope, entry.id, now);
       return applied;
     });
   }

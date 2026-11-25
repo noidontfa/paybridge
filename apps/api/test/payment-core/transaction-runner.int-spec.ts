@@ -4,6 +4,7 @@ import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/p
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // The transaction runner and the repositories it hands out, against the
 // migrated test database.
@@ -32,7 +33,9 @@ function newPayment(overrides: Partial<NewPayment> = {}): NewPayment {
 }
 
 async function givenPayment(overrides: Partial<NewPayment> = {}) {
-  return runner.run((repos) => repos.payments.create(newPayment(overrides)));
+  return runner.run((repos) =>
+    repos.payments.create(defaultScope, newPayment(overrides)),
+  );
 }
 
 class Rollback extends Error {}
@@ -53,14 +56,16 @@ describe('PaymentRepository', () => {
     const first = newId();
     const second = newId();
     await runner.run(async (repos) => {
-      await repos.payments.createAttempt({
+      await repos.payments.createAttempt(defaultScope, {
         id: first,
         paymentId: payment.id,
         gatewayId: 'fake',
         status: 'CREATED',
       });
-      await repos.payments.updateAttempt(first, { status: 'FAILED' });
-      await repos.payments.createAttempt({
+      await repos.payments.updateAttempt(defaultScope, first, {
+        status: 'FAILED',
+      });
+      await repos.payments.createAttempt(defaultScope, {
         id: second,
         paymentId: payment.id,
         gatewayId: 'fake',
@@ -71,7 +76,10 @@ describe('PaymentRepository', () => {
       });
     });
 
-    const found = await runner.repositories.payments.findById(payment.id);
+    const found = await runner.repositories.payments.findById(
+      defaultScope,
+      payment.id,
+    );
 
     expect(found).toMatchObject({
       id: payment.id,
@@ -99,32 +107,40 @@ describe('PaymentRepository', () => {
 
   it('keeps fractional amounts as exact decimal strings', async () => {
     const payment = await givenPayment({ amount: '0.0001' });
-    const found = await runner.repositories.payments.findById(payment.id);
+    const found = await runner.repositories.payments.findById(
+      defaultScope,
+      payment.id,
+    );
     expect(found?.amount).toBe('0.0001');
   });
 
   it('returns null for an unknown Payment', async () => {
-    expect(await runner.repositories.payments.findById(newId())).toBeNull();
     expect(
-      await runner.run((repos) => repos.payments.findForUpdate(newId())),
+      await runner.repositories.payments.findById(defaultScope, newId()),
+    ).toBeNull();
+    expect(
+      await runner.run((repos) =>
+        repos.payments.findForUpdate(defaultScope, newId()),
+      ),
     ).toBeNull();
   });
 
   it('updates the Payment status', async () => {
     const payment = await givenPayment();
     const updated = await runner.run((repos) =>
-      repos.payments.update(payment.id, { status: 'CANCELLED' }),
+      repos.payments.update(defaultScope, payment.id, { status: 'CANCELLED' }),
     );
     expect(updated.status).toBe('CANCELLED');
     expect(
-      (await runner.repositories.payments.findById(payment.id))?.status,
+      (await runner.repositories.payments.findById(defaultScope, payment.id))
+        ?.status,
     ).toBe('CANCELLED');
   });
 
   it('refuses findForUpdate outside a transaction', async () => {
     const payment = await givenPayment();
     await expect(
-      runner.repositories.payments.findForUpdate(payment.id),
+      runner.repositories.payments.findForUpdate(defaultScope, payment.id),
     ).rejects.toThrow(/transaction/);
   });
 
@@ -138,18 +154,23 @@ describe('PaymentRepository', () => {
     const firstHasLock = new Promise<void>((r) => (firstLocked = r));
 
     const first = runner.run(async (repos) => {
-      await repos.payments.findForUpdate(payment.id);
+      await repos.payments.findForUpdate(defaultScope, payment.id);
       events.push('first locked');
       firstLocked();
       await firstMayCommit;
-      await repos.payments.update(payment.id, { status: 'CANCELLED' });
+      await repos.payments.update(defaultScope, payment.id, {
+        status: 'CANCELLED',
+      });
       events.push('first commits');
     });
 
     await firstHasLock;
     let secondSaw: string | undefined;
     const second = runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(payment.id);
+      const locked = await repos.payments.findForUpdate(
+        defaultScope,
+        payment.id,
+      );
       events.push('second locked');
       secondSaw = locked?.status;
     });
@@ -167,7 +188,11 @@ describe('PaymentRepository', () => {
 
   it('rolls back every write of a failed transaction', async () => {
     const payment = newPayment();
-    await runAndRollBack((repos) => repos.payments.create(payment));
-    expect(await runner.repositories.payments.findById(payment.id)).toBeNull();
+    await runAndRollBack((repos) =>
+      repos.payments.create(defaultScope, payment),
+    );
+    expect(
+      await runner.repositories.payments.findById(defaultScope, payment.id),
+    ).toBeNull();
   });
 });

@@ -22,6 +22,7 @@ export interface NewStatusTransition {
 
 export interface StatusTransition extends NewStatusTransition {
   readonly id: string;
+  readonly organizationId: string;
   readonly reason: string | null;
   readonly createdAt: Date;
 }
@@ -45,6 +46,7 @@ export interface NewOutboxEvent {
 
 export interface OutboxEvent {
   readonly id: string;
+  readonly organizationId: string;
   readonly eventType: OutboxEventType;
   readonly paymentId: string;
   readonly payload: unknown;
@@ -73,6 +75,7 @@ export interface NewWebhookInboxEntry {
 
 export interface WebhookInboxEntry {
   readonly id: string;
+  readonly organizationId: string;
   readonly gatewayId: string;
   readonly dedupeKey: string;
   readonly providerEventId: string | null;
@@ -105,6 +108,7 @@ export interface IdempotencyRecord extends Omit<
   NewIdempotencyRecord,
   'createdAt'
 > {
+  readonly organizationId: string;
   readonly createdAt: Date;
 }
 
@@ -121,5 +125,6 @@ export interface NewGatewayRawResponse {
 
 export interface GatewayRawResponse extends NewGatewayRawResponse {
   readonly id: string;
+  readonly organizationId: string;
   readonly createdAt: Date;
 }

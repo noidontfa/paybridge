@@ -1,3 +1,4 @@
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
 import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../domain/clock.js';
 import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
@@ -37,12 +38,15 @@ export class RetentionCleanup {
     const before = (ms: number): Date => new Date(now - ms);
     const repos = this.runner.repositories;
     const idempotencyKeys = await repos.idempotencyKeys.deleteExpiredBefore(
+      ALL_ORGANIZATIONS,
       before(IDEMPOTENCY_RETENTION_AFTER_EXPIRY_MS),
     );
     const outboxEvents = await repos.outbox.deletePublishedBefore(
+      ALL_ORGANIZATIONS,
       before(OUTBOX_RETENTION_AFTER_PUBLISH_MS),
     );
     const webhookInbox = await repos.webhookInbox.deleteReceivedBefore(
+      ALL_ORGANIZATIONS,
       before(WEBHOOK_INBOX_RETENTION_MS),
     );
     return { idempotencyKeys, outboxEvents, webhookInbox };

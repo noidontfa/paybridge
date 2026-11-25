@@ -11,6 +11,7 @@ import { RetentionProcessor } from '../../src/payment-core/reliability/processor
 import { RetentionCleanup } from '../../src/payment-core/reliability/retention.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 27: scheduled cleanup deletes only the rows the spec lets expire.
 // The worker is switched off here so the test drives each cleanup run.
@@ -58,7 +59,7 @@ const ago = (ms: number): Date => new Date(NOW.getTime() - ms);
 async function givenPayment(): Promise<string> {
   const id = newId();
   await runner.run((tx) =>
-    tx.payments.create({
+    tx.payments.create(defaultScope, {
       id,
       merchantOrderId: `order-${id}`,
       amount: '1000',
@@ -72,7 +73,7 @@ async function givenPayment(): Promise<string> {
 
 async function givenIdempotencyKey(expiresAt: Date): Promise<string> {
   const key = `key-${newId()}`;
-  await runner.repositories.idempotencyKeys.create({
+  await runner.repositories.idempotencyKeys.create(defaultScope, {
     key,
     requestHash: 'hash',
     responseStatus: 201,
@@ -84,7 +85,9 @@ async function givenIdempotencyKey(expiresAt: Date): Promise<string> {
 }
 
 async function idempotencyKeyExists(key: string): Promise<boolean> {
-  return (await runner.repositories.idempotencyKeys.find(key)) !== null;
+  return (
+    (await runner.repositories.idempotencyKeys.find(defaultScope, key)) !== null
+  );
 }
 
 describe('retention cleanup: idempotency records', () => {
@@ -105,19 +108,26 @@ async function givenOutboxEvent(
   paymentId: string,
   publishedAt: Date | null,
 ): Promise<string> {
-  const event = await runner.repositories.outbox.add({
+  const event = await runner.repositories.outbox.add(defaultScope, {
     eventType: 'PaymentCreated',
     paymentId,
     payload: {},
   });
   if (publishedAt) {
-    await runner.repositories.outbox.markPublished(event.id, publishedAt);
+    await runner.repositories.outbox.markPublished(
+      defaultScope,
+      event.id,
+      publishedAt,
+    );
   }
   return event.id;
 }
 
 async function outboxIds(paymentId: string): Promise<string[]> {
-  const events = await runner.repositories.outbox.listForPayment(paymentId);
+  const events = await runner.repositories.outbox.listForPayment(
+    defaultScope,
+    paymentId,
+  );
   return events.map((e) => e.id);
 }
 
@@ -153,13 +163,16 @@ async function givenInboxRow(
   receivedAt: Date,
   status: InboxStatus = 'PROCESSED',
 ): Promise<string> {
-  const { entry } = await runner.repositories.webhookInbox.record({
-    gatewayId: 'fake',
-    dedupeKey: newId(),
-    rawBody: new TextEncoder().encode('{}'),
-    headers: {},
-    query: {},
-  });
+  const { entry } = await runner.repositories.webhookInbox.record(
+    defaultScope,
+    {
+      gatewayId: 'fake',
+      dedupeKey: newId(),
+      rawBody: new TextEncoder().encode('{}'),
+      headers: {},
+      query: {},
+    },
+  );
   await prisma.webhookInbox.update({
     where: { id: entry.id },
     data: { receivedAt, status },
@@ -168,7 +181,9 @@ async function givenInboxRow(
 }
 
 async function inboxRowExists(id: string): Promise<boolean> {
-  return (await runner.repositories.webhookInbox.findById(id)) !== null;
+  return (
+    (await runner.repositories.webhookInbox.findById(defaultScope, id)) !== null
+  );
 }
 
 describe('retention cleanup: webhook inbox', () => {
@@ -195,19 +210,19 @@ describe('retention cleanup: audit data', () => {
   it('never deletes raw gateway responses or status transitions, however old', async () => {
     const paymentId = await givenPayment();
     const attempt = await runner.run((tx) =>
-      tx.payments.createAttempt({
+      tx.payments.createAttempt(defaultScope, {
         id: newId(),
         paymentId,
         gatewayId: 'fake',
         status: 'PENDING',
       }),
     );
-    await runner.repositories.gatewayRawResponses.record({
+    await runner.repositories.gatewayRawResponses.record(defaultScope, {
       attemptId: attempt.id,
       operation: 'initiate',
       payload: { any: 'thing' },
     });
-    await runner.repositories.statusTransitions.record({
+    await runner.repositories.statusTransitions.record(defaultScope, {
       entityType: 'PAYMENT',
       entityId: paymentId,
       fromStatus: null,
@@ -224,10 +239,14 @@ describe('retention cleanup: audit data', () => {
     await cleanup.run();
 
     expect(
-      await runner.repositories.gatewayRawResponses.listForAttempt(attempt.id),
+      await runner.repositories.gatewayRawResponses.listForAttempt(
+        defaultScope,
+        attempt.id,
+      ),
     ).toHaveLength(1);
     expect(
       await runner.repositories.statusTransitions.listForEntity(
+        defaultScope,
         'PAYMENT',
         paymentId,
       ),

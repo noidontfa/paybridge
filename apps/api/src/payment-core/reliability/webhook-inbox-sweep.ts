@@ -1,3 +1,4 @@
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Queue } from 'bullmq';
@@ -54,12 +55,14 @@ export class WebhookInboxSweep {
     const now = this.clock.now();
 
     const reset = await inbox.resetStaleProcessing(
+      ALL_ORGANIZATIONS,
       new Date(now.getTime() - WEBHOOK_INBOX_LOCK_TIMEOUT_MS),
     );
 
     // `attempts` counts every try, the first one included.
     const maxTries = WEBHOOK_INBOX_MAX_RETRIES + 1;
     const ids = await inbox.findDispatchableIds(
+      ALL_ORGANIZATIONS,
       maxTries - 1,
       WEBHOOK_INBOX_SWEEP_BATCH_SIZE,
     );
@@ -77,6 +80,7 @@ export class WebhookInboxSweep {
     }
 
     const exhausted = await inbox.findExhausted(
+      ALL_ORGANIZATIONS,
       maxTries - 1,
       WEBHOOK_INBOX_SWEEP_BATCH_SIZE,
     );

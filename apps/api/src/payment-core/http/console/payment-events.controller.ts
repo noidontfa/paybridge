@@ -15,6 +15,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentScope } from '../current-scope.decorator.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetPaymentEvent,
@@ -50,10 +52,11 @@ export class PaymentEventsController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentScope() scope: OrganizationScope,
     @Query(new ZodValidationPipe(paymentEventsListQuerySchema))
     query: PaymentEventsListQuery,
   ) {
-    const page = await this.listEvents.execute(query);
+    const page = await this.listEvents.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -70,8 +73,8 @@ export class PaymentEventsController {
   @ApiOperation({ summary: 'One Payment Event with its payload (operator)' })
   @ApiOkResponse({ description: 'The Payment Event' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async get(@Param('id') id: string) {
-    const row = await this.getEvent.execute(id);
+  async get(@CurrentScope() scope: OrganizationScope, @Param('id') id: string) {
+    const row = await this.getEvent.execute(scope, id);
     if (!row) throw new NotFoundException(`Payment Event ${id} not found`);
     return {
       id: row.id,
