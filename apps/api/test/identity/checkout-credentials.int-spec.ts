@@ -154,7 +154,7 @@ describe('a Publishable Key at a checkout endpoint', () => {
     await probe(next.key).expect(200);
   });
 
-  it('refuses the key of a suspended Organization', async () => {
+  it('answers "unavailable" for the key of a suspended Organization', async () => {
     const orgId = await createOrganization(prisma);
     const { key } = await createKey(await admin(orgId));
     await prisma.organization.update({
@@ -164,8 +164,13 @@ describe('a Publishable Key at a checkout endpoint', () => {
 
     const res = await probe(key);
 
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe('INVALID_PUBLISHABLE_KEY');
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({
+      code: 'CHECKOUT_UNAVAILABLE',
+      details: { reason: 'ORGANIZATION_SUSPENDED' },
+    });
+    // A website that is not allowed learns nothing about the Organization.
+    await probe(key, 'https://evil.example').expect(403);
   });
 
   it('keeps Organizations apart: each key resolves to its own Organization', async () => {

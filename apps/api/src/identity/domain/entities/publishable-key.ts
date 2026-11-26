@@ -66,11 +66,22 @@ export class PublishableKeyRevokedError extends Error {
   }
 }
 
-/** The key is unknown, revoked, or its Organization is suspended. */
+/** The key is unknown or revoked. */
 export class InvalidPublishableKeyError extends Error {
   constructor() {
     super('A valid Publishable Key is required');
     this.name = 'InvalidPublishableKeyError';
+  }
+}
+
+/**
+ * A valid key, used from an allowed origin, of a suspended Organization: the
+ * checkout answers "unavailable" rather than "invalid key".
+ */
+export class CheckoutOrganizationSuspendedError extends Error {
+  constructor() {
+    super('Payment is not available right now');
+    this.name = 'CheckoutOrganizationSuspendedError';
   }
 }
 

@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import {
@@ -18,6 +19,7 @@ import { AuthenticateApiKey } from '../../application/use-cases/api-keys.js';
 import { InvalidApiKeyError } from '../../domain/entities/api-key.js';
 import { AuthenticatePublishableKey } from '../../application/use-cases/publishable-keys.js';
 import {
+  CheckoutOrganizationSuspendedError,
   InvalidPublishableKeyError,
   OriginNotAllowedError,
 } from '../../domain/entities/publishable-key.js';
@@ -141,6 +143,14 @@ export class HttpPrincipalResolver extends PrincipalResolver {
         throw new ForbiddenException({
           message: error.message,
           code: 'ORIGIN_NOT_ALLOWED',
+        });
+      }
+      if (error instanceof CheckoutOrganizationSuspendedError) {
+        // The checkout's generic "unavailable" answer (checkout module).
+        throw new UnprocessableEntityException({
+          message: error.message,
+          code: 'CHECKOUT_UNAVAILABLE',
+          details: { reason: 'ORGANIZATION_SUSPENDED' },
         });
       }
       throw error;
