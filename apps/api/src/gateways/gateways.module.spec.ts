@@ -38,7 +38,7 @@ describe('Gateway composition root', () => {
     expect(manager.resolve('fake')).toBe(manager.resolve('fake'));
   });
 
-  it('also registers a QR variant of the fake plugin outside production', async () => {
+  it('also registers a QR variant of the fake plugin in development', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         configFor('development'),
@@ -59,6 +59,17 @@ describe('Gateway composition root', () => {
       type: 'QR_CODE',
       payload: 'fake-qr://pay/a-1',
     });
+  });
+
+  it('leaves the QR variant out of tests, which script the fake plugin instead', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        configFor('test'),
+        GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+      ],
+    }).compile();
+
+    expect(moduleRef.get(GatewayManager).isRegistered('fake-qr')).toBe(false);
   });
 
   it('does not register the fake plugin in production', async () => {
@@ -83,7 +94,7 @@ describe('Gateway composition root', () => {
     }).compile();
 
     const manager = moduleRef.get(GatewayManager);
-    expect(manager.gatewayIds()).toEqual(['fake', 'fake-qr', 'stripe']);
+    expect(manager.gatewayIds()).toEqual(['fake', 'stripe']);
     expect(manager.resolve('stripe')).toBeInstanceOf(StripeGatewayPlugin);
   });
 
@@ -144,7 +155,7 @@ describe('Gateway composition root', () => {
     }).compile();
 
     const manager = moduleRef.get(GatewayManager);
-    expect(manager.gatewayIds()).toEqual(['fake', 'fake-qr', 'stripe']);
+    expect(manager.gatewayIds()).toEqual(['fake', 'stripe']);
     // Only a Gateway Connection can supply Stripe credentials.
     expect(() => manager.resolve('stripe')).toThrow(/No Gateway Plugin/);
   });
