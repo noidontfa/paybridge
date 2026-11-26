@@ -43,15 +43,19 @@ function isDeadlock(error: unknown): boolean {
   );
 }
 
+/** Gateways the test suites register (`fake`, and `alpha`/`beta` doubles). */
+const TEST_GATEWAY_IDS = ['fake', 'alpha', 'beta'];
+
 /**
- * Every Organization holds an enabled `fake` Gateway Connection (no
- * credentials) after a reset, so tests start attempts without ceremony. Tests
- * about Gateway Connections delete or change it.
+ * Every Organization holds an enabled, credential-less Gateway Connection for
+ * each test gateway after a reset, so tests start attempts without ceremony.
+ * Tests about Gateway Connections delete or change them.
  */
 export async function connectFakeGateway(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
     `INSERT INTO core_gateway_connections (id, organization_id, gateway_id, updated_at)
-     SELECT gen_random_uuid(), id, 'fake', now() FROM iam_organizations
+     SELECT gen_random_uuid(), o.id, g.id, now()
+     FROM iam_organizations o CROSS JOIN unnest(ARRAY[${TEST_GATEWAY_IDS.map((g) => `'${g}'`).join(',')}]) AS g(id)
      ON CONFLICT DO NOTHING`,
   );
 }

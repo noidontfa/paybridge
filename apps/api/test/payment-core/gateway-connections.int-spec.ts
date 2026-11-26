@@ -235,15 +235,16 @@ describe('starting a PaymentTransaction', () => {
   it('the fake gateway’s connection has no credentials', async () => {
     const fake = (await connectionsOf()).find((c) => c.gatewayId === 'fake')!;
     expect(fake.credentialsCiphertext).toBeNull();
-    const res = await admin
-      .post('/internal/gateway-connections')
-      .send({ gatewayId: 'fake', credentials: { a: 'b' } });
-    expect(res.status).toBe(409); // already connected; credentials never apply
+    // Credentials never apply to it, connected already or not.
     await prisma.gatewayConnection.delete({ where: { id: fake.id } });
     const bad = await admin
       .post('/internal/gateway-connections')
       .send({ gatewayId: 'fake', credentials: { a: 'b' } });
     expect(bad.status).toBe(400);
+    await admin
+      .post('/internal/gateway-connections')
+      .send({ gatewayId: 'fake' })
+      .expect(201);
   });
 });
 

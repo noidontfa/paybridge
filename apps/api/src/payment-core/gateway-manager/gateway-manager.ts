@@ -133,6 +133,19 @@ export class GatewayManager {
     return entry.factory.credentialsSchema;
   }
 
+  /**
+   * Gateways the deployment itself serves (fake, or the legacy env account),
+   * as opposed to those only Gateway Connections can supply credentials for.
+   */
+  deploymentGatewayIds(): string[] {
+    return [...this.registrations.entries()]
+      .filter(
+        ([, entry]) =>
+          !entry.factory.credentialsSchema || entry.credentials !== undefined,
+      )
+      .map(([id]) => id);
+  }
+
   isRegistered(gatewayId: string): boolean {
     return this.registrations.has(gatewayId);
   }

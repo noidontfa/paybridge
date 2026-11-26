@@ -4,17 +4,17 @@
 
 **Blocked by:** 01, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Gateway Connections are owned by Payment Core: Organization, gateway identifier, encrypted credentials, the encrypting key's id, a credentials version, and enabled state; at most one per Organization per gateway
-- [ ] Credentials are encrypted with AES-256-GCM using identified keys from configuration; the API refuses to start in production without one; a CLI command re-encrypts every row under the primary key
-- [ ] No endpoint ever returns credentials; responses say only which fields are set
-- [ ] Organization Admins create, replace credentials of, enable and disable their Gateway Connections; a used Gateway Connection cannot be deleted
-- [ ] The Gateway Manager builds plugin instances per Gateway Connection from its decrypted credentials, cached by id and credentials version
-- [ ] Starting a PaymentTransaction on a gateway the Organization has not connected or has disabled is refused with a clear error
-- [ ] Re-queries, reconciliation, expiry handling and Refunds still work on a disabled Gateway Connection
-- [ ] The `fake` gateway's Gateway Connection has no credentials and is available outside production only
-- [ ] Gateway Connection management is a sensitive write
-- [ ] The Console has a Gateway Connections page in Organization settings
-- [ ] The seed creates Gateway Connections, one of them disabled
-- [ ] Integration tests over HTTP cover each rule above, including the key-rotation command's observable result
+- [x] Gateway Connections are owned by Payment Core: Organization, gateway identifier, encrypted credentials, the encrypting key's id, a credentials version, and enabled state; at most one per Organization per gateway
+- [x] Credentials are encrypted with AES-256-GCM using identified keys from configuration; the API refuses to start in production without one; a CLI command re-encrypts every row under the primary key
+- [x] No endpoint ever returns credentials; responses say only which fields are set
+- [x] Organization Admins create, replace credentials of, enable and disable their Gateway Connections; a used Gateway Connection cannot be deleted
+- [x] The Gateway Manager builds plugin instances per Gateway Connection from its decrypted credentials, cached by id and credentials version
+- [x] Starting a PaymentTransaction on a gateway the Organization has not connected or has disabled is refused with a clear error
+- [x] Re-queries, reconciliation, expiry handling and Refunds still work on a disabled Gateway Connection
+- [x] The `fake` gateway's Gateway Connection has no credentials and is available outside production only
+- [x] Gateway Connection management is a sensitive write
+- [x] The Console has a Gateway Connections page in Organization settings
+- [x] The seed creates Gateway Connections, one of them disabled
+- [x] Integration tests over HTTP cover each rule above, including the key-rotation command's observable result
