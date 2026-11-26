@@ -25,6 +25,12 @@ const STRINGS = {
     cancelledBody: 'This payment was cancelled.',
     tryAgainLater: 'Something went wrong. Please try again.',
     done: 'Done',
+    emailPrompt: 'Enter your email so we know who bought.',
+    emailLabel: 'Your email',
+    emailInvalid: 'Please enter a valid email',
+    continue: 'Continue',
+    payNow: 'Pay',
+    processing: 'Processing your payment…',
   },
   vi: {
     unavailable: 'Hiện chưa thể thanh toán',
@@ -48,6 +54,12 @@ const STRINGS = {
     cancelledBody: 'Khoản thanh toán này đã bị huỷ.',
     tryAgainLater: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
     done: 'Xong',
+    emailPrompt: 'Nhập email để chúng tôi biết ai đã mua.',
+    emailLabel: 'Email của bạn',
+    emailInvalid: 'Vui lòng nhập một email hợp lệ',
+    continue: 'Tiếp tục',
+    payNow: 'Thanh toán',
+    processing: 'Đang xử lý thanh toán…',
   },
 } as const satisfies Record<Language, Record<string, string>>;
 

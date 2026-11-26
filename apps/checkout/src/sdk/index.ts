@@ -84,6 +84,7 @@ function startCheckout(
       planId: plan.id,
       language: table.language,
       ...(snippet.customerReference ? { customerReference: snippet.customerReference } : {}),
+      ...(snippet.askEmail ? { askEmail: true } : {}),
       ...(snippet.successUrl ? { successUrl: snippet.successUrl } : {}),
       ...(snippet.cancelUrl ? { cancelUrl: snippet.cancelUrl } : {}),
     },

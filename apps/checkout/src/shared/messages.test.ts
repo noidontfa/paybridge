@@ -69,6 +69,21 @@ describe('messages from the SDK, read by the checkout page', () => {
     });
   });
 
+  it('carries the ask for an email, and refuses a non-boolean one', () => {
+    const message = fromSdk({ type: 'init', tableId: 't', planId: 'p', language: 'en', askEmail: true });
+
+    expect(readSdkMessage(event(message, SHOP, parent), expected)).toEqual({
+      type: 'init',
+      tableId: 't',
+      planId: 'p',
+      language: 'en',
+      askEmail: true,
+    });
+    expect(
+      readSdkMessage(event({ ...message, askEmail: 'yes' }, SHOP, parent), expected),
+    ).toBeNull();
+  });
+
   it('ignores an init message from any other origin', () => {
     const message = fromSdk({ type: 'init', tableId: 't', planId: 'p', language: 'en' });
 

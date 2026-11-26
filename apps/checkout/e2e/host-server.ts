@@ -9,7 +9,7 @@ import {
 // Plain HTML host pages, like an Organization's landing page, served on two
 // origins: one the seed's Publishable Key allows and one it does not.
 //
-//   /             the snippet; ?table=, ?key=, ?customerRef=, ?lang= override it
+//   /             the snippet; ?table=, ?key=, ?customerRef=, ?askEmail=, ?lang= override it
 //   /raw-iframe   frames the checkout page directly, without the SDK
 
 const escape = (value: string) =>
@@ -21,6 +21,7 @@ function snippetPage(params: URLSearchParams): string {
     'data-key': params.get('key') ?? SEED.publishableKey,
     'data-table': params.get('table') ?? SEED.pricingTableId,
     'data-customer-ref': params.get('customerRef') ?? undefined,
+    'data-ask-email': params.get('askEmail') ?? undefined,
     'data-on-success': 'onPaid',
     'data-on-cancel': 'onCancelled',
     'data-on-error': 'onCheckoutError',
