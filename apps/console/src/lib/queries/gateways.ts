@@ -10,24 +10,15 @@ export const gatewayKeys = {
 };
 
 export function useGatewayList() {
-  return useQuery({
-    queryKey: gatewayKeys.list(),
-    queryFn: ({ signal }) => listGateways(signal),
-  });
+  return useQuery({ queryKey: gatewayKeys.list(), queryFn: ({ signal }) => listGateways(signal) });
 }
 
 export function useGateway(id: string) {
-  return useQuery({
-    queryKey: gatewayKeys.detail(id),
-    queryFn: ({ signal }) => getGateway(id, signal),
-  });
+  return useQuery({ queryKey: gatewayKeys.detail(id), queryFn: ({ signal }) => getGateway(id, signal) });
 }
 
 /** Filter options for a gateway select, from the Gateways list the API reports. */
 export function useGatewayOptions() {
   const { data } = useGatewayList();
-  return (data?.items ?? []).map((gateway) => ({
-    value: gateway.id,
-    label: gateway.id,
-  }));
+  return (data?.items ?? []).map((gateway) => ({ value: gateway.id, label: gateway.id }));
 }

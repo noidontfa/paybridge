@@ -11,9 +11,7 @@ export const RANGE_LABELS: Record<OverviewRange, string> = {
 };
 
 /** Reads a `range` search param; anything unknown falls back to the default. */
-export function parseRange(
-  value: string | string[] | undefined | null,
-): OverviewRange {
+export function parseRange(value: string | string[] | undefined | null): OverviewRange {
   const first = Array.isArray(value) ? value[0] : value;
   return OVERVIEW_RANGES.find((range) => range === first) ?? DEFAULT_RANGE;
 }

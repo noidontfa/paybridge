@@ -63,15 +63,11 @@ export class HttpPrincipalResolver extends PrincipalResolver {
   resolve(request: unknown): Principal {
     const req = request as RequestLike;
     const path = req.path ?? req.url ?? '';
-    if (!path.startsWith(`/${INTERNAL_PREFIX}/`))
-      return this.publicApi.resolve();
+    if (!path.startsWith(`/${INTERNAL_PREFIX}/`)) return this.publicApi.resolve();
 
     const header = req.headers.authorization;
-    const match =
-      typeof header === 'string' ? /^Bearer (\S+)$/.exec(header) : null;
-    const claims = match
-      ? this.tokens.verify(match[1]!, this.clock.now())
-      : null;
+    const match = typeof header === 'string' ? /^Bearer (\S+)$/.exec(header) : null;
+    const claims = match ? this.tokens.verify(match[1]!, this.clock.now()) : null;
     if (!claims) {
       throw new UnauthorizedException({
         message: 'A valid access token is required',

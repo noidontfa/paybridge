@@ -6,15 +6,9 @@ import { MockStore, type MockAttempt, type MockPayment } from './store';
 
 const NOW = new Date('2026-11-25T03:00:00.000Z');
 const HOUR = 3_600_000;
-const ago = (hours: number) =>
-  new Date(NOW.getTime() - hours * HOUR).toISOString();
+const ago = (hours: number) => new Date(NOW.getTime() - hours * HOUR).toISOString();
 
-function pay(
-  id: string,
-  status: MockPayment['status'],
-  amount: string,
-  hoursAgo: number,
-): MockPayment {
+function pay(id: string, status: MockPayment['status'], amount: string, hoursAgo: number): MockPayment {
   return {
     id,
     upstreamReference: `order-${id}`,
@@ -27,23 +21,8 @@ function pay(
   };
 }
 
-function att(
-  id: string,
-  paymentId: string,
-  gatewayId: string,
-  status: MockAttempt['status'],
-  hoursAgo: number,
-): MockAttempt {
-  return {
-    id,
-    paymentId,
-    gatewayId,
-    status,
-    providerRef: null,
-    refundRequired: false,
-    createdAt: ago(hoursAgo),
-    updatedAt: ago(hoursAgo),
-  };
+function att(id: string, paymentId: string, gatewayId: string, status: MockAttempt['status'], hoursAgo: number): MockAttempt {
+  return { id, paymentId, gatewayId, status, providerRef: null, refundRequired: false, createdAt: ago(hoursAgo), updatedAt: ago(hoursAgo) };
 }
 
 function fixture() {
@@ -105,10 +84,7 @@ describe('computeOverview', () => {
   it('buckets volume hourly for 24h and daily for 7d and 30d, summing to the total', () => {
     const day = computeOverview(fixture(), '24h');
     expect(day.volumeSeries).toHaveLength(24);
-    expect(day.volumeSeries.find((b) => b.volume !== '0')).toEqual({
-      start: ago(2),
-      volume: '100000',
-    });
+    expect(day.volumeSeries.find((b) => b.volume !== '0')).toEqual({ start: ago(2), volume: '100000' });
     const week = computeOverview(fixture(), '7d');
     expect(week.volumeSeries).toHaveLength(7);
     expect(week.volumeSeries.at(-1)!.volume).toBe('100000');
@@ -117,29 +93,13 @@ describe('computeOverview', () => {
 
   it('lists the most recent Payments first', () => {
     const o = computeOverview(fixture(), '30d');
-    expect(o.recentPayments.map((p) => p.id)).toEqual([
-      'd',
-      'a',
-      'c',
-      'b',
-      'e',
-    ]);
-    expect(o.recentPayments[0]).toMatchObject({
-      gatewayId: null,
-      status: 'PENDING',
-      amount: '20000',
-    });
+    expect(o.recentPayments.map((p) => p.id)).toEqual(['d', 'a', 'c', 'b', 'e']);
+    expect(o.recentPayments[0]).toMatchObject({ gatewayId: null, status: 'PENDING', amount: '20000' });
   });
 
   it('has no success rate when nothing is closed, and no figures for an empty range', () => {
     const o = computeOverview(new MockStore(NOW), '24h');
-    expect(o).toMatchObject({
-      volume: '0',
-      paymentCount: 0,
-      successRate: null,
-      gateways: [],
-      recentPayments: [],
-    });
+    expect(o).toMatchObject({ volume: '0', paymentCount: 0, successRate: null, gateways: [], recentPayments: [] });
   });
 
   it('is valid for the copied schema over the seeded store', () => {

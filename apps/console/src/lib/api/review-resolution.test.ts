@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  reviewResolutionResponseSchema,
-  toReviewResolutionResult,
-} from './review-resolution';
+import { reviewResolutionResponseSchema, toReviewResolutionResult } from './review-resolution';
 
 // What the real API answers (the Payment with its attempts), cut down to the fields the Console reads.
 const apiResponse = {
@@ -14,12 +11,7 @@ const apiResponse = {
   ],
 };
 // What the Console's mock answers.
-const mockResponse = {
-  paymentId: 'p-1',
-  attemptId: 'a-2',
-  attemptStatus: 'SUCCEEDED',
-  paymentStatus: 'SUCCEEDED',
-};
+const mockResponse = { paymentId: 'p-1', attemptId: 'a-2', attemptStatus: 'SUCCEEDED', paymentStatus: 'SUCCEEDED' };
 
 describe('toReviewResolutionResult', () => {
   it('reads the resolved attempt out of the Payment the API answers with', () => {

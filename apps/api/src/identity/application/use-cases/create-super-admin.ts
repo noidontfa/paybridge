@@ -57,10 +57,7 @@ export class CreateSuperAdmin {
       if (existing.role !== 'SUPER_ADMIN') throw new EmailTakenError(email);
       await repos.users.resetPassword(existing.id, passwordHash);
       await repos.refreshTokens.revokeAllOfUser(existing.id, this.clock.now());
-      return {
-        user: { ...existing, passwordHash, active: true },
-        recovered: true,
-      };
+      return { user: { ...existing, passwordHash, active: true }, recovered: true };
     });
   }
 }

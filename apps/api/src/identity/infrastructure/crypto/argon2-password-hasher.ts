@@ -51,8 +51,7 @@ export class Argon2PasswordHasher extends PasswordHasher {
       Number(p),
     );
     return (
-      actual.length === expectedTag.length &&
-      timingSafeEqual(actual, expectedTag)
+      actual.length === expectedTag.length && timingSafeEqual(actual, expectedTag)
     );
   }
 }

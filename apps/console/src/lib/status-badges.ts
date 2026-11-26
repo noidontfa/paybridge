@@ -33,29 +33,12 @@ export interface BadgeSpec {
   icon: LucideIcon;
 }
 
-export type BadgeKind =
-  'payment' | 'transaction' | 'review' | 'event' | 'callback';
+export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event' | 'callback';
 
-const SUCCEEDED: BadgeSpec = {
-  label: 'Succeeded',
-  tone: 'success',
-  icon: CheckCircle2Icon,
-};
-const PENDING: BadgeSpec = {
-  label: 'Pending',
-  tone: 'info',
-  icon: HourglassIcon,
-};
-const CANCELLED: BadgeSpec = {
-  label: 'Cancelled',
-  tone: 'neutral',
-  icon: BanIcon,
-};
-const EXPIRED: BadgeSpec = {
-  label: 'Expired',
-  tone: 'neutral',
-  icon: TimerOffIcon,
-};
+const SUCCEEDED: BadgeSpec = { label: 'Succeeded', tone: 'success', icon: CheckCircle2Icon };
+const PENDING: BadgeSpec = { label: 'Pending', tone: 'info', icon: HourglassIcon };
+const CANCELLED: BadgeSpec = { label: 'Cancelled', tone: 'neutral', icon: BanIcon };
+const EXPIRED: BadgeSpec = { label: 'Expired', tone: 'neutral', icon: TimerOffIcon };
 
 const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
   payment: {
@@ -71,61 +54,21 @@ const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
     FAILED: { label: 'Failed', tone: 'danger', icon: XCircleIcon },
     EXPIRED,
     CANCELLED,
-    REQUIRES_REVIEW: {
-      label: 'In review',
-      tone: 'warning',
-      icon: SearchCheckIcon,
-    },
+    REQUIRES_REVIEW: { label: 'In review', tone: 'warning', icon: SearchCheckIcon },
   },
   review: {
-    AMBIGUOUS_PROVIDER_STATUS: {
-      label: 'Ambiguous status',
-      tone: 'warning',
-      icon: CircleDotIcon,
-    },
-    AMOUNT_MISMATCH: {
-      label: 'Amount mismatch',
-      tone: 'warning',
-      icon: ScaleIcon,
-    },
-    LATE_SUCCESS_ON_CLOSED_PAYMENT: {
-      label: 'Late success',
-      tone: 'warning',
-      icon: ClockIcon,
-    },
-    DUPLICATE_SUCCESS: {
-      label: 'Duplicate success',
-      tone: 'warning',
-      icon: CopyCheckIcon,
-    },
+    AMBIGUOUS_PROVIDER_STATUS: { label: 'Ambiguous status', tone: 'warning', icon: CircleDotIcon },
+    AMOUNT_MISMATCH: { label: 'Amount mismatch', tone: 'warning', icon: ScaleIcon },
+    LATE_SUCCESS_ON_CLOSED_PAYMENT: { label: 'Late success', tone: 'warning', icon: ClockIcon },
+    DUPLICATE_SUCCESS: { label: 'Duplicate success', tone: 'warning', icon: CopyCheckIcon },
   },
   /** Payment Event types, toned like the Payment status they announce. */
   event: {
-    PaymentCreated: {
-      label: 'Payment created',
-      tone: 'info',
-      icon: PlusCircleIcon,
-    },
-    PaymentSucceeded: {
-      label: 'Payment succeeded',
-      tone: 'success',
-      icon: CheckCircle2Icon,
-    },
-    PaymentCancelled: {
-      label: 'Payment cancelled',
-      tone: 'neutral',
-      icon: BanIcon,
-    },
-    PaymentExpired: {
-      label: 'Payment expired',
-      tone: 'neutral',
-      icon: TimerOffIcon,
-    },
-    PaymentRequiresReview: {
-      label: 'Payment requires review',
-      tone: 'warning',
-      icon: SearchCheckIcon,
-    },
+    PaymentCreated: { label: 'Payment created', tone: 'info', icon: PlusCircleIcon },
+    PaymentSucceeded: { label: 'Payment succeeded', tone: 'success', icon: CheckCircle2Icon },
+    PaymentCancelled: { label: 'Payment cancelled', tone: 'neutral', icon: BanIcon },
+    PaymentExpired: { label: 'Payment expired', tone: 'neutral', icon: TimerOffIcon },
+    PaymentRequiresReview: { label: 'Payment requires review', tone: 'warning', icon: SearchCheckIcon },
   },
   callback: {
     RECEIVED: { label: 'Received', tone: 'neutral', icon: InboxIcon },
@@ -136,13 +79,7 @@ const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
 };
 
 export function statusBadge(kind: BadgeKind, value: string): BadgeSpec {
-  return (
-    REGISTRY[kind][value] ?? {
-      label: humanizeCode(value),
-      tone: 'neutral',
-      icon: CircleDashedIcon,
-    }
-  );
+  return REGISTRY[kind][value] ?? { label: humanizeCode(value), tone: 'neutral', icon: CircleDashedIcon };
 }
 
 /** Tailwind classes per tone; shared so every badge reads the same in both themes. */

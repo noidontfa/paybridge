@@ -2,15 +2,8 @@
 
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { statusTransitionEntityTypeSchema } from '@/lib/api/schemas';
-import {
-  listStatusTransitions,
-  type AuditEntry,
-  type AuditListQuery,
-} from '@/lib/api/status-transitions';
-import type {
-  TableUrlConfig,
-  TableUrlState,
-} from '@/lib/url-state/table-url-state';
+import { listStatusTransitions, type AuditEntry, type AuditListQuery } from '@/lib/api/status-transitions';
+import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
 
 /** The audit log is always newest first, so there is nothing to sort in the URL. */
 export const AUDIT_URL_CONFIG: TableUrlConfig = {
@@ -44,9 +37,7 @@ export const auditKeys = {
 
 /** The table state as the endpoint's query; an entity type the endpoint would reject is dropped. */
 export function auditListQuery(state: TableUrlState): AuditListQuery {
-  const entityType = statusTransitionEntityTypeSchema.safeParse(
-    state.filters.entityType,
-  );
+  const entityType = statusTransitionEntityTypeSchema.safeParse(state.filters.entityType);
   return {
     entityType: entityType.success ? entityType.data : undefined,
     trigger: state.filters.trigger,
@@ -61,8 +52,7 @@ export function useAuditList(state: TableUrlState) {
   const query = auditListQuery(state);
   const result = useInfiniteQuery({
     queryKey: auditKeys.list({ ...query, cursor: state.cursor ?? undefined }),
-    queryFn: ({ pageParam, signal }) =>
-      listStatusTransitions({ ...query, cursor: pageParam }, signal),
+    queryFn: ({ pageParam, signal }) => listStatusTransitions({ ...query, cursor: pageParam }, signal),
     initialPageParam: state.cursor ?? undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,

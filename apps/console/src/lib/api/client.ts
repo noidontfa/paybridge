@@ -12,11 +12,7 @@ import { BFF_PREFIX } from '@/lib/bff';
 import { ApiError, CLIENT_ERROR_CODES } from './errors';
 import type { OverviewRange } from '@/lib/overview-range';
 import { overviewSchema, type Overview } from './overview-schema';
-import {
-  apiErrorBodySchema,
-  operatorPaymentSchema,
-  type OperatorPayment,
-} from './schemas';
+import { apiErrorBodySchema, operatorPaymentSchema, type OperatorPayment } from './schemas';
 
 /** Operator routes live under the API's internal prefix. */
 const INTERNAL = '/internal';
@@ -29,10 +25,7 @@ export interface RequestOptions {
 }
 
 function bffUrl(path: string, query?: RequestOptions['query']): string {
-  const url = new URL(
-    `${BFF_PREFIX}${path}`,
-    globalThis.location?.href ?? 'http://localhost',
-  );
+  const url = new URL(`${BFF_PREFIX}${path}`, globalThis.location?.href ?? 'http://localhost');
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined) url.searchParams.set(key, String(value));
   }
@@ -40,9 +33,7 @@ function bffUrl(path: string, query?: RequestOptions['query']): string {
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
-  const parsed = apiErrorBodySchema.safeParse(
-    await response.json().catch(() => undefined),
-  );
+  const parsed = apiErrorBodySchema.safeParse(await response.json().catch(() => undefined));
   if (parsed.success) {
     const { message, code, details } = parsed.data;
     return new ApiError({
@@ -55,8 +46,7 @@ async function toApiError(response: Response): Promise<ApiError> {
   return new ApiError({
     status: response.status,
     code: CLIENT_ERROR_CODES.unknown,
-    message:
-      `The API answered ${response.status} ${response.statusText}`.trim(),
+    message: `The API answered ${response.status} ${response.statusText}`.trim(),
   });
 }
 
@@ -69,17 +59,12 @@ export async function request<S extends z.ZodType>(
   try {
     response = await fetch(bffUrl(path, options.query), {
       method: options.method ?? 'GET',
-      headers:
-        options.body === undefined
-          ? undefined
-          : { 'content-type': 'application/json' },
-      body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+      headers: options.body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });
   } catch (cause) {
-    if (cause instanceof DOMException && cause.name === 'AbortError')
-      throw cause;
+    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
     throw new ApiError({
       status: 0,
       code: CLIENT_ERROR_CODES.network,
@@ -90,11 +75,7 @@ export async function request<S extends z.ZodType>(
   if (!response.ok) {
     const error = await toApiError(response);
     // The session has ended (the BFF cleared its cookies): back to sign-in.
-    if (
-      error.status === 401 &&
-      error.code === 'SESSION_EXPIRED' &&
-      typeof window !== 'undefined'
-    ) {
+    if (error.status === 401 && error.code === 'SESSION_EXPIRED' && typeof window !== 'undefined') {
       window.location.assign('/sign-in');
     }
     throw error;
@@ -113,24 +94,11 @@ export async function request<S extends z.ZodType>(
 }
 
 /** `GET /internal/payments/:id`: a Payment with its attempts, transitions and events. */
-export function getOperatorPayment(
-  id: string,
-  signal?: AbortSignal,
-): Promise<OperatorPayment> {
-  return request(
-    `${INTERNAL}/payments/${encodeURIComponent(id)}`,
-    operatorPaymentSchema,
-    { signal },
-  );
+export function getOperatorPayment(id: string, signal?: AbortSignal): Promise<OperatorPayment> {
+  return request(`${INTERNAL}/payments/${encodeURIComponent(id)}`, operatorPaymentSchema, { signal });
 }
 
 /** `GET /internal/overview?range=`: figures, chart data, gateway breakdown and recent Payments. */
-export function getOverview(
-  range: OverviewRange,
-  signal?: AbortSignal,
-): Promise<Overview> {
-  return request(`${INTERNAL}/overview`, overviewSchema, {
-    query: { range },
-    signal,
-  });
+export function getOverview(range: OverviewRange, signal?: AbortSignal): Promise<Overview> {
+  return request(`${INTERNAL}/overview`, overviewSchema, { query: { range }, signal });
 }

@@ -9,9 +9,5 @@ export const organizationKeys = {
 };
 
 export function useOrganizationList(enabled = true) {
-  return useQuery({
-    queryKey: organizationKeys.list(),
-    queryFn: ({ signal }) => listOrganizations(signal),
-    enabled,
-  });
+  return useQuery({ queryKey: organizationKeys.list(), queryFn: ({ signal }) => listOrganizations(signal), enabled });
 }

@@ -17,10 +17,7 @@ export class SignOut {
         hashRefreshToken(refreshToken),
       );
       if (stored) {
-        await repos.refreshTokens.revokeFamily(
-          stored.familyId,
-          this.clock.now(),
-        );
+        await repos.refreshTokens.revokeFamily(stored.familyId, this.clock.now());
       }
     });
   }

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatAbsoluteTime,
-  formatMoney,
-  formatOpenFor,
-  formatRelativeTime,
-} from './format';
+import { formatAbsoluteTime, formatMoney, formatOpenFor, formatRelativeTime } from './format';
 
 const plain = (text: string) => text.replace(/ /g, ' ');
 
@@ -22,9 +17,7 @@ describe('formatMoney', () => {
   });
 
   it('keeps every digit of amounts beyond float precision', () => {
-    expect(plain(formatMoney('9007199254740993'))).toBe(
-      '9.007.199.254.740.993 ₫',
-    );
+    expect(plain(formatMoney('9007199254740993'))).toBe('9.007.199.254.740.993 ₫');
   });
 
   it('rejects a value that is not a decimal string', () => {
@@ -43,9 +36,7 @@ describe('time formatting', () => {
   it('adds a relative hint, in the past and in the future', () => {
     const now = new Date(2026, 10, 25, 15, 30, 5);
     expect(formatRelativeTime(at.toISOString(), now)).toBe('1 hour ago');
-    expect(
-      formatRelativeTime(new Date(2026, 10, 25, 16, 30, 5).toISOString(), now),
-    ).toBe('in 1 hour');
+    expect(formatRelativeTime(new Date(2026, 10, 25, 16, 30, 5).toISOString(), now)).toBe('in 1 hour');
   });
 
   it('says how long a Review has been open', () => {

@@ -4,7 +4,11 @@ import { isRefreshTokenLive } from '../../domain/refresh-token.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import { AccessTokenService } from '../../port/access-token.service.js';
 import { IdentityClock } from '../../port/clock.js';
-import { hashRefreshToken, issueSession, type Session } from '../session.js';
+import {
+  hashRefreshToken,
+  issueSession,
+  type Session,
+} from '../session.js';
 
 /**
  * Trades a refresh token for a new access token and a new refresh token (the

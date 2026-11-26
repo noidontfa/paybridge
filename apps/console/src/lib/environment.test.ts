@@ -22,9 +22,7 @@ describe('server environment', () => {
   });
 
   it('refuses mock mode in a production build, like the BFF does', () => {
-    expect(() =>
-      getEnvironment({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'production' }),
-    ).toThrow(/production/);
+    expect(() => getEnvironment({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'production' })).toThrow(/production/);
   });
 
   it('ignores mock flag values other than "true"', () => {

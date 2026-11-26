@@ -63,10 +63,7 @@ describe('operatorPaymentSchema', () => {
   it('accepts the operator Payment detail response', () => {
     const parsed = operatorPaymentSchema.parse(sample);
     expect(parsed.attempts[0]?.reviewReason).toBe('AMBIGUOUS_PROVIDER_STATUS');
-    expect(parsed.attempts[1]?.nextAction).toEqual({
-      type: 'REDIRECT',
-      url: 'https://fake.example/pay/1',
-    });
+    expect(parsed.attempts[1]?.nextAction).toEqual({ type: 'REDIRECT', url: 'https://fake.example/pay/1' });
     expect(parsed.events[0]?.publishedAt).toBeNull();
   });
 
@@ -75,23 +72,16 @@ describe('operatorPaymentSchema', () => {
   });
 
   it('rejects an unknown Payment status', () => {
-    expect(
-      operatorPaymentSchema.safeParse({ ...sample, status: 'PAID' }).success,
-    ).toBe(false);
+    expect(operatorPaymentSchema.safeParse({ ...sample, status: 'PAID' }).success).toBe(false);
   });
 
   it('rejects a numeric amount', () => {
-    expect(
-      operatorPaymentSchema.safeParse({ ...sample, amount: 150000 }).success,
-    ).toBe(false);
+    expect(operatorPaymentSchema.safeParse({ ...sample, amount: 150000 }).success).toBe(false);
   });
 
   it('rejects an attempt without refundRequired', () => {
     const { refundRequired: _drop, ...broken } = sample.attempts[1]!;
-    expect(
-      operatorPaymentSchema.safeParse({ ...sample, attempts: [broken] })
-        .success,
-    ).toBe(false);
+    expect(operatorPaymentSchema.safeParse({ ...sample, attempts: [broken] }).success).toBe(false);
   });
 });
 
@@ -111,9 +101,6 @@ describe('apiErrorBodySchema', () => {
   });
 
   it('accepts a validation error with a message list and no code', () => {
-    expect(
-      apiErrorBodySchema.parse({ statusCode: 400, message: ['a', 'b'] })
-        .message,
-    ).toEqual(['a', 'b']);
+    expect(apiErrorBodySchema.parse({ statusCode: 400, message: ['a', 'b'] }).message).toEqual(['a', 'b']);
   });
 });

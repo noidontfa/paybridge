@@ -5,11 +5,7 @@
  * resolution mutation invalidates `reviewKeys.all` (list and summary) and the
  * Payment detail.
  */
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useQuery,
-} from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   getReviewSummary,
   listReviews,
@@ -19,10 +15,7 @@ import {
   type ReviewState,
 } from '@/lib/api/reviews';
 import type { ReviewReason } from '@/lib/api/schemas';
-import type {
-  TableUrlConfig,
-  TableUrlState,
-} from '@/lib/url-state/table-url-state';
+import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
 
 export const reviewKeys = {
   all: ['reviews'] as const,
@@ -44,8 +37,7 @@ export function reviewListQuery(state: TableUrlState): ReviewListQuery {
     reason: reason as ReviewReason | undefined,
     gatewayId,
     q: state.q || undefined,
-    state:
-      reviewState === 'closed' ? ('closed' satisfies ReviewState) : undefined,
+    state: reviewState === 'closed' ? ('closed' satisfies ReviewState) : undefined,
     sort: 'reviewOpenedAt',
     order: state.sort.desc ? 'desc' : 'asc',
   };
@@ -55,14 +47,12 @@ export function useReviewList(state: TableUrlState) {
   const query = reviewListQuery(state);
   const result = useInfiniteQuery({
     queryKey: reviewKeys.list({ ...query, cursor: state.cursor ?? undefined }),
-    queryFn: ({ pageParam, signal }) =>
-      listReviews({ ...query, cursor: pageParam }, signal),
+    queryFn: ({ pageParam, signal }) => listReviews({ ...query, cursor: pageParam }, signal),
     initialPageParam: state.cursor ?? undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });
-  const rows: ReviewItem[] =
-    result.data?.pages.flatMap((page) => page.items) ?? EMPTY;
+  const rows: ReviewItem[] = result.data?.pages.flatMap((page) => page.items) ?? EMPTY;
   return { ...result, rows };
 }
 

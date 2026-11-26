@@ -6,11 +6,7 @@
 import { z } from 'zod';
 import { request } from './client';
 import { listPageSchema, type ListPage, type ListQuery } from './pagination';
-import {
-  attemptStatusSchema,
-  decimalStringSchema,
-  paymentStatusSchema,
-} from './schemas';
+import { attemptStatusSchema, decimalStringSchema, paymentStatusSchema } from './schemas';
 
 export const PAYMENT_SORT_COLUMNS = ['createdAt', 'amount'] as const;
 export type PaymentSortColumn = (typeof PAYMENT_SORT_COLUMNS)[number];
@@ -28,9 +24,7 @@ export const paymentListItemSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   /** Null while the Payment has no PaymentTransaction yet. */
-  latestTransaction: z
-    .object({ gatewayId: z.string(), status: attemptStatusSchema })
-    .nullable(),
+  latestTransaction: z.object({ gatewayId: z.string(), status: attemptStatusSchema }).nullable(),
 });
 export type PaymentListItem = z.infer<typeof paymentListItemSchema>;
 
@@ -50,12 +44,6 @@ export interface PaymentListQuery extends ListQuery {
   order?: 'asc' | 'desc';
 }
 
-export function listPayments(
-  query: PaymentListQuery,
-  signal?: AbortSignal,
-): Promise<PaymentList> {
-  return request('/internal/payments', paymentListSchema, {
-    query: { ...query },
-    signal,
-  });
+export function listPayments(query: PaymentListQuery, signal?: AbortSignal): Promise<PaymentList> {
+  return request('/internal/payments', paymentListSchema, { query: { ...query }, signal });
 }

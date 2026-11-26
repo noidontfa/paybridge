@@ -73,14 +73,8 @@ export interface ReviewListQuery extends ListQuery {
   order?: 'asc' | 'desc';
 }
 
-export function listReviews(
-  query: ReviewListQuery,
-  signal?: AbortSignal,
-): Promise<ReviewList> {
-  return request('/internal/reviews', reviewListSchema, {
-    query: { ...query },
-    signal,
-  });
+export function listReviews(query: ReviewListQuery, signal?: AbortSignal): Promise<ReviewList> {
+  return request('/internal/reviews', reviewListSchema, { query: { ...query }, signal });
 }
 
 export function getReviewSummary(signal?: AbortSignal): Promise<ReviewSummary> {

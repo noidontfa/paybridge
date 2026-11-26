@@ -25,15 +25,8 @@ export const overviewSchema = z.object({
   successRate: rateSchema,
   openReviewCount: z.number().int().nonnegative(),
   /** Oldest first: 24 hourly buckets for `24h`, daily buckets for `7d` and `30d`. */
-  volumeSeries: z.array(
-    z.object({ start: z.string(), volume: decimalStringSchema }),
-  ),
-  statusCounts: z.array(
-    z.object({
-      status: paymentStatusSchema,
-      count: z.number().int().nonnegative(),
-    }),
-  ),
+  volumeSeries: z.array(z.object({ start: z.string(), volume: decimalStringSchema })),
+  statusCounts: z.array(z.object({ status: paymentStatusSchema, count: z.number().int().nonnegative() })),
   gateways: z.array(
     z.object({
       gatewayId: z.string(),

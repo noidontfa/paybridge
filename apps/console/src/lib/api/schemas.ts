@@ -10,12 +10,7 @@ import { z } from 'zod';
 
 // --- Vocabularies (apps/api/src/payment-core/domain/statuses.ts, records.ts) ---
 
-export const PAYMENT_STATUSES = [
-  'PENDING',
-  'SUCCEEDED',
-  'CANCELLED',
-  'EXPIRED',
-] as const;
+export const PAYMENT_STATUSES = ['PENDING', 'SUCCEEDED', 'CANCELLED', 'EXPIRED'] as const;
 export const paymentStatusSchema = z.enum(PAYMENT_STATUSES);
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 
@@ -50,24 +45,14 @@ export const PAYMENT_EVENT_TYPES = [
 export const paymentEventTypeSchema = z.enum(PAYMENT_EVENT_TYPES);
 export type PaymentEventType = z.infer<typeof paymentEventTypeSchema>;
 
-export const STATUS_TRANSITION_ENTITY_TYPES = [
-  'PAYMENT',
-  'PAYMENT_TRANSACTION',
-  'REFUND',
-] as const;
-export const statusTransitionEntityTypeSchema = z.enum(
-  STATUS_TRANSITION_ENTITY_TYPES,
-);
-export type StatusTransitionEntityType = z.infer<
-  typeof statusTransitionEntityTypeSchema
->;
+export const STATUS_TRANSITION_ENTITY_TYPES = ['PAYMENT', 'PAYMENT_TRANSACTION', 'REFUND'] as const;
+export const statusTransitionEntityTypeSchema = z.enum(STATUS_TRANSITION_ENTITY_TYPES);
+export type StatusTransitionEntityType = z.infer<typeof statusTransitionEntityTypeSchema>;
 
 // --- Shared building blocks ---
 
 /** Money crosses the wire as a decimal string in the major unit. */
-export const decimalStringSchema = z
-  .string()
-  .regex(/^-?\d+(\.\d+)?$/, 'Expected a decimal string');
+export const decimalStringSchema = z.string().regex(/^-?\d+(\.\d+)?$/, 'Expected a decimal string');
 const isoTimeSchema = z.string().min(1);
 
 export const nextActionSchema = z.discriminatedUnion('type', [

@@ -6,15 +6,9 @@
 import { z } from 'zod';
 import { request } from './client';
 import { listPageSchema, type ListPage, type ListQuery } from './pagination';
-import {
-  paymentEventSchema,
-  type PaymentEvent,
-  type PaymentEventType,
-} from './schemas';
+import { paymentEventSchema, type PaymentEvent, type PaymentEventType } from './schemas';
 
-export const paymentEventSummarySchema = paymentEventSchema.omit({
-  payload: true,
-});
+export const paymentEventSummarySchema = paymentEventSchema.omit({ payload: true });
 export type PaymentEventSummary = z.infer<typeof paymentEventSummarySchema>;
 
 export const paymentEventListSchema = listPageSchema(paymentEventSummarySchema);
@@ -28,23 +22,10 @@ export interface PaymentEventListQuery extends ListQuery {
   q?: string;
 }
 
-export function listPaymentEvents(
-  query: PaymentEventListQuery,
-  signal?: AbortSignal,
-): Promise<PaymentEventList> {
-  return request('/internal/payment-events', paymentEventListSchema, {
-    query: { ...query },
-    signal,
-  });
+export function listPaymentEvents(query: PaymentEventListQuery, signal?: AbortSignal): Promise<PaymentEventList> {
+  return request('/internal/payment-events', paymentEventListSchema, { query: { ...query }, signal });
 }
 
-export function getPaymentEvent(
-  id: string,
-  signal?: AbortSignal,
-): Promise<PaymentEvent> {
-  return request(
-    `/internal/payment-events/${encodeURIComponent(id)}`,
-    paymentEventSchema,
-    { signal },
-  );
+export function getPaymentEvent(id: string, signal?: AbortSignal): Promise<PaymentEvent> {
+  return request(`/internal/payment-events/${encodeURIComponent(id)}`, paymentEventSchema, { signal });
 }

@@ -44,9 +44,7 @@ export class Es256AccessTokenService extends AccessTokenService {
     const jwk = this.publicKey.export({ format: 'jwk' });
     // RFC 7638 thumbprint as the key id.
     this.kid = createHash('sha256')
-      .update(
-        JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y }),
-      )
+      .update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y }))
       .digest('base64url');
   }
 

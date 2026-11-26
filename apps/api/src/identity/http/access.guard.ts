@@ -43,9 +43,7 @@ export class AccessGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const targets = [context.getHandler(), context.getClass()];
-    if (
-      this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets)
-    ) {
+    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets)) {
       return true;
     }
     const request = context
@@ -93,10 +91,7 @@ export class AccessGuard implements CanActivate {
         user.organizationId,
       );
       if (!organization || organization.status !== 'ACTIVE') {
-        return refuse(
-          'Your Organization is suspended',
-          'ORGANIZATION_SUSPENDED',
-        );
+        return refuse('Your Organization is suspended', 'ORGANIZATION_SUSPENDED');
       }
     }
     return { ...principal, user: { ...claimed, name: user.name } };

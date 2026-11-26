@@ -19,26 +19,17 @@ export const gatewaySummarySchema = z.object({
 });
 export type GatewaySummary = z.infer<typeof gatewaySummarySchema>;
 
-export const gatewayListSchema = z.object({
-  items: z.array(gatewaySummarySchema),
-});
+export const gatewayListSchema = z.object({ items: z.array(gatewaySummarySchema) });
 export type GatewayList = z.infer<typeof gatewayListSchema>;
 
 const count = z.number().int().nonnegative();
 
 export const gatewayDetailSchema = gatewaySummarySchema.extend({
   /** Callbacks received in the last 24 hours, by inbox status (every status is present). */
-  callbackCounts: z.object({
-    RECEIVED: count,
-    PROCESSING: count,
-    PROCESSED: count,
-    FAILED: count,
-  }),
+  callbackCounts: z.object({ RECEIVED: count, PROCESSING: count, PROCESSED: count, FAILED: count }),
   lastCallbackAt: z.string().nullable(),
   /** Gateway errors in the last 24 hours by error category, most frequent first. */
-  recentErrors: z.array(
-    z.object({ category: z.string(), count: z.number().int().positive() }),
-  ),
+  recentErrors: z.array(z.object({ category: z.string(), count: z.number().int().positive() })),
 });
 export type GatewayDetail = z.infer<typeof gatewayDetailSchema>;
 
@@ -46,13 +37,6 @@ export function listGateways(signal?: AbortSignal): Promise<GatewayList> {
   return request('/internal/gateways', gatewayListSchema, { signal });
 }
 
-export function getGateway(
-  id: string,
-  signal?: AbortSignal,
-): Promise<GatewayDetail> {
-  return request(
-    `/internal/gateways/${encodeURIComponent(id)}`,
-    gatewayDetailSchema,
-    { signal },
-  );
+export function getGateway(id: string, signal?: AbortSignal): Promise<GatewayDetail> {
+  return request(`/internal/gateways/${encodeURIComponent(id)}`, gatewayDetailSchema, { signal });
 }

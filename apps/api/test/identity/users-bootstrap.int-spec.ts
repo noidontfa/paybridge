@@ -36,6 +36,13 @@ describe('the seed', () => {
 
     const roles = new Set<string>();
     for (const seeded of SEED_USERS) {
+      if (seeded.active === false) {
+        await signIn(app, {
+          email: seeded.email,
+          password: SEED_PASSWORD,
+        }).expect(403);
+        continue;
+      }
       const res = await signIn(app, {
         email: seeded.email,
         password: SEED_PASSWORD,
@@ -59,9 +66,7 @@ describe('the seed', () => {
       distinct: ['organizationId'],
       select: { organizationId: true },
     });
-    expect(
-      organizations.filter((o) => o.organizationId).length,
-    ).toBeGreaterThanOrEqual(2);
+    expect(organizations.filter((o) => o.organizationId).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -84,10 +89,7 @@ describe('the create-super-admin command', () => {
     await createUser(prisma, { role: 'SUPER_ADMIN' });
     const email = uniqueEmail();
 
-    const result = run(
-      ['--email', email, '--name', 'Root'],
-      'a-long-enough-password',
-    );
+    const result = run(['--email', email, '--name', 'Root'], 'a-long-enough-password');
 
     expect(result.status, result.stderr).toBe(0);
     const res = await signIn(app, {
@@ -114,19 +116,13 @@ describe('the create-super-admin command', () => {
   it('recovers an existing Super Admin: new password, active, signed out everywhere', async () => {
     const admin = await createUser(prisma, { role: 'SUPER_ADMIN' });
     const before = await signInOk(app, admin);
-    await prisma.user.update({
-      where: { id: admin.id },
-      data: { active: false },
-    });
+    await prisma.user.update({ where: { id: admin.id }, data: { active: false } });
 
     const result = run(['--email', admin.email], 'brand-new-password-1');
 
     expect(result.status, result.stderr).toBe(0);
     await signIn(app, admin).expect(401);
-    await signIn(app, {
-      email: admin.email,
-      password: 'brand-new-password-1',
-    }).expect(200);
+    await signIn(app, { email: admin.email, password: 'brand-new-password-1' }).expect(200);
     await refresh(app, before.refreshToken).expect(401);
   });
 
@@ -136,9 +132,6 @@ describe('the create-super-admin command', () => {
     const result = run(['--email', operator.email], 'a-long-enough-password');
 
     expect(result.status).toBe(1);
-    await signIn(app, {
-      email: operator.email,
-      password: 'a-long-enough-password',
-    }).expect(401);
+    await signIn(app, { email: operator.email, password: 'a-long-enough-password' }).expect(401);
   });
 });

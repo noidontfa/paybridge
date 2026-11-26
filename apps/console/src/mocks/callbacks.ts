@@ -5,32 +5,17 @@
  * the Attempt Key (null when the key matches no PaymentTransaction).
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import {
-  CALLBACK_STATUSES,
-  type CallbackDetail,
-  type CallbackListItem,
-} from '@/lib/api/callbacks';
+import { CALLBACK_STATUSES, type CallbackDetail, type CallbackListItem } from '@/lib/api/callbacks';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockCallback, MockStore } from './store';
 
 function toListItem(callback: MockCallback): CallbackListItem {
-  const {
-    headers: _headers,
-    query: _query,
-    rawBody: _rawBody,
-    lastError: _lastError,
-    ...item
-  } = callback;
+  const { headers: _headers, query: _query, rawBody: _rawBody, lastError: _lastError, ...item } = callback;
   return item;
 }
 
-export function toDetail(
-  store: MockStore,
-  callback: MockCallback,
-): CallbackDetail {
-  const attempt = callback.attemptKey
-    ? store.attempts.find((a) => a.id === callback.attemptKey)
-    : undefined;
+export function toDetail(store: MockStore, callback: MockCallback): CallbackDetail {
+  const attempt = callback.attemptKey ? store.attempts.find((a) => a.id === callback.attemptKey) : undefined;
   return { ...callback, paymentId: attempt?.paymentId ?? null };
 }
 
@@ -38,33 +23,19 @@ export function queryCallbacks(store: MockStore, params: URLSearchParams) {
   const window = readListWindow(params);
   const status = params.get('status') || null;
   if (status && !CALLBACK_STATUSES.some((s) => s === status)) {
-    throw new BadQueryError(
-      `status must be one of ${CALLBACK_STATUSES.join(', ')}`,
-    );
+    throw new BadQueryError(`status must be one of ${CALLBACK_STATUSES.join(', ')}`);
   }
   const gatewayId = params.get('gatewayId') || null;
   const q = (params.get('q') ?? '').trim().toLowerCase();
   const matches = (c: MockCallback) => {
-    const payment = store.getPayment(
-      store.attempts.find((a) => a.id === c.attemptKey)?.paymentId ?? '',
-    );
-    return [
-      c.id,
-      c.providerEventId,
-      c.attemptKey,
-      payment?.id,
-      payment?.upstreamReference,
-    ].some((value) => value?.toLowerCase().includes(q));
+    const payment = store.getPayment(store.attempts.find((a) => a.id === c.attemptKey)?.paymentId ?? '');
+    return [c.id, c.providerEventId, c.attemptKey, payment?.id, payment?.upstreamReference].some((value) => value?.toLowerCase().includes(q));
   };
   const rows = store.callbacks
     .filter((c) => !status || c.status === status)
     .filter((c) => !gatewayId || c.gatewayId === gatewayId)
     .filter((c) => !q || matches(c))
-    .sort(
-      (a, b) =>
-        Date.parse(b.receivedAt) - Date.parse(a.receivedAt) ||
-        (a.id < b.id ? -1 : 1),
-    )
+    .sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt) || (a.id < b.id ? -1 : 1))
     .map(toListItem);
   return pageOf(rows, window);
 }
@@ -78,12 +49,9 @@ export function callbacksHandlers(
   return [
     http.get(`${base}/internal/callbacks`, ({ request }) => {
       try {
-        return HttpResponse.json(
-          queryCallbacks(store, new URL(request.url).searchParams),
-        );
+        return HttpResponse.json(queryCallbacks(store, new URL(request.url).searchParams));
       } catch (error) {
-        if (error instanceof BadQueryError)
-          return badRequest(request, error.message);
+        if (error instanceof BadQueryError) return badRequest(request, error.message);
         throw error;
       }
     }),

@@ -56,30 +56,10 @@ const HOUR = 60 * MINUTE;
 const SCENARIOS: Scenario[] = [
   // Open Payments.
   { weight: 2, payment: 'PENDING', ageHours: [0.05, 0.4], attempts: [] },
-  {
-    weight: 1,
-    payment: 'PENDING',
-    ageHours: [0.05, 0.4],
-    attempts: [{ gateway: 'stripe', path: ['CREATED'] }],
-  },
-  {
-    weight: 3,
-    payment: 'PENDING',
-    ageHours: [0.05, 0.4],
-    attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING'] }],
-  },
-  {
-    weight: 3,
-    payment: 'PENDING',
-    ageHours: [0.05, 0.4],
-    attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING'] }],
-  },
-  {
-    weight: 2,
-    payment: 'PENDING',
-    ageHours: [0.1, 0.4],
-    attempts: [{ gateway: 'fake', path: ['CREATED', 'FAILED'] }],
-  },
+  { weight: 1, payment: 'PENDING', ageHours: [0.05, 0.4], attempts: [{ gateway: 'stripe', path: ['CREATED'] }] },
+  { weight: 3, payment: 'PENDING', ageHours: [0.05, 0.4], attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING'] }] },
+  { weight: 3, payment: 'PENDING', ageHours: [0.05, 0.4], attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING'] }] },
+  { weight: 2, payment: 'PENDING', ageHours: [0.1, 0.4], attempts: [{ gateway: 'fake', path: ['CREATED', 'FAILED'] }] },
   {
     weight: 2,
     payment: 'PENDING',
@@ -90,20 +70,8 @@ const SCENARIOS: Scenario[] = [
     ],
   },
   // Succeeded.
-  {
-    weight: 12,
-    payment: 'SUCCEEDED',
-    ageHours: [1, 700],
-    attempts: [
-      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'SUCCEEDED'] },
-    ],
-  },
-  {
-    weight: 8,
-    payment: 'SUCCEEDED',
-    ageHours: [1, 700],
-    attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'SUCCEEDED'] }],
-  },
+  { weight: 12, payment: 'SUCCEEDED', ageHours: [1, 700], attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'SUCCEEDED'] }] },
+  { weight: 8, payment: 'SUCCEEDED', ageHours: [1, 700], attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'SUCCEEDED'] }] },
   {
     weight: 3,
     payment: 'SUCCEEDED',
@@ -115,32 +83,16 @@ const SCENARIOS: Scenario[] = [
   },
   // Closed without success.
   { weight: 3, payment: 'CANCELLED', ageHours: [1, 700], attempts: [] },
-  {
-    weight: 3,
-    payment: 'CANCELLED',
-    ageHours: [1, 700],
-    attempts: [
-      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'CANCELLED'] },
-    ],
-  },
+  { weight: 3, payment: 'CANCELLED', ageHours: [1, 700], attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'CANCELLED'] }] },
   { weight: 4, payment: 'EXPIRED', ageHours: [1, 700], attempts: [] },
-  {
-    weight: 4,
-    payment: 'EXPIRED',
-    ageHours: [1, 700],
-    attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'EXPIRED'] }],
-  },
+  { weight: 4, payment: 'EXPIRED', ageHours: [1, 700], attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'EXPIRED'] }] },
   // A gateway switch: the first attempt is cancelled when the customer picks another gateway.
   {
     weight: 2,
     payment: 'PENDING',
     ageHours: [0.1, 0.4],
     attempts: [
-      {
-        gateway: 'stripe',
-        path: ['CREATED', 'PENDING', 'CANCELLED'],
-        switched: true,
-      },
+      { gateway: 'stripe', path: ['CREATED', 'PENDING', 'CANCELLED'], switched: true },
       { gateway: 'fake', path: ['CREATED', 'PENDING'] },
     ],
   },
@@ -176,37 +128,19 @@ const SCENARIOS: Scenario[] = [
     weight: 3,
     payment: 'PENDING',
     ageHours: [2, 150],
-    attempts: [
-      {
-        gateway: 'stripe',
-        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'],
-        reviewReason: 'AMBIGUOUS_PROVIDER_STATUS',
-      },
-    ],
+    attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'], reviewReason: 'AMBIGUOUS_PROVIDER_STATUS' }],
   },
   {
     weight: 2,
     payment: 'PENDING',
     ageHours: [2, 150],
-    attempts: [
-      {
-        gateway: 'fake',
-        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'],
-        reviewReason: 'AMBIGUOUS_PROVIDER_STATUS',
-      },
-    ],
+    attempts: [{ gateway: 'fake', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'], reviewReason: 'AMBIGUOUS_PROVIDER_STATUS' }],
   },
   {
     weight: 2,
     payment: 'PENDING',
     ageHours: [2, 150],
-    attempts: [
-      {
-        gateway: 'stripe',
-        path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'],
-        reviewReason: 'AMOUNT_MISMATCH',
-      },
-    ],
+    attempts: [{ gateway: 'stripe', path: ['CREATED', 'PENDING', 'REQUIRES_REVIEW'], reviewReason: 'AMOUNT_MISMATCH' }],
   },
   {
     weight: 2,
@@ -226,11 +160,7 @@ const SCENARIOS: Scenario[] = [
     payment: 'CANCELLED',
     ageHours: [10, 400],
     attempts: [
-      {
-        gateway: 'fake',
-        path: ['CREATED', 'PENDING', 'CANCELLED', 'REQUIRES_REVIEW'],
-        reviewReason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT',
-      },
+      { gateway: 'fake', path: ['CREATED', 'PENDING', 'CANCELLED', 'REQUIRES_REVIEW'], reviewReason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT' },
     ],
   },
   {
@@ -249,10 +179,7 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-const EVENT_FOR_CLOSING_STATUS: Record<
-  Exclude<PaymentStatus, 'PENDING'>,
-  PaymentEventType
-> = {
+const EVENT_FOR_CLOSING_STATUS: Record<Exclude<PaymentStatus, 'PENDING'>, PaymentEventType> = {
   SUCCEEDED: 'PaymentSucceeded',
   CANCELLED: 'PaymentCancelled',
   EXPIRED: 'PaymentExpired',
@@ -267,67 +194,43 @@ interface Cause {
 }
 
 /** What caused an attempt to move from one status to the next. */
-function attemptCause(
-  from: AttemptStatus | null,
-  to: AttemptStatus,
-  plan: AttemptPlan,
-): Cause {
-  if (from === 'REQUIRES_REVIEW' && plan.resolutionNote)
-    return { trigger: 'operator_resolution', actor: OPERATOR };
+function attemptCause(from: AttemptStatus | null, to: AttemptStatus, plan: AttemptPlan): Cause {
+  if (from === 'REQUIRES_REVIEW' && plan.resolutionNote) return { trigger: 'operator_resolution', actor: OPERATOR };
   if (from === null) return { trigger: 'start_attempt', actor: 'system' };
   switch (to) {
     case 'PENDING':
       return { trigger: 'gateway_accepted', actor: 'system' };
     case 'FAILED':
-      return from === 'CREATED'
-        ? { trigger: 'gateway_rejected', actor: 'system' }
-        : { trigger: 'webhook', actor: 'system' };
+      return from === 'CREATED' ? { trigger: 'gateway_rejected', actor: 'system' } : { trigger: 'webhook', actor: 'system' };
     case 'SUCCEEDED':
       return { trigger: 'webhook', actor: 'system' };
     case 'EXPIRED':
       return { trigger: 'expiry', actor: 'system' };
     case 'CANCELLED':
-      return plan.switched
-        ? { trigger: 'gateway_switch', actor: 'system' }
-        : { trigger: 'merchant_cancel', actor: 'merchant' };
+      return plan.switched ? { trigger: 'gateway_switch', actor: 'system' } : { trigger: 'merchant_cancel', actor: 'merchant' };
     case 'REQUIRES_REVIEW':
-      return from === 'PENDING'
-        ? { trigger: 'status_query', actor: 'system' }
-        : { trigger: 'webhook', actor: 'system' };
+      return from === 'PENDING' ? { trigger: 'status_query', actor: 'system' } : { trigger: 'webhook', actor: 'system' };
     default:
       return { trigger: 'start_attempt', actor: 'system' };
   }
 }
 
-export function createSeededStore(
-  options: { seed?: number; now?: Date } = {},
-): MockStore {
+export function createSeededStore(options: { seed?: number; now?: Date } = {}): MockStore {
   const random = createRandom(options.seed ?? DEFAULT_SEED);
   const store = new MockStore(options.now ?? SEED_NOW);
-  const deck = SCENARIOS.flatMap((scenario) =>
-    Array.from({ length: scenario.weight }, () => scenario),
-  );
+  const deck = SCENARIOS.flatMap((scenario) => Array.from({ length: scenario.weight }, () => scenario));
   for (let index = 0; index < PAYMENT_COUNT; index += 1) {
     seedPayment(store, random, deck[index % deck.length]!, index);
   }
-  seedCallbacks(
-    store,
-    createRandom((options.seed ?? DEFAULT_SEED) ^ 0xca11bac),
-  );
+  seedCallbacks(store, createRandom((options.seed ?? DEFAULT_SEED) ^ 0xca11bac));
   return store;
 }
 
-function seedPayment(
-  store: MockStore,
-  random: Random,
-  scenario: Scenario,
-  index: number,
-): void {
+function seedPayment(store: MockStore, random: Random, scenario: Scenario, index: number): void {
   const nowMs = store.now.getTime();
   const iso = (ms: number) => new Date(Math.min(ms, nowMs)).toISOString();
   const [minAge, maxAge] = scenario.ageHours;
-  const createdMs =
-    nowMs - Math.round((minAge + random.next() * (maxAge - minAge)) * HOUR);
+  const createdMs = nowMs - Math.round((minAge + random.next() * (maxAge - minAge)) * HOUR);
   const expiresMs = createdMs + random.pick([15, 30, 60]) * MINUTE;
 
   const payment: MockPayment = {
@@ -365,39 +268,22 @@ function seedPayment(
     });
   };
   let eventId = 0;
-  const emit = (
-    type: PaymentEventType,
-    atMs: number,
-    payload: Record<string, unknown>,
-  ) => {
+  const emit = (type: PaymentEventType, atMs: number, payload: Record<string, unknown>) => {
     eventId += 1;
     const recent = nowMs - atMs < HOUR;
     // Recent events may simply not have been relayed yet; a few old ones are stuck.
-    const unpublished = recent
-      ? random.next() < 0.4
-      : type !== 'PaymentCreated' && index % 11 === 0;
+    const unpublished = recent ? random.next() < 0.4 : type !== 'PaymentCreated' && index % 11 === 0;
     store.events.push({
       id: `${payment.id.slice(0, 8)}-e${eventId}`,
       type,
       paymentId: payment.id,
-      payload: {
-        paymentId: payment.id,
-        upstreamReference: payment.upstreamReference,
-        ...payload,
-      },
+      payload: { paymentId: payment.id, upstreamReference: payment.upstreamReference, ...payload },
       createdAt: iso(atMs),
       publishedAt: unpublished ? null : iso(atMs + random.int(1, 5) * SECOND),
     });
   };
 
-  transition(
-    'PAYMENT',
-    payment.id,
-    null,
-    'PENDING',
-    { trigger: 'create_payment', actor: 'merchant' },
-    createdMs,
-  );
+  transition('PAYMENT', payment.id, null, 'PENDING', { trigger: 'create_payment', actor: 'merchant' }, createdMs);
   emit('PaymentCreated', createdMs, {
     amount: payment.amount,
     currency: payment.currency,
@@ -426,22 +312,12 @@ function seedPayment(
     let previous: AttemptStatus | null = null;
     for (const status of plan.path) {
       if (status === 'EXPIRED') clock = Math.max(clock + SECOND, expiresMs);
-      else if (previous === 'EXPIRED' || previous === 'CANCELLED')
-        clock += random.int(60, 300) * MINUTE;
+      else if (previous === 'EXPIRED' || previous === 'CANCELLED') clock += random.int(60, 300) * MINUTE;
       else if (previous !== null) clock += random.int(5, 90) * SECOND;
-      const review =
-        status === 'REQUIRES_REVIEW' ? plan.reviewReason : undefined;
+      const review = status === 'REQUIRES_REVIEW' ? plan.reviewReason : undefined;
       const cause = attemptCause(previous, status, plan);
       const resolved = cause.trigger === 'operator_resolution';
-      transition(
-        'PAYMENT_TRANSACTION',
-        attempt.id,
-        previous,
-        status,
-        cause,
-        clock,
-        resolved ? plan.resolutionNote! : (review ?? null),
-      );
+      transition('PAYMENT_TRANSACTION', attempt.id, previous, status, cause, clock, resolved ? plan.resolutionNote! : (review ?? null));
       if (resolved) {
         // The Review is over; its reason stays (that is what makes it a closed Review) but nothing is owed.
         attempt.refundRequired = false;
@@ -452,20 +328,14 @@ function seedPayment(
       attempt.status = status;
       attempt.updatedAt = iso(clock);
       if (status === 'PENDING') {
-        attempt.providerRef =
-          plan.gateway === 'stripe'
-            ? `pi_${random.token(24)}`
-            : `FAKE-${random.token(10).toUpperCase()}`;
+        attempt.providerRef = plan.gateway === 'stripe' ? `pi_${random.token(24)}` : `FAKE-${random.token(10).toUpperCase()}`;
       }
       if (review) {
         attempt.reviewReason = review;
         attempt.reviewOpenedAt = iso(clock);
         attempt.refundRequired = review !== 'AMBIGUOUS_PROVIDER_STATUS';
         // The provider reported less than the Payment Amount (decimal strings, no float drift for whole VND).
-        if (review === 'AMOUNT_MISMATCH')
-          attempt.providerReportedAmount = String(
-            Math.floor(Number(payment.amount) * 0.9),
-          );
+        if (review === 'AMOUNT_MISMATCH') attempt.providerReportedAmount = String(Math.floor(Number(payment.amount) * 0.9));
         emit('PaymentRequiresReview', clock, {
           status: payment.status,
           attemptId: attempt.id,
@@ -477,41 +347,23 @@ function seedPayment(
         if (plan.note) {
           // The Operator annotates the open Review; its status does not change.
           const noteMs = clock + random.int(1, 30) * MINUTE;
-          transition(
-            'PAYMENT_TRANSACTION',
-            attempt.id,
-            status,
-            status,
-            { trigger: 'operator_note', actor: OPERATOR },
-            noteMs,
-            plan.note,
-          );
+          transition('PAYMENT_TRANSACTION', attempt.id, status, status, { trigger: 'operator_note', actor: OPERATOR }, noteMs, plan.note);
           clock = noteMs;
         }
       }
-      if (
-        planIndex === scenario.attempts.length - 1 &&
-        status === 'PENDING' &&
-        plan.path.at(-1) === 'PENDING'
-      ) {
+      if (planIndex === scenario.attempts.length - 1 && status === 'PENDING' && plan.path.at(-1) === 'PENDING') {
         attempt.nextAction = nextActionFor(plan.gateway, attempt, random);
       }
-      if (payment.status === 'SUCCEEDED' && status === 'SUCCEEDED')
-        paymentClosedMs = clock;
-      if (payment.status === 'CANCELLED' && status === 'CANCELLED')
-        paymentClosedMs = clock;
-      if (payment.status === 'EXPIRED' && status === 'EXPIRED')
-        paymentClosedMs = clock;
+      if (payment.status === 'SUCCEEDED' && status === 'SUCCEEDED') paymentClosedMs = clock;
+      if (payment.status === 'CANCELLED' && status === 'CANCELLED') paymentClosedMs = clock;
+      if (payment.status === 'EXPIRED' && status === 'EXPIRED') paymentClosedMs = clock;
       previous = status;
     }
   });
 
   if (payment.status !== 'PENDING') {
     // Payments without a closing attempt (cancelled or expired while idle) close on their own.
-    paymentClosedMs ??=
-      payment.status === 'EXPIRED'
-        ? expiresMs
-        : clock + random.int(1, 20) * MINUTE;
+    paymentClosedMs ??= payment.status === 'EXPIRED' ? expiresMs : clock + random.int(1, 20) * MINUTE;
     const cause: Cause =
       resolution ??
       (payment.status === 'CANCELLED'
@@ -519,40 +371,19 @@ function seedPayment(
         : payment.status === 'EXPIRED'
           ? { trigger: 'expiry', actor: 'system' }
           : { trigger: 'webhook', actor: 'system' });
-    transition(
-      'PAYMENT',
-      payment.id,
-      'PENDING',
-      payment.status,
-      cause,
-      paymentClosedMs,
-      resolutionNote,
-    );
-    emit(EVENT_FOR_CLOSING_STATUS[payment.status], paymentClosedMs, {
-      status: payment.status,
-    });
+    transition('PAYMENT', payment.id, 'PENDING', payment.status, cause, paymentClosedMs, resolutionNote);
+    emit(EVENT_FOR_CLOSING_STATUS[payment.status], paymentClosedMs, { status: payment.status });
     payment.updatedAt = iso(paymentClosedMs);
   } else {
     payment.updatedAt = iso(Math.max(clock, createdMs));
   }
 }
 
-function nextActionFor(
-  gateway: Gateway,
-  attempt: MockAttempt,
-  random: Random,
-): NextAction {
+function nextActionFor(gateway: Gateway, attempt: MockAttempt, random: Random): NextAction {
   if (gateway === 'stripe') {
-    return {
-      type: 'CLIENT_SDK',
-      token: `${attempt.providerRef}_secret_${random.token(16)}`,
-      clientParams: { mode: 'test' },
-    };
+    return { type: 'CLIENT_SDK', token: `${attempt.providerRef}_secret_${random.token(16)}`, clientParams: { mode: 'test' } };
   }
   return random.next() < 0.5
-    ? {
-        type: 'REDIRECT',
-        url: `https://fake.example/pay/${attempt.providerRef}`,
-      }
+    ? { type: 'REDIRECT', url: `https://fake.example/pay/${attempt.providerRef}` }
     : { type: 'QR_CODE', payload: `fake://pay/${attempt.providerRef}` };
 }

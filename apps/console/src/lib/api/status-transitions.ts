@@ -6,14 +6,9 @@
 import { z } from 'zod';
 import { request } from './client';
 import { listPageSchema, type ListPage, type ListQuery } from './pagination';
-import {
-  statusTransitionSchema,
-  type StatusTransitionEntityType,
-} from './schemas';
+import { statusTransitionSchema, type StatusTransitionEntityType } from './schemas';
 
-export const auditEntrySchema = statusTransitionSchema.extend({
-  paymentId: z.string().nullable(),
-});
+export const auditEntrySchema = statusTransitionSchema.extend({ paymentId: z.string().nullable() });
 export type AuditEntry = z.infer<typeof auditEntrySchema>;
 
 export const auditListSchema = listPageSchema(auditEntrySchema);
@@ -28,12 +23,6 @@ export interface AuditListQuery extends ListQuery {
   q?: string;
 }
 
-export function listStatusTransitions(
-  query: AuditListQuery,
-  signal?: AbortSignal,
-): Promise<AuditList> {
-  return request('/internal/status-transitions', auditListSchema, {
-    query: { ...query },
-    signal,
-  });
+export function listStatusTransitions(query: AuditListQuery, signal?: AbortSignal): Promise<AuditList> {
+  return request('/internal/status-transitions', auditListSchema, { query: { ...query }, signal });
 }

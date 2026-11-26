@@ -71,12 +71,7 @@ export interface MockGateway {
   callbackUrl: string;
 }
 
-const mockUser = (
-  id: string,
-  name: string,
-  role: 'OPERATOR' | 'ORGANIZATION_ADMIN',
-  active = true,
-): MockUser => ({
+const mockUser = (id: string, name: string, role: 'OPERATOR' | 'ORGANIZATION_ADMIN', active = true): MockUser => ({
   id,
   email: `${id}@example.test`,
   name,
@@ -96,20 +91,8 @@ export class MockStore {
 
   /** Only `stripe` and `fake` exist. Tests replace the contents to model other states. */
   readonly gateways: MockGateway[] = [
-    {
-      id: 'stripe',
-      registered: true,
-      configured: true,
-      mode: 'test',
-      callbackUrl: 'https://pay.example.test/webhooks/stripe',
-    },
-    {
-      id: 'fake',
-      registered: true,
-      configured: true,
-      mode: 'test',
-      callbackUrl: 'https://pay.example.test/webhooks/fake',
-    },
+    { id: 'stripe', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/stripe' },
+    { id: 'fake', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/fake' },
   ];
 
   /**
@@ -139,23 +122,17 @@ export class MockStore {
 
   /** Oldest first. */
   attemptsOf(paymentId: string): MockAttempt[] {
-    return this.attempts
-      .filter((a) => a.paymentId === paymentId)
-      .sort(byCreatedAt);
+    return this.attempts.filter((a) => a.paymentId === paymentId).sort(byCreatedAt);
   }
 
   /** The status trail of a Payment or an attempt, oldest first. */
   transitionsOf(entityId: string): StatusTransition[] {
-    return this.transitions
-      .filter((t) => t.entityId === entityId)
-      .sort(byCreatedAt);
+    return this.transitions.filter((t) => t.entityId === entityId).sort(byCreatedAt);
   }
 
   /** Oldest first. */
   eventsOf(paymentId: string): PaymentEvent[] {
-    return this.events
-      .filter((e) => e.paymentId === paymentId)
-      .sort(byCreatedAt);
+    return this.events.filter((e) => e.paymentId === paymentId).sort(byCreatedAt);
   }
 
   /** The operator Payment detail response (`GET /internal/payments/:id`). */
@@ -164,20 +141,15 @@ export class MockStore {
     if (!payment) return undefined;
     return {
       ...payment,
-      attempts: this.attemptsOf(id).map(
-        ({ paymentId: _paymentId, ...attempt }) => ({
-          ...attempt,
-          transitions: this.transitionsOf(attempt.id),
-        }),
-      ),
+      attempts: this.attemptsOf(id).map(({ paymentId: _paymentId, ...attempt }) => ({
+        ...attempt,
+        transitions: this.transitionsOf(attempt.id),
+      })),
       events: this.eventsOf(id),
     };
   }
 }
 
-function byCreatedAt(
-  a: { createdAt: string },
-  b: { createdAt: string },
-): number {
+function byCreatedAt(a: { createdAt: string }, b: { createdAt: string }): number {
   return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
 }

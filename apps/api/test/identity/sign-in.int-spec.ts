@@ -96,10 +96,7 @@ describe('sign-in', () => {
 
     const res = await signIn(app, user).expect(200);
 
-    expect(res.body.user).toMatchObject({
-      role: 'SUPER_ADMIN',
-      organization: null,
-    });
+    expect(res.body.user).toMatchObject({ role: 'SUPER_ADMIN', organization: null });
     expect(claimsOf(res.body.accessToken)).not.toHaveProperty('org');
   });
 
@@ -153,10 +150,7 @@ describe('sign-in', () => {
   it('does not reveal a deactivated account to someone who lacks the password', async () => {
     const user = await createUser(prisma, { active: false });
 
-    const res = await signIn(app, {
-      email: user.email,
-      password: 'nope-nope-nope',
-    });
+    const res = await signIn(app, { email: user.email, password: 'nope-nope-nope' });
 
     expect(res.status).toBe(401);
   });
@@ -170,9 +164,7 @@ describe('the principal', () => {
       .set('Authorization', 'Bearer not.a.jwt')
       .expect(401);
     await http()
-      .post(
-        '/internal/payments/00000000-0000-7000-8000-000000000009/review-resolution',
-      )
+      .post('/internal/payments/00000000-0000-7000-8000-000000000009/review-resolution')
       .send({})
       .expect(401);
   });
@@ -230,12 +222,7 @@ describe('the principal', () => {
     const res = await http().get('/.well-known/jwks.json').expect(200);
 
     expect(res.body.keys).toHaveLength(1);
-    expect(res.body.keys[0]).toMatchObject({
-      kty: 'EC',
-      crv: 'P-256',
-      alg: 'ES256',
-      use: 'sig',
-    });
+    expect(res.body.keys[0]).toMatchObject({ kty: 'EC', crv: 'P-256', alg: 'ES256', use: 'sig' });
     expect(res.body.keys[0]).not.toHaveProperty('d');
     const user = await createUser(prisma);
     const { accessToken } = await signInOk(app, user);
@@ -269,8 +256,7 @@ describe('refresh', () => {
     }
     // 6 x 23h = 138h. The 7 days (168h) since sign-in are not over yet.
     now = new Date(now.getTime() + 23 * HOUR);
-    tokens = (await refresh(app, tokens.refreshToken).expect(200))
-      .body as typeof tokens;
+    tokens = (await refresh(app, tokens.refreshToken).expect(200)).body as typeof tokens;
 
     // 161h + 23h = 184h > 168h: past the 7 days, whatever the activity.
     now = new Date(now.getTime() + 23 * HOUR);
@@ -315,10 +301,7 @@ describe('refresh', () => {
   it('refuses to refresh once the User is deactivated', async () => {
     const user = await createUser(prisma);
     const { refreshToken } = await signInOk(app, user);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { active: false },
-    });
+    await prisma.user.update({ where: { id: user.id }, data: { active: false } });
 
     await refresh(app, refreshToken).expect(401);
   });
@@ -341,10 +324,7 @@ describe('sign-out', () => {
     const user = await createUser(prisma);
     const { refreshToken } = await signInOk(app, user);
 
-    await http()
-      .post('/internal/auth/sign-out')
-      .send({ refreshToken })
-      .expect(204);
+    await http().post('/internal/auth/sign-out').send({ refreshToken }).expect(204);
 
     await refresh(app, refreshToken).expect(401);
   });
