@@ -32,7 +32,7 @@ export interface ForwardOptions {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ALLOWED_METHODS = ['GET', 'HEAD', 'POST'];
+const ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'DELETE'];
 const FORWARDED_PREFIX = 'internal';
 
 const isRead = (method: string) => method === 'GET' || method === 'HEAD';

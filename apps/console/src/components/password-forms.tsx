@@ -11,6 +11,8 @@ export const MIN_PASSWORD_LENGTH = 12;
 /** Messages for the refusals of reset, forgot and change-password calls. */
 export function passwordMessage(status: number, code: string | undefined): string {
   if (code === 'INVALID_RESET_TOKEN') return 'This reset link is invalid or has expired. Ask for a new one.';
+  if (code === 'INVALID_INVITATION_TOKEN') return 'This invitation link is invalid or has expired. Ask for a new one.';
+  if (code === 'EMAIL_TAKEN') return 'An account with this email already exists. Sign in instead.';
   if (code === 'INVALID_CURRENT_PASSWORD') return 'The current password is not right.';
   if (code === 'WEAK_PASSWORD') return `The new password needs at least ${MIN_PASSWORD_LENGTH} characters.`;
   if (code === 'ACCOUNT_DEACTIVATED') return 'This account has been deactivated. Ask your Organization Admin.';
@@ -144,6 +146,54 @@ export function ResetPasswordForm({ token }: { token: string | undefined }) {
       <ErrorText message={error} />
       <Button type="submit" disabled={pending}>
         {pending ? 'Saving…' : 'Set new password'}
+      </Button>
+    </form>
+  );
+}
+
+/** Accepts an Invitation: the invitee picks a name and their own password. */
+export function AcceptInvitationForm({ token }: { token: string | undefined }) {
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  if (!token) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {passwordMessage(400, 'INVALID_INVITATION_TOKEN')}
+      </p>
+    );
+  }
+  if (done) {
+    return (
+      <p role="status" className="text-sm">
+        Your account is ready. <Link href="/sign-in" className="underline">Sign in</Link> with your email and the password you chose.
+      </p>
+    );
+  }
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const password = field(form, 'password');
+    const problem = newPasswordProblem(password, field(form, 'confirmation'));
+    if (problem) return setError(problem);
+    setPending(true);
+    setError(null);
+    const outcome = await submit('/api/auth/accept-invitation', { token, name: field(form, 'name'), password });
+    if (outcome.ok) setDone(true);
+    else setError(outcome.message);
+    setPending(false);
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4" aria-label="Accept invitation">
+      <Field id="name" label="Your name" autoComplete="name" autoFocus />
+      <Field id="password" label="Password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} />
+      <Field id="confirmation" label="Repeat the password" type="password" autoComplete="new-password" />
+      <ErrorText message={error} />
+      <Button type="submit" disabled={pending}>
+        {pending ? 'Saving…' : 'Join'}
       </Button>
     </form>
   );

@@ -10,6 +10,15 @@ import { RequestPasswordReset } from './application/use-cases/request-password-r
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
+import { AcceptInvitation } from './application/use-cases/accept-invitation.js';
+import {
+  InvitationMailer,
+  ListPendingInvitations,
+  ResendInvitation,
+  RevokeInvitation,
+  SendInvitation,
+} from './application/use-cases/manage-invitations.js';
+import { InvitationsController } from './http/invitations.controller.js';
 import { ManageUsers } from './application/use-cases/manage-users.js';
 import { UsersController } from './http/users.controller.js';
 import { AccessGuard } from './http/access.guard.js';
@@ -43,6 +52,7 @@ import { UserRepository } from './port/user.repository.js';
     AuthController,
     JwksController,
     OrganizationsController,
+    InvitationsController,
     UsersController,
   ],
   providers: [
@@ -81,6 +91,12 @@ import { UserRepository } from './port/user.repository.js';
     RequestPasswordReset,
     CompletePasswordReset,
     ChangePassword,
+    InvitationMailer,
+    SendInvitation,
+    ResendInvitation,
+    RevokeInvitation,
+    ListPendingInvitations,
+    AcceptInvitation,
     ManageUsers,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],

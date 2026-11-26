@@ -72,6 +72,8 @@ const ORGANIZATIONS: Record<OrganizationKey, { id: string; name: string }> = {
 
 /** The one password every seeded User has. Development only: the seed refuses production. */
 export const SEED_PASSWORD = 'paybridge-dev-password';
+/** The seeded pending Invitation's link token (development only). */
+export const SEED_INVITATION_TOKEN = 'seed-pending-invitation-token';
 
 interface SeedUser {
   readonly key: string;
@@ -239,6 +241,25 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             },
           });
         }
+        // A pending Invitation, so the Invitations screen has data. Its link
+        // is /accept-invitation?token=SEED_INVITATION_TOKEN (development only).
+        const invitation = {
+          email: 'newcomer@default.paybridge.dev',
+          role: 'OPERATOR' as const,
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          invitedById: id('user:admin-primary'),
+          tokenHash: createHash('sha256')
+            .update(SEED_INVITATION_TOKEN)
+            .digest('hex'),
+          expiresAt: new Date(now + 7 * 24 * 60 * 60_000),
+          acceptedAt: null,
+          revokedAt: null,
+        };
+        await tx.invitation.upsert({
+          where: { id: id('invitation:pending') },
+          update: invitation,
+          create: { id: id('invitation:pending'), ...invitation },
+        });
         await insertChunked(rows.payments, (data) =>
           tx.payment.createMany({ data }),
         );
