@@ -42,6 +42,23 @@ export class GatewaysReadRepository {
     ];
   }
 
+  /** Gateway Connection ids in scope, by gateway id. */
+  async connectionIds(scope: ReadScope): Promise<Map<string, string[]>> {
+    const rows = await this.prisma.gatewayConnection.findMany({
+      where: scopeWhere(scope),
+      select: { id: true, gatewayId: true },
+      orderBy: { id: 'asc' },
+    });
+    const byGateway = new Map<string, string[]>();
+    for (const row of rows) {
+      byGateway.set(row.gatewayId, [
+        ...(byGateway.get(row.gatewayId) ?? []),
+        row.id,
+      ]);
+    }
+    return byGateway;
+  }
+
   async callbackHealth(
     scope: ReadScope,
     gatewayId: string,

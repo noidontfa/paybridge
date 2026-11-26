@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Queue } from 'bullmq';
-import type { OrganizationScope } from '../domain/organization-scope.js';
-import { GatewayManager } from '../gateway-manager/gateway-manager.js';
+import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
+import { organizationScope } from '../domain/organization-scope.js';
+import { ConnectionPlugins } from './connection-plugins.js';
 import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
 import { QUEUES, jobIds } from '../infrastructure/queue/queue.constants.js';
 import {
@@ -34,6 +35,19 @@ export interface IncomingCallback extends CallbackInput {
   readonly gatewayId: string;
 }
 
+/**
+ * Whose Gateway Connection verifies the Callback: the one the URL names, or
+ * (legacy route) the Organization's own for that gateway.
+ */
+export type CallbackTarget =
+  | { readonly connectionId: string }
+  | { readonly organizationId: string };
+
+/** The URL names no Gateway Connection for that gateway. */
+export class UnknownGatewayConnectionError extends Error {
+  override readonly name = 'UnknownGatewayConnectionError';
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -41,24 +55,29 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * the webhook inbox and returns the acknowledgement at once. Processing runs
  * later from the webhook queue.
  *
- * Throws `UnknownGatewayError` for an unregistered gateway; any other plugin
- * error propagates and nothing is stored.
+ * The Gateway Connection is resolved first and verifies with its own
+ * credentials; the Callback is stored with the connection's Organization, and
+ * a disabled connection still counts. Throws `UnknownGatewayConnectionError`
+ * for an unknown connection or one of another gateway, and
+ * `UnknownGatewayError` for an unregistered gateway; any other plugin error
+ * propagates and nothing is stored.
  */
 @Injectable()
 export class WebhookIntake {
   private readonly logger = new Logger(WebhookIntake.name);
 
   constructor(
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @InjectQueue(QUEUES.webhookInbox) private readonly queue: Queue,
   ) {}
 
   async receive(
-    scope: OrganizationScope,
+    target: CallbackTarget,
     callback: IncomingCallback,
   ): Promise<CallbackAck> {
-    const plugin = this.gateways.resolve(callback.gatewayId);
+    const { organizationId, plugin } = await this.resolve(target, callback);
+    const scope = organizationScope(organizationId);
 
     let parsed;
     try {
@@ -99,6 +118,36 @@ export class WebhookIntake {
 
     if (!duplicate) this.dispatch(entry.id);
     return parsed.ack;
+  }
+
+  private async resolve(
+    target: CallbackTarget,
+    callback: IncomingCallback,
+  ) {
+    if (!('connectionId' in target)) {
+      return {
+        organizationId: target.organizationId,
+        plugin: await this.plugins.forExisting(
+          target.organizationId,
+          callback.gatewayId,
+        ),
+      };
+    }
+    const connection = UUID.test(target.connectionId)
+      ? await this.runner.repositories.gatewayConnections.findById(
+          ALL_ORGANIZATIONS,
+          target.connectionId,
+        )
+      : null;
+    if (!connection || connection.gatewayId !== callback.gatewayId) {
+      throw new UnknownGatewayConnectionError(
+        `No Gateway Connection ${target.connectionId} for gateway "${callback.gatewayId}"`,
+      );
+    }
+    return {
+      organizationId: connection.organizationId,
+      plugin: this.plugins.forConnection(connection),
+    };
   }
 
   /**
