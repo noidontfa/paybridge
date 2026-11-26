@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  SECRET_OVERLAPS,
   WEBHOOK_EVENT_KINDS,
   type CreatedWebhookEndpoint,
+  type SecretOverlap,
   type WebhookEndpoint,
   type WebhookEndpointInput,
   type WebhookEventKind,
@@ -19,6 +21,7 @@ import { useSendTestWebhook } from '@/lib/queries/webhook-deliveries';
 import {
   useCreateWebhookEndpoint,
   useDeleteWebhookEndpoint,
+  useRollWebhookEndpointSecret,
   useSetWebhookEndpointEnabled,
   useUpdateWebhookEndpoint,
   useWebhookEndpoints,
@@ -139,8 +142,77 @@ function EndpointForm({
 }
 
 /**
+ * Rolls an endpoint's signing secret. The old secret keeps signing for the
+ * chosen time, so the Organization's system can switch without rejecting one.
+ */
+function RollSecretForm({
+  endpoint,
+  pending,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  endpoint: WebhookEndpoint;
+  pending: boolean;
+  error: Error | null;
+  onSubmit: (overlap: SecretOverlap) => Promise<unknown>;
+  onCancel: () => void;
+}) {
+  const [overlap, setOverlap] = useState<SecretOverlap>('24h');
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      await onSubmit(overlap);
+    } catch {
+      // Shown from the mutation's error below.
+    }
+  }
+
+  return (
+    <form
+      aria-label="Roll signing secret"
+      onSubmit={(e) => void submit(e)}
+      className="flex flex-col gap-3 rounded-xl border p-4"
+    >
+      <p className="text-sm">
+        Roll the signing secret of <span className="font-mono break-all">{endpoint.url}</span>. Until the old secret
+        expires, every Webhook carries a signature for each secret.
+      </p>
+      <label className="flex flex-col gap-1 text-sm">
+        Keep the old secret valid for
+        <select
+          value={overlap}
+          onChange={(e) => setOverlap(e.target.value as SecretOverlap)}
+          className="h-9 max-w-xs rounded-md border bg-transparent px-2"
+        >
+          {SECRET_OVERLAPS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={pending}>
+          Roll secret
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error.message}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+/**
  * Webhook Endpoints of the current Organization: add one (its signing secret
- * is shown once), edit, disable or enable, delete.
+ * is shown once), edit, roll its secret, disable or enable, delete.
  */
 export function WebhookEndpointsScreen() {
   const canManage = useCan('webhook-endpoints:manage');
@@ -149,8 +221,10 @@ export function WebhookEndpointsScreen() {
   const update = useUpdateWebhookEndpoint();
   const setEnabled = useSetWebhookEndpointEnabled();
   const remove = useDeleteWebhookEndpoint();
+  const roll = useRollWebhookEndpointSecret();
   const [created, setCreated] = useState<CreatedWebhookEndpoint | null>(null);
   const [editing, setEditing] = useState<WebhookEndpoint | null>(null);
+  const [rolling, setRolling] = useState<WebhookEndpoint | null>(null);
   // Remounts the add form after a success, so it starts empty again.
   const [formKey, setFormKey] = useState(0);
 
@@ -164,7 +238,19 @@ export function WebhookEndpointsScreen() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pb-6">
-      {editing ? (
+      {rolling ? (
+        <RollSecretForm
+          key={`roll-${rolling.id}`}
+          endpoint={rolling}
+          pending={roll.isPending}
+          error={roll.error}
+          onCancel={() => setRolling(null)}
+          onSubmit={async (overlap) => {
+            setCreated(await roll.mutateAsync({ id: rolling.id, overlap }));
+            setRolling(null);
+          }}
+        />
+      ) : editing ? (
         <EndpointForm
           key={`edit-${editing.id}`}
           label="Edit Webhook Endpoint"
@@ -232,7 +318,14 @@ export function WebhookEndpointsScreen() {
               <tr key={endpoint.id} className="border-t align-top">
                 <td className="py-2 font-mono break-all">{endpoint.url}</td>
                 <td className="font-mono">{endpoint.eventKinds.join(', ')}</td>
-                <td className="font-mono">{endpoint.secretPrefix}…</td>
+                <td>
+                  <span className="font-mono">{endpoint.secretPrefix}…</span>
+                  {endpoint.previousSecretExpiresAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Previous secret valid until {when(endpoint.previousSecretExpiresAt)}
+                    </p>
+                  )}
+                </td>
                 <td>
                   <div className="flex flex-wrap gap-1">
                     <Badge variant={endpoint.status === 'ENABLED' ? 'default' : 'secondary'}>
@@ -257,6 +350,17 @@ export function WebhookEndpointsScreen() {
                     onClick={() => setEditing(endpoint)}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Roll secret ${endpoint.url}`}
+                    onClick={() => {
+                      setEditing(null);
+                      setRolling(endpoint);
+                    }}
+                  >
+                    Roll secret
                   </Button>
                   <Button
                     variant="outline"

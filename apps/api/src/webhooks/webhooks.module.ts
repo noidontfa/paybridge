@@ -9,12 +9,20 @@ import {
   SendWebhooksByHand,
 } from './application/use-cases/webhook-deliveries.js';
 import { ManageWebhookEndpoints } from './application/use-cases/webhook-endpoints.js';
+import { WebhookDeliverySweep } from './application/sweeps/webhook-delivery-sweep.js';
+import {
+  WEBHOOK_RETENTION_OPTIONS,
+  WebhookRetention,
+  type WebhookRetentionOptions,
+} from './application/sweeps/webhook-retention.js';
 import { DeliverWebhook } from './application/workers/deliver-webhook.js';
 import { FanOutPaymentEvent } from './application/workers/fan-out-payment-event.js';
 import { WebhooksTransactionRunner } from './domain/repositories/transaction-runner.js';
 import { WebhookDeliveriesReadRepository } from './domain/repositories/webhook-deliveries-read.repository.js';
 import {
   DeliveryDispatcher,
+  MathRetryJitter,
+  RetryJitter,
   SecretCipher,
   SystemWebhooksClock,
   WebhooksClock,
@@ -31,6 +39,10 @@ import { WebhookEndpointTestsController } from './infrastructure/http/webhook-en
 import { WebhookEndpointsController } from './infrastructure/http/webhook-endpoints.controller.js';
 import { PrismaWebhookDeliveriesReadRepository } from './infrastructure/prisma/webhook-deliveries-read.repository.js';
 import { PrismaWebhooksTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
+import {
+  WebhookMaintenanceProcessor,
+  WebhookMaintenanceScheduler,
+} from './infrastructure/queue/maintenance.js';
 import {
   PaymentEventProcessor,
   WebhookDeliveryProcessor,
@@ -88,6 +100,25 @@ import {
     AttemptDelivery,
     ReadWebhookDeliveries,
     SendWebhooksByHand,
+    { provide: RetryJitter, useClass: MathRetryJitter },
+    {
+      provide: WEBHOOK_RETENTION_OPTIONS,
+      inject: [ConfigService],
+      useFactory: (
+        config: ConfigService<Env, true>,
+      ): WebhookRetentionOptions => ({
+        deliveryRetentionMs:
+          config.get('WEBHOOK_DELIVERY_RETENTION_DAYS', { infer: true }) *
+          24 *
+          60 *
+          60 *
+          1000,
+      }),
+    },
+    WebhookDeliverySweep,
+    WebhookRetention,
+    WebhookMaintenanceScheduler,
+    WebhookMaintenanceProcessor,
     DeliverWebhook,
     FanOutPaymentEvent,
     ManageWebhookEndpoints,

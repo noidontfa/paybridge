@@ -114,10 +114,12 @@ export class SendWebhooksByHand {
     const delivery = await repos.deliveries.findById(scope, deliveryId);
     if (!delivery) throw new WebhookDeliveryNotFoundError(deliveryId);
     const endpoint = await repos.endpoints.findById(scope, delivery.endpointId);
-    const result =
-      endpoint?.status === 'DISABLED'
-        ? refused(this.clock.now(), 'The Webhook Endpoint is disabled')
-        : await this.attempt.execute(delivery, endpoint);
+    const at = this.clock.now();
+    const result = !endpoint
+      ? refused(at, 'The Webhook Endpoint was deleted')
+      : endpoint.status === 'DISABLED'
+        ? refused(at, 'The Webhook Endpoint is disabled')
+        : await this.attempt.post(delivery, endpoint, at);
     const recorded = await this.runner.run((tx) =>
       tx.manualAttempts.recordResend(
         scope,
@@ -145,8 +147,9 @@ export class SendWebhooksByHand {
       endpointId,
     );
     if (!endpoint) throw new WebhookEndpointNotFoundError(endpointId);
-    const delivery = testDelivery(scope, endpoint, this.clock.now());
-    const result = await this.attempt.execute(delivery, endpoint);
+    const at = this.clock.now();
+    const delivery = testDelivery(scope, endpoint, at);
+    const result = await this.attempt.post(delivery, endpoint, at);
     await this.runner.run((tx) =>
       tx.manualAttempts.recordTestSend(
         scope,
@@ -176,5 +179,7 @@ function testDelivery(
     data: testEventData(endpoint.id),
     status: 'PENDING',
     attempts: 0,
+    // Sent once, now; a test delivery is never retried.
+    nextAttemptAt: null,
   };
 }

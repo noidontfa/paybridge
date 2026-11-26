@@ -11,10 +11,11 @@ import type { Actor } from '../entities/webhook-endpoint.js';
  */
 export abstract class ManualAttemptRepository {
   /**
-   * Records a resend of an existing delivery. A success delivers it; a
-   * failure leaves its status as it was, so an earlier success stays visible
-   * and automatic retries are not cut short. False when the Organization has
-   * no such delivery.
+   * Records a resend of an existing delivery. A success delivers it (and
+   * cancels any retry still due); a failure leaves its status and retry
+   * schedule as they were, so an earlier success stays visible and automatic
+   * retries go on. A resend is its own attempt, sent at once: it does not
+   * claim the delivery. False when the Organization has no such delivery.
    */
   abstract recordResend(
     scope: OrganizationScope,

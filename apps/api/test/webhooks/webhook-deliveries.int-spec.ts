@@ -447,6 +447,34 @@ describe('resending a delivery', () => {
     expect(await prisma.webhookDelivery.count()).toBe(1);
   });
 
+  it('signs with the previous secret too while a rolled one is still valid', async () => {
+    const endpoint = await registerEndpoint();
+    const delivery = await storeDelivery({
+      endpointId: endpoint.id,
+      createdAt: '2026-11-20T10:00:00.000Z',
+      status: 'FAILED',
+    });
+    const admin = await as('ORGANIZATION_ADMIN');
+    const rolled = await admin
+      .post(`/internal/webhook-endpoints/${endpoint.id}/roll-secret`)
+      .send({ previousSecretValidFor: '1h' })
+      .expect(200);
+    const newSecret = (rolled.body as { secret: string }).secret;
+
+    await admin.post(`${LIST}/${delivery.id}/resend`).send({}).expect(200);
+    await admin
+      .post(`/internal/webhook-endpoints/${endpoint.id}/test`)
+      .send({})
+      .expect(200);
+
+    expect(received).toHaveLength(2);
+    for (const { headers, body } of received) {
+      const header = headers['paybridge-signature'] as string;
+      expect(verifies(newSecret, header, body)).toBe(true);
+      expect(verifies(endpoint.secret, header, body)).toBe(true);
+    }
+  });
+
   it('records a failed resend without hiding an earlier success', async () => {
     const endpoint = await registerEndpoint();
     const delivery = await storeDelivery({

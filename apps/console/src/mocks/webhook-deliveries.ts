@@ -44,6 +44,7 @@ function endpoint(id: string, url: string, at: string): WebhookEndpoint {
     eventKinds: ['payment.created', 'payment.succeeded', 'payment.cancelled', 'payment.expired', 'payment.requires_review'],
     status: 'ENABLED',
     secretPrefix: 'whsec_pb_mock12',
+    previousSecretExpiresAt: null,
     createdAt: at,
     updatedAt: at,
     updatedBy: MOCK_ADMIN,

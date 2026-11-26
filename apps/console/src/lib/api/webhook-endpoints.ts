@@ -24,6 +24,8 @@ export const webhookEndpointSchema = z.object({
   eventKinds: z.array(z.string()),
   status: z.enum(['ENABLED', 'DISABLED']),
   secretPrefix: z.string(),
+  /** While set, Webhooks are signed with the previous secret too, until then. */
+  previousSecretExpiresAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   updatedBy: z.object({
@@ -62,6 +64,22 @@ export function setWebhookEndpointEnabled(id: string, enabled: boolean) {
   return request(`${BASE}/${encodeURIComponent(id)}/${enabled ? 'enable' : 'disable'}`, webhookEndpointSchema, {
     method: 'POST',
     body: {},
+  });
+}
+
+/** How long the old secret stays valid after a roll. */
+export const SECRET_OVERLAPS = [
+  { value: 'now', label: 'Not at all' },
+  { value: '1h', label: '1 hour' },
+  { value: '24h', label: '24 hours' },
+] as const;
+export type SecretOverlap = (typeof SECRET_OVERLAPS)[number]['value'];
+
+/** Replaces the signing secret; the new one is returned only here. */
+export function rollWebhookEndpointSecret(id: string, previousSecretValidFor: SecretOverlap) {
+  return request(`${BASE}/${encodeURIComponent(id)}/roll-secret`, createdWebhookEndpointSchema, {
+    method: 'POST',
+    body: { previousSecretValidFor },
   });
 }
 

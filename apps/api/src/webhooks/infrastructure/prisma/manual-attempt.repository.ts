@@ -48,7 +48,8 @@ export class PrismaManualAttemptRepository extends ManualAttemptRepository {
       where: { id: deliveryId, organizationId: scope.organizationId },
       data: {
         attempts: { increment: 1 },
-        ...(result.succeeded && { status: 'SUCCEEDED' }),
+        // Delivered: no automatic retry is due any more.
+        ...(result.succeeded && { status: 'SUCCEEDED', nextAttemptAt: null }),
       },
     });
     if (count === 0) return false;

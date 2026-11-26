@@ -7,6 +7,8 @@ import { isFailingEndpoint } from './webhook-deliveries';
 type ErrorInit = { status: number; error: string; code: string; message: string };
 
 const MOCK_ACTOR = { name: 'Mock Admin', role: 'ORGANIZATION_ADMIN', label: null };
+const OVERLAP_MS: Record<string, number> = { now: 0, '1h': 60 * 60 * 1000, '24h': 24 * 60 * 60 * 1000 };
+const newSecret = () => `whsec_pb_${Math.random().toString(36).slice(2).padEnd(43, 'x')}`;
 
 function validate(body: { url?: unknown; eventKinds?: unknown }, partial: boolean): string | null {
   if (body.url !== undefined || !partial) {
@@ -51,7 +53,7 @@ export function webhookEndpointsHandlers(
       const body = (await request.json().catch(() => ({}))) as { url?: unknown; eventKinds?: unknown };
       const problem = validate(body, false);
       if (problem) return invalid(request, problem);
-      const secret = `whsec_pb_${Math.random().toString(36).slice(2).padEnd(43, 'x')}`;
+      const secret = newSecret();
       const now = store.clock().toISOString();
       const created: WebhookEndpoint = {
         id: `endpoint-${store.webhookEndpoints.length + 1}`,
@@ -59,12 +61,33 @@ export function webhookEndpointsHandlers(
         eventKinds: body.eventKinds as string[],
         status: 'ENABLED',
         secretPrefix: secret.slice(0, 15),
+        previousSecretExpiresAt: null,
         createdAt: now,
         updatedAt: now,
         updatedBy: MOCK_ACTOR,
       };
       store.webhookEndpoints.push(created);
       return HttpResponse.json({ ...created, secret }, { status: 201 });
+    }),
+    http.post(`${base}/internal/webhook-endpoints/:id/roll-secret`, async ({ request, params }) => {
+      const found = find(params.id);
+      if (!found) return notFound(request);
+      const body = (await request.json().catch(() => ({}))) as { previousSecretValidFor?: unknown };
+      const overlap = OVERLAP_MS[String(body.previousSecretValidFor)];
+      if (overlap === undefined) {
+        return error(request, {
+          status: 400,
+          error: 'Bad Request',
+          code: 'VALIDATION_FAILED',
+          message: 'Choose how long the old secret stays valid',
+        });
+      }
+      const secret = newSecret();
+      const now = store.clock();
+      found.secretPrefix = secret.slice(0, 15);
+      found.previousSecretExpiresAt = overlap > 0 ? new Date(now.getTime() + overlap).toISOString() : null;
+      found.updatedAt = now.toISOString();
+      return HttpResponse.json({ ...found, secret });
     }),
     http.post(`${base}/internal/webhook-endpoints/:id/:action`, ({ request, params }) => {
       const found = find(params.id);
