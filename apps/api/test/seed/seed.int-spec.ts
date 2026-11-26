@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { hashApiKey } from '../../src/identity/application/api-key-secret.js';
 import { runSeed, SeedRefusedError } from '../../seed/seed.js';
+import { DEVELOPMENT_CREDENTIAL_KEYS } from '../../src/config/env.schema.js';
+import { AesCredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { testDatabaseUrl } from '../setup/test-database.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
@@ -356,6 +358,45 @@ describe('seed API Keys', () => {
       expect(row.keyHash).toBe(hashApiKey(issued.key));
       expect(issued.key.startsWith(row.prefix)).toBe(true);
     }
+  });
+});
+
+describe('seed Webhook Endpoint', () => {
+  it('points a Webhook Endpoint of the default Organization at a local receiver, kept across re-runs', async () => {
+    const first = await runSeed({
+      databaseUrl: DATABASE_URL,
+      nodeEnv: 'test',
+      now: NOW,
+    });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    const endpoints = await prisma.webhookEndpoint.findMany({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+    });
+    expect(endpoints).toHaveLength(1);
+    const [endpoint] = endpoints;
+    expect(endpoint).toMatchObject({
+      url: 'http://localhost:9998/webhooks',
+      status: 'ENABLED',
+      deletedAt: null,
+    });
+    expect([...endpoint!.eventKinds].sort()).toEqual([
+      'payment.cancelled',
+      'payment.created',
+      'payment.expired',
+      'payment.requires_review',
+      'payment.succeeded',
+    ]);
+    const cipher = AesCredentialCipher.fromConfig(DEVELOPMENT_CREDENTIAL_KEYS);
+    expect(
+      cipher.decrypt({
+        ciphertext: endpoint!.secretCiphertext,
+        keyId: endpoint!.secretKeyId,
+      }),
+    ).toBe(first.webhookEndpoint.secret);
+    expect(
+      first.webhookEndpoint.secret.startsWith(endpoint!.secretPrefix),
+    ).toBe(true);
   });
 });
 
