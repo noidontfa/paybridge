@@ -20,6 +20,7 @@ import {
   type PaymentSpec,
   type When,
 } from './scenarios.js';
+import { seedPricingPlans } from './pricing-plans.js';
 
 // Database seed (ticket 01). Writes straight to the database, outside Payment
 // Core, so it may use the database client and open its own transaction.
@@ -63,6 +64,7 @@ export interface SeedResult {
   transitions: number;
   callbacks: number;
   events: number;
+  pricingPlans: number;
 }
 
 const id = (name: string): string => v5(name, NAMESPACE);
@@ -267,6 +269,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   const now = (options.now ?? new Date()).getTime();
   const rows = buildRows(now, bulk);
   const passwordHash = await new Argon2PasswordHasher().hash(SEED_PASSWORD);
+  let pricingPlans = 0;
 
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: options.databaseUrl }),
@@ -380,6 +383,18 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
           update: invitation,
           create: { id: id('invitation:pending'), ...invitation },
         });
+        pricingPlans = await seedPricingPlans(tx, {
+          id,
+          now,
+          organizations: {
+            primary: ORGANIZATIONS.primary.id,
+            acme: ORGANIZATIONS.acme.id,
+          },
+          editors: {
+            primary: seedEditor('admin-primary'),
+            acme: seedEditor('admin-acme'),
+          },
+        });
         await insertChunked(rows.payments, (data) =>
           tx.payment.createMany({ data }),
         );
@@ -412,7 +427,14 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     transitions: rows.transitions.length,
     callbacks: rows.callbacks.length,
     events: rows.events.length,
+    pricingPlans,
   };
+}
+
+/** A seed User as the last editor of seeded rows. */
+function seedEditor(key: string) {
+  const user = SEED_USERS.find((u) => u.key === key)!;
+  return { userId: id(`user:${key}`), role: user.role, name: user.name };
 }
 
 type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];

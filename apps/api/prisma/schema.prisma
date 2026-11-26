@@ -3,7 +3,8 @@
 //
 // Conventions (spec: PostgreSQL schema; ADR 0001):
 // - Every table and enum type is mapped to a prefixed name: `core_` for Payment
-//   Core, `iam_` for the Identity module (ADR 0001). src/database/schema.spec.ts
+//   Core, `iam_` for the Identity module, `chk_` for the checkout module
+//   (ADR 0001). src/database/schema.spec.ts
 //   enforces the prefix and the partial indexes.
 // - Every `core_*` table that holds Organization data has a non-null
 //   `organization_id` foreign key to `iam_organizations` (ADR 0006).
@@ -134,6 +135,7 @@ model Organization {
   users               User[]
   invitations         Invitation[]
   apiKeys             ApiKey[]
+  pricingPlans        PricingPlan[]
   publishableKeys     PublishableKey[]
 
   @@map("iam_organizations")
@@ -496,4 +498,46 @@ model GatewayConnection {
 
   @@unique([organizationId, gatewayId], map: "core_gateway_connections_org_gateway_uq")
   @@map("core_gateway_connections")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): Pricing Plans
+// ---------------------------------------------------------------------------
+
+enum PricingPlanStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@map("chk_pricing_plan_status")
+}
+
+/// What an Organization sells for a fixed Amount. Payments copy the Amount and
+/// the name when they are created, so edits never touch them. `features` is an
+/// ordered JSON array of `{ text, included }`, plain text only. An empty
+/// `allowed_gateway_ids` means every enabled PaymentGateway. `amount > 0` and
+/// the Payment Expiry range are CHECK constraints in the migration.
+model PricingPlan {
+  id                String            @id @db.Uuid
+  organizationId    String            @map("organization_id") @db.Uuid
+  name              String
+  description       String
+  features          Json
+  amount            Decimal           @db.Decimal(19, 4)
+  currency          String
+  allowedGatewayIds String[]          @map("allowed_gateway_ids")
+  successUrl        String?           @map("success_url")
+  cancelUrl         String?           @map("cancel_url")
+  expiryMinutes     Int               @map("expiry_minutes")
+  status            PricingPlanStatus @default(ACTIVE)
+  /// The User who last changed it, with their Role and name at that moment.
+  updatedByUserId   String            @map("updated_by_user_id") @db.Uuid
+  updatedByRole     String            @map("updated_by_role")
+  updatedByName     String            @map("updated_by_name")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime          @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId, createdAt, id], map: "chk_pricing_plans_org_created_at_idx")
+  @@map("chk_pricing_plans")
 }

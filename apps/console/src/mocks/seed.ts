@@ -20,6 +20,7 @@ import type {
 import { createRandom, type Random } from './random';
 import { seedCallbacks } from './seed-callbacks';
 import { MockStore, type MockAttempt, type MockPayment } from './store';
+import { seedPricingPlans } from './pricing-plans';
 
 /** The fixed "now" of the mock world. */
 export const SEED_NOW = new Date('2026-11-25T03:00:00.000Z');
@@ -223,6 +224,7 @@ export function createSeededStore(options: { seed?: number; now?: Date } = {}): 
     seedPayment(store, random, deck[index % deck.length]!, index);
   }
   seedCallbacks(store, createRandom((options.seed ?? DEFAULT_SEED) ^ 0xca11bac));
+  seedPricingPlans(store);
   return store;
 }
 
