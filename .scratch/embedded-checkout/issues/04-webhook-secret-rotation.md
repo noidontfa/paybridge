@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An Organization Admin rolls an endpoint's secret. The new secret is returned in full once. The old secret stays valid until an end time chosen from a short list (for example now, 1 hour, 24 hours).
 - [ ] Until that end time, the signature header carries one signature per valid secret. Afterwards it carries only the new one.
