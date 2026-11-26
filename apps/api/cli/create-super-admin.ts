@@ -4,10 +4,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { CreateSuperAdmin } from '../src/identity/application/use-cases/create-super-admin.js';
 import { EmailTakenError } from '../src/identity/domain/errors.js';
-import { WeakPasswordError } from '../src/identity/domain/user.js';
+import { WeakPasswordError } from '../src/identity/domain/entities/user.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import { PrismaTransactionRunner } from '../src/identity/infrastructure/prisma/transaction-runner.js';
-import { SystemIdentityClock } from '../src/identity/port/clock.js';
+import { SystemIdentityClock } from '../src/identity/domain/services/clock.js';
 
 // `pnpm identity:create-super-admin --email you@example.com --name "Your Name"`
 // The password comes from SUPER_ADMIN_PASSWORD (preferred: it stays out of the

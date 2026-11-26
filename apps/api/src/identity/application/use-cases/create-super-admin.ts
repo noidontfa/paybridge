@@ -4,10 +4,10 @@ import {
   assertStrongPassword,
   normalizeEmail,
   type User,
-} from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
-import { PasswordHasher } from '../../port/password-hasher.js';
+} from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { PasswordHasher } from '../../domain/services/password-hasher.js';
 
 export interface CreateSuperAdminInput {
   readonly email: string;

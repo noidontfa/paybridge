@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InvalidRefreshTokenError } from '../../domain/errors.js';
-import { isRefreshTokenLive } from '../../domain/refresh-token.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { AccessTokenService } from '../../port/access-token.service.js';
-import { IdentityClock } from '../../port/clock.js';
+import { isRefreshTokenLive } from '../../domain/entities/refresh-token.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { AccessTokenService } from '../../domain/services/access-token.service.js';
+import { IdentityClock } from '../../domain/services/clock.js';
 import {
   hashRefreshToken,
   issueSession,

@@ -18,19 +18,19 @@ import { z } from 'zod';
 import {
   RequirePermission,
   RequireSensitivePermission,
-} from '../../common/principal/access-policy.js';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+} from '../../../common/principal/access-policy.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
-import { ManageUsers } from '../application/use-cases/manage-users.js';
+} from '../../../common/principal/principal.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
+import { ManageUsers } from '../../application/use-cases/manage-users.js';
 import {
   LastOrganizationAdminError,
   UserNotFoundError,
-} from '../domain/errors.js';
-import { MANAGED_ROLES, ROLE_LABELS, type User } from '../domain/user.js';
+} from '../../domain/errors.js';
+import { MANAGED_ROLES, ROLE_LABELS, type User } from '../../domain/entities/user.js';
 
 const roleSchema = z.object({
   role: z.enum(MANAGED_ROLES),

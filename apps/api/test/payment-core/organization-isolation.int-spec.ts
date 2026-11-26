@@ -4,7 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { permissionsOf } from '../../src/identity/domain/permissions.js';
-import { PrincipalResolver } from '../../src/identity/port/principal-resolver.js';
+import { PrincipalResolver } from '../../src/identity/domain/services/principal-resolver.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import {
   Clock,

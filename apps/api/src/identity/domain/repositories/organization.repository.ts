@@ -2,7 +2,7 @@ import type {
   NewOrganization,
   Organization,
   OrganizationStatus,
-} from '../domain/organization.js';
+} from '../entities/organization.js';
 
 /** Persistence port for Organizations. Implemented in `infrastructure/prisma`. */
 export abstract class OrganizationRepository {

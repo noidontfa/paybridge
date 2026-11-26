@@ -9,14 +9,14 @@ import { Reflector } from '@nestjs/core';
 import {
   ACCESS_POLICY_KEY,
   type AccessPolicy,
-} from '../../common/principal/access-policy.js';
+} from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { permissionsOf, type Permission } from '../domain/permissions.js';
-import { OrganizationRepository } from '../port/organization.repository.js';
-import { UserRepository } from '../port/user.repository.js';
+} from '../../../common/principal/principal.js';
+import { permissionsOf, type Permission } from '../../domain/permissions.js';
+import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
+import { UserRepository } from '../../domain/repositories/user.repository.js';
 import { IS_PUBLIC } from './principal.guard.js';
 
 const refuse = (message: string, code: string): never => {

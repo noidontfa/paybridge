@@ -5,14 +5,14 @@ import {
   InvitationPendingError,
 } from '../../domain/errors.js';
 import { newIdentityId } from '../../domain/ids.js';
-import { INVITATION_TTL_MS } from '../../domain/invitation.js';
+import { INVITATION_TTL_MS } from '../../domain/entities/invitation.js';
 import {
   OrganizationNotFoundError,
   type Organization,
-} from '../../domain/organization.js';
-import { normalizeEmail } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
+} from '../../domain/entities/organization.js';
+import { normalizeEmail } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
 import {
   hashInvitationToken,
   InvitationMailer,

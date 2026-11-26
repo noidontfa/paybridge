@@ -14,25 +14,25 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import {
   RequirePermission,
   RequireSensitivePermission,
-} from '../../common/principal/access-policy.js';
+} from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
-import { SendInvitation } from '../application/use-cases/manage-invitations.js';
-import { ManageSuperAdmins } from '../application/use-cases/manage-super-admins.js';
+} from '../../../common/principal/principal.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
+import { SendInvitation } from '../../application/use-cases/manage-invitations.js';
+import { ManageSuperAdmins } from '../../application/use-cases/manage-super-admins.js';
 import {
   EmailTakenError,
   InvitationPendingError,
   LastSuperAdminError,
   UserNotFoundError,
-} from '../domain/errors.js';
-import { ROLE_LABELS, type User } from '../domain/user.js';
+} from '../../domain/errors.js';
+import { ROLE_LABELS, type User } from '../../domain/entities/user.js';
 
 const inviteSchema = z.object({
   email: z.string().trim().min(3).max(320).includes('@'),

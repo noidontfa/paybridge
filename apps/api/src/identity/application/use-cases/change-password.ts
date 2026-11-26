@@ -4,10 +4,10 @@ import {
   OrganizationSuspendedError,
   UserDeactivatedError,
 } from '../../domain/errors.js';
-import { assertStrongPassword } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
-import { PasswordHasher } from '../../port/password-hasher.js';
+import { assertStrongPassword } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { PasswordHasher } from '../../domain/services/password-hasher.js';
 import { hashRefreshToken } from '../session.js';
 
 export interface ChangePasswordInput {

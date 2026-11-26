@@ -15,23 +15,23 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { RequireSensitivePermission } from '../../common/principal/access-policy.js';
+import { RequireSensitivePermission } from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
+} from '../../../common/principal/principal.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   CreateApiKey,
   ListApiKeys,
   RevokeApiKey,
-} from '../application/use-cases/api-keys.js';
+} from '../../application/use-cases/api-keys.js';
 import {
   ApiKeyNotFoundError,
   InvalidApiKeyLabelError,
   type ApiKey,
-} from '../domain/api-key.js';
+} from '../../domain/entities/api-key.js';
 
 const createSchema = z.object({ label: z.string().max(1000) });
 type CreateBody = z.output<typeof createSchema>;

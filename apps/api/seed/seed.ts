@@ -2,12 +2,12 @@ import { createHash } from 'node:crypto';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
-import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
+import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/entities/organization.js';
 import {
   API_KEY_PREFIX,
   hashApiKey,
 } from '../src/identity/application/api-key-secret.js';
-import type { UserRole } from '../src/identity/domain/user.js';
+import type { UserRole } from '../src/identity/domain/entities/user.js';
 import { DEVELOPMENT_CREDENTIAL_KEYS } from '../src/config/env.schema.js';
 import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';

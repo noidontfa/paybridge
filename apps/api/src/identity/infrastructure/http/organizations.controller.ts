@@ -14,26 +14,26 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import {
   RequirePermission,
   RequireSensitivePermission,
-} from '../../common/principal/access-policy.js';
+} from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
+} from '../../../common/principal/principal.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   CreateOrganization,
   SetOrganizationSuspension,
-} from '../application/use-cases/manage-organizations.js';
-import { EmailTakenError, InvitationPendingError } from '../domain/errors.js';
+} from '../../application/use-cases/manage-organizations.js';
+import { EmailTakenError, InvitationPendingError } from '../../domain/errors.js';
 import {
   OrganizationNotFoundError,
   type Organization,
-} from '../domain/organization.js';
-import { OrganizationRepository } from '../port/organization.repository.js';
+} from '../../domain/entities/organization.js';
+import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(200),

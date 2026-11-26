@@ -1,4 +1,4 @@
-import type { UserRole } from './user.js';
+import type { UserRole } from './entities/user.js';
 
 /** What a User may do. Checks are by Permission, never by Role name. */
 export const PERMISSIONS = [

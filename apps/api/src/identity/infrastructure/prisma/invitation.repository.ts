@@ -1,6 +1,6 @@
 import type { Invitation as InvitationRow } from '../../../generated/prisma/client.js';
-import type { Invitation, NewInvitation } from '../../domain/invitation.js';
-import { InvitationRepository } from '../../port/invitation.repository.js';
+import type { Invitation, NewInvitation } from '../../domain/entities/invitation.js';
+import { InvitationRepository } from '../../domain/repositories/invitation.repository.js';
 import type { DbContext } from './db.js';
 
 function toInvitation(row: InvitationRow): Invitation {

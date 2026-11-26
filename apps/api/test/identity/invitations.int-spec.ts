@@ -4,8 +4,8 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { RecordingEmailSender } from '../../src/identity/infrastructure/email/recording-email-sender.js';
-import { IdentityClock } from '../../src/identity/port/clock.js';
-import { EmailSender } from '../../src/identity/port/email-sender.js';
+import { IdentityClock } from '../../src/identity/domain/services/clock.js';
+import { EmailSender } from '../../src/identity/domain/services/email-sender.js';
 import { createOrganization } from '../setup/organizations.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import {

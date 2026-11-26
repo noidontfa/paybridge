@@ -1,7 +1,7 @@
 import type {
   NewPasswordReset,
   PasswordReset,
-} from '../domain/password-reset.js';
+} from '../entities/password-reset.js';
 
 export abstract class PasswordResetRepository {
   abstract create(reset: NewPasswordReset): Promise<void>;

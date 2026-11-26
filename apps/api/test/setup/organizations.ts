@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
-import { DEFAULT_ORGANIZATION_ID } from '../../src/identity/domain/organization.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../src/identity/domain/entities/organization.js';
 import { connectFakeGateway } from './reset-db.js';
 import { organizationScope } from '../../src/payment-core/domain/value-objects/organization-scope.js';
 

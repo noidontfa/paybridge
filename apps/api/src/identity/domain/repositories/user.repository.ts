@@ -1,4 +1,4 @@
-import type { NewUser, User, UserRole } from '../domain/user.js';
+import type { NewUser, User, UserRole } from '../entities/user.js';
 
 export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;

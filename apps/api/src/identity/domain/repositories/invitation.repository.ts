@@ -1,4 +1,4 @@
-import type { Invitation, NewInvitation } from '../domain/invitation.js';
+import type { Invitation, NewInvitation } from '../entities/invitation.js';
 
 export abstract class InvitationRepository {
   abstract create(invitation: NewInvitation): Promise<Invitation>;

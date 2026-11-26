@@ -20,29 +20,29 @@ import { z } from 'zod';
 import {
   RequirePermission,
   RequireSensitivePermission,
-} from '../../common/principal/access-policy.js';
+} from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
+} from '../../../common/principal/principal.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   ListPendingInvitations,
   ResendInvitation,
   RevokeInvitation,
   SendInvitation,
   type InvitationManager,
-} from '../application/use-cases/manage-invitations.js';
+} from '../../application/use-cases/manage-invitations.js';
 import {
   EmailTakenError,
   InvitationNotFoundError,
   InvitationPendingError,
   InvitationRoleForbiddenError,
   OrganizationRequiredError,
-} from '../domain/errors.js';
-import { ROLE_LABELS, USER_ROLES, type UserRole } from '../domain/user.js';
-import type { Invitation } from '../domain/invitation.js';
+} from '../../domain/errors.js';
+import { ROLE_LABELS, USER_ROLES, type UserRole } from '../../domain/entities/user.js';
+import type { Invitation } from '../../domain/entities/invitation.js';
 
 const inviteSchema = z.object({
   email: z.string().trim().min(3).max(320).includes('@'),

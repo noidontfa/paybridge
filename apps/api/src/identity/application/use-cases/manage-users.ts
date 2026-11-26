@@ -3,9 +3,9 @@ import {
   LastOrganizationAdminError,
   UserNotFoundError,
 } from '../../domain/errors.js';
-import type { ManagedRole, User, UserRole } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
+import type { ManagedRole, User, UserRole } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
 
 
 /**

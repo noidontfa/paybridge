@@ -6,8 +6,8 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PRINCIPAL_REQUEST_KEY } from '../../common/principal/principal.js';
-import { PrincipalResolver } from '../port/principal-resolver.js';
+import { PRINCIPAL_REQUEST_KEY } from '../../../common/principal/principal.js';
+import { PrincipalResolver } from '../../domain/services/principal-resolver.js';
 
 export const IS_PUBLIC = 'identity:public';
 

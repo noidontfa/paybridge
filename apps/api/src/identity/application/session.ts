@@ -3,11 +3,11 @@ import { newIdentityId } from '../domain/ids.js';
 import {
   ACCESS_TOKEN_TTL_MS,
   REFRESH_TOKEN_IDLE_MS,
-} from '../domain/refresh-token.js';
+} from '../domain/entities/refresh-token.js';
 import { permissionsOf, type Permission } from '../domain/permissions.js';
-import type { User, UserRole } from '../domain/user.js';
-import { AccessTokenService } from '../port/access-token.service.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { User, UserRole } from '../domain/entities/user.js';
+import { AccessTokenService } from '../domain/services/access-token.service.js';
+import type { Repositories } from '../domain/repositories/repositories.js';
 
 export interface SessionUser {
   readonly id: string;

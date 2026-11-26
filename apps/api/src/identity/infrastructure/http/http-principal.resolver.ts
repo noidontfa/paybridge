@@ -8,13 +8,13 @@ import { validate as isUuid } from 'uuid';
 import {
   ORGANIZATION_HEADER,
   type Principal,
-} from '../../common/principal/principal.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
-import { AccessTokenService } from '../port/access-token.service.js';
-import { IdentityClock } from '../port/clock.js';
-import { PrincipalResolver } from '../port/principal-resolver.js';
-import { AuthenticateApiKey } from '../application/use-cases/api-keys.js';
-import { InvalidApiKeyError } from '../domain/api-key.js';
+} from '../../../common/principal/principal.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
+import { AccessTokenService } from '../../domain/services/access-token.service.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { PrincipalResolver } from '../../domain/services/principal-resolver.js';
+import { AuthenticateApiKey } from '../../application/use-cases/api-keys.js';
+import { InvalidApiKeyError } from '../../domain/entities/api-key.js';
 
 interface RequestLike {
   readonly path?: string;

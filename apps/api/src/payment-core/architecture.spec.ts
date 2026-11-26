@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 // Build-time checks of the module boundaries (run by `pnpm test`), for Payment
-// Core and for the identity module, which is laid out the same way:
+// Core and for the identity module, which is laid out the same way
+// (domain/{entities,repositories,services}, application/, infrastructure/):
 // 1. The transaction runner is the only code that opens a database transaction.
 // 2. Outside `infrastructure/prisma`, a module never imports the database
 //    client, so repositories are the only place that sees Prisma types.
@@ -198,10 +199,10 @@ export function layerViolations(
   const importsApplication = /from\s+['"][^'"]*\/application\/[^'"]*['"]/;
   return sources
     .filter((f) => {
-      if (f.path.startsWith('payment-core/application/')) {
+      if (MODULES.some((m) => f.path.startsWith(`${m}/application/`))) {
         return importsInfrastructure.test(f.text);
       }
-      if (f.path.startsWith('payment-core/domain/')) {
+      if (MODULES.some((m) => f.path.startsWith(`${m}/domain/`))) {
         return (
           importsInfrastructure.test(f.text) || importsApplication.test(f.text)
         );
@@ -231,6 +232,24 @@ describe('layers depend inward', () => {
     ).toEqual([
       'payment-core/application/use-cases/x.ts',
       'payment-core/application/use-cases/console/y.ts',
+    ]);
+  });
+
+  it('flags an identity application file that imports infrastructure', () => {
+    expect(
+      layerViolations([
+        {
+          path: 'identity/application/use-cases/x.ts',
+          text: "import { T } from '../../infrastructure/prisma/transaction-runner.js';",
+        },
+        {
+          path: 'identity/domain/entities/y.ts',
+          text: "import { z } from '../../application/session.js';",
+        },
+      ]),
+    ).toEqual([
+      'identity/application/use-cases/x.ts',
+      'identity/domain/entities/y.ts',
     ]);
   });
 

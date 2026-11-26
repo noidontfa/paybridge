@@ -16,8 +16,7 @@ import {
   WebhookIntake,
   type CallbackTarget,
 } from '../../application/webhook-intake.js';
-import { DEFAULT_ORGANIZATION_ID } from '../../../identity/domain/organization.js';
-import { Public } from '../../../identity/http/principal.guard.js';
+import { DEFAULT_ORGANIZATION_ID, Public } from '../../../identity/port/index.js';
 import { UnknownGatewayError } from '../../application/gateway-manager.js';
 import type { CallbackAck, HeaderValues } from '../../port/index.js';
 

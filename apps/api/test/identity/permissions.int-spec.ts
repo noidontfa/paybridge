@@ -5,7 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { ACCESS_POLICY_KEY } from '../../src/common/principal/access-policy.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
-import { AccessTokenService } from '../../src/identity/port/access-token.service.js';
+import { AccessTokenService } from '../../src/identity/domain/services/access-token.service.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import {
   Clock,

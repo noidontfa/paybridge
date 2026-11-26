@@ -1,8 +1,8 @@
 import type {
   NewPasswordReset,
   PasswordReset,
-} from '../../domain/password-reset.js';
-import { PasswordResetRepository } from '../../port/password-reset.repository.js';
+} from '../../domain/entities/password-reset.js';
+import { PasswordResetRepository } from '../../domain/repositories/password-reset.repository.js';
 import type { DbContext } from './db.js';
 
 /** Password Resets in `iam_password_resets`, by hash only. */

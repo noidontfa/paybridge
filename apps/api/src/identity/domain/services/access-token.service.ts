@@ -1,5 +1,5 @@
-import type { Permission } from '../domain/permissions.js';
-import type { UserRole } from '../domain/user.js';
+import type { Permission } from '../permissions.js';
+import type { UserRole } from '../entities/user.js';
 
 /** What an access token says about the User it was issued to. */
 export interface AccessClaims {

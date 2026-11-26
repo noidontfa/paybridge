@@ -1,4 +1,4 @@
-import type { ApiKey, NewApiKey } from '../domain/api-key.js';
+import type { ApiKey, NewApiKey } from '../entities/api-key.js';
 
 /** Persistence port for API Keys. Implemented in `infrastructure/prisma`. */
 export abstract class ApiKeyRepository {

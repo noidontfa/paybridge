@@ -1,4 +1,4 @@
-import type { Principal } from '../../common/principal/principal.js';
+import type { Principal } from '../../../common/principal/principal.js';
 
 /**
  * Decides who is calling. The scope never comes from a body or query

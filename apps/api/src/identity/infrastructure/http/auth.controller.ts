@@ -14,23 +14,23 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
-import { SessionOnly } from '../../common/principal/access-policy.js';
+import { SessionOnly } from '../../../common/principal/access-policy.js';
 import {
   PRINCIPAL_REQUEST_KEY,
   type Principal,
-} from '../../common/principal/principal.js';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
-import { GetSessionUser } from '../application/use-cases/get-session-user.js';
-import { RefreshSession } from '../application/use-cases/refresh-session.js';
-import { ChangePassword } from '../application/use-cases/change-password.js';
-import { CompletePasswordReset } from '../application/use-cases/complete-password-reset.js';
-import { RequestPasswordReset } from '../application/use-cases/request-password-reset.js';
-import { SignIn } from '../application/use-cases/sign-in.js';
-import { SignOut } from '../application/use-cases/sign-out.js';
-import type { Session, SessionUser } from '../application/session.js';
-import { WeakPasswordError } from '../domain/user.js';
-import { AcceptInvitation } from '../application/use-cases/accept-invitation.js';
+} from '../../../common/principal/principal.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
+import { GetSessionUser } from '../../application/use-cases/get-session-user.js';
+import { RefreshSession } from '../../application/use-cases/refresh-session.js';
+import { ChangePassword } from '../../application/use-cases/change-password.js';
+import { CompletePasswordReset } from '../../application/use-cases/complete-password-reset.js';
+import { RequestPasswordReset } from '../../application/use-cases/request-password-reset.js';
+import { SignIn } from '../../application/use-cases/sign-in.js';
+import { SignOut } from '../../application/use-cases/sign-out.js';
+import type { Session, SessionUser } from '../../application/session.js';
+import { WeakPasswordError } from '../../domain/entities/user.js';
+import { AcceptInvitation } from '../../application/use-cases/accept-invitation.js';
 import {
   EmailTakenError,
   InvalidInvitationTokenError,
@@ -40,8 +40,8 @@ import {
   InvalidRefreshTokenError,
   OrganizationSuspendedError,
   UserDeactivatedError,
-} from '../domain/errors.js';
-import { AccessTokenService } from '../port/access-token.service.js';
+} from '../../domain/errors.js';
+import { AccessTokenService } from '../../domain/services/access-token.service.js';
 import { Public } from './principal.guard.js';
 
 const signInSchema = z.object({

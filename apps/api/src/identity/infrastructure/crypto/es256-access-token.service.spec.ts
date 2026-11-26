@@ -1,5 +1,5 @@
 import { generateKeyPairSync } from 'node:crypto';
-import type { AccessClaims } from '../../port/access-token.service.js';
+import type { AccessClaims } from '../../domain/services/access-token.service.js';
 import { Es256AccessTokenService } from './es256-access-token.service.js';
 
 const NOW = new Date('2026-05-01T10:00:00.000Z');

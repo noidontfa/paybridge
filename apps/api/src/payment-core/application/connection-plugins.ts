@@ -4,7 +4,7 @@ import {
   GatewayNotConnectedError,
 } from '../domain/errors.js';
 import type { GatewayConnection } from '../domain/entities/gateway-connection.js';
-import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/organization.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../identity/port/index.js';
 import { organizationScope } from '../domain/value-objects/organization-scope.js';
 import { GatewayManager } from './gateway-manager.js';
 import { CredentialCipher } from '../domain/services/credential-cipher.js';

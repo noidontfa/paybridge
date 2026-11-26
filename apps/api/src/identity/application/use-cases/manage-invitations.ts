@@ -13,11 +13,11 @@ import { newIdentityId } from '../../domain/ids.js';
 import {
   INVITATION_TTL_MS,
   type Invitation,
-} from '../../domain/invitation.js';
-import { normalizeEmail, type UserRole } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
-import { EmailSender } from '../../port/email-sender.js';
+} from '../../domain/entities/invitation.js';
+import { normalizeEmail, type UserRole } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { EmailSender } from '../../domain/services/email-sender.js';
 
 export function hashInvitationToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');

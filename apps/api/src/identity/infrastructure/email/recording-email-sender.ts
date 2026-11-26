@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type Email, EmailSender } from '../../port/email-sender.js';
+import { type Email, EmailSender } from '../../domain/services/email-sender.js';
 
 /** Test adapter: keeps every email it receives. Swap in with overrideProvider. */
 @Injectable()

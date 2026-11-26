@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
-import { IdentityClock } from '../../src/identity/port/clock.js';
+import { IdentityClock } from '../../src/identity/domain/services/clock.js';
 import { createOrganization } from '../setup/organizations.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import {

@@ -1,5 +1,5 @@
-import type { ApiKey, NewApiKey } from '../../domain/api-key.js';
-import { ApiKeyRepository } from '../../port/api-key.repository.js';
+import type { ApiKey, NewApiKey } from '../../domain/entities/api-key.js';
+import { ApiKeyRepository } from '../../domain/repositories/api-key.repository.js';
 import type { DbContext } from './db.js';
 
 /** API Keys in `iam_api_keys`, by hash only. */

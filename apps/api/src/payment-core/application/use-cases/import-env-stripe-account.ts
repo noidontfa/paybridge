@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DEFAULT_ORGANIZATION_ID } from '../../../identity/domain/organization.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../../identity/port/index.js';
 import { newId } from '../../domain/ids.js';
 import { organizationScope } from '../../domain/value-objects/organization-scope.js';
 import { CredentialCipher } from '../../domain/services/credential-cipher.js';
