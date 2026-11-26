@@ -3,7 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { resolveCredentialKeys } from '../src/config/env.schema.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { ReencryptGatewayCredentials } from '../src/payment-core/application/use-cases/manage-gateway-connections.js';
-import { ALL_ORGANIZATIONS } from '../src/payment-core/domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../src/payment-core/domain/value-objects/organization-scope.js';
 import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { PrismaTransactionRunner } from '../src/payment-core/infrastructure/prisma/transaction-runner.js';
 

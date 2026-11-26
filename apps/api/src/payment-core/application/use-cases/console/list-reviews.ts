@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { reviewResolvableAt } from '../../../domain/rules/review-resolution.js';
 import {
   ReviewsReadRepository,
   type ReviewListQuery,
   type ReviewRow,
-} from '../../../domain/console-read/reviews-read.repository.js';
+} from '../../../domain/repositories/console-read/reviews-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Reviews list cursor, by opening time; it only continues its own order. */

@@ -7,16 +7,16 @@ import {
   UnknownGatewayIdError,
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
-import type { GatewayConnection } from '../../domain/gateway-connection.js';
+import type { GatewayConnection } from '../../domain/entities/gateway-connection.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import { organizationScope } from '../../domain/organization-scope.js';
-import { UniqueViolationError } from '../../domain/repositories.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
-import { CredentialCipher } from '../../domain/credential-cipher.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+} from '../../domain/value-objects/organization-scope.js';
+import { organizationScope } from '../../domain/value-objects/organization-scope.js';
+import { UniqueViolationError } from '../../domain/repositories/repositories.js';
+import { GatewayManager } from '../gateway-manager.js';
+import { CredentialCipher } from '../../domain/services/credential-cipher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** What a response may say about a Gateway Connection: never the credentials. */
 export interface GatewayConnectionView {

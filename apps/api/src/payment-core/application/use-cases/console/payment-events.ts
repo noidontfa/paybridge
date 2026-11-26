@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   PaymentEventsReadRepository,
   type PaymentEventDetailRow,
   type PaymentEventListQuery,
   type PaymentEventSummaryRow,
-} from '../../../domain/console-read/payment-events-read.repository.js';
+} from '../../../domain/repositories/console-read/payment-events-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Payment Events list cursor: newest first by `createdAt`. */

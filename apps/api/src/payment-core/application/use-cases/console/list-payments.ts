@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { isDecimalString } from '../../../domain/amount.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import { isDecimalString } from '../../../domain/value-objects/amount.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   PaymentsReadRepository,
   type PaymentListQuery,
   type PaymentListRow,
   type PaymentSortColumn,
-} from '../../../domain/console-read/payments-read.repository.js';
+} from '../../../domain/repositories/console-read/payments-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Payments list cursor; it only continues the sort and order it was made for. */

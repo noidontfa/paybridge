@@ -1,8 +1,11 @@
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import { Inject, Injectable } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
-import { JobDispatcher, type JobOptions } from '../../domain/job-dispatcher.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import { Clock } from '../../domain/services/clock.js';
+import {
+  JobDispatcher,
+  type JobOptions,
+} from '../../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** Job name of one Payment to expire, on the payment-expiry queue. */
 export const EXPIRE_PAYMENT_JOB = 'expire-payment';

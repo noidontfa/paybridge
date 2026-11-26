@@ -1,5 +1,5 @@
 import { validate as isUuid } from 'uuid';
-import { isDecimalString } from '../../../domain/amount.js';
+import { isDecimalString } from '../../../domain/value-objects/amount.js';
 
 // Helpers shared by the operator read models (ADR 0005).
 

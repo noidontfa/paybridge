@@ -13,7 +13,7 @@ import {
   organizationScope,
   type OrganizationScope,
   type ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
 
 /**
  * The Organization scope of the authenticated caller (ADR 0006). It comes

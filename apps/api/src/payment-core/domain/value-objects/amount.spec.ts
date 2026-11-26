@@ -1,5 +1,5 @@
 import { parseAmount } from './amount.js';
-import { InvalidAmountError, UnsupportedCurrencyError } from './errors.js';
+import { InvalidAmountError, UnsupportedCurrencyError } from '../errors.js';
 
 describe('parseAmount', () => {
   it('accepts a whole-dong VND amount', () => {

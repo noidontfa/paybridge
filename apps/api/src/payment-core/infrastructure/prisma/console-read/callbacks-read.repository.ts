@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
 import { escapeLike, toStringRecord, uuidNeedle } from './read-helpers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import {
   CallbacksReadRepository,
   type CallbackListQuery,
   type CallbackListRow,
   type CallbackDetailRow,
-} from '../../../domain/console-read/callbacks-read.repository.js';
+} from '../../../domain/repositories/console-read/callbacks-read.repository.js';
 
 const LIST_SELECT = {
   id: true,

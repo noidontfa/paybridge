@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /**
  * Reads a Payment with all its attempts, oldest first (spec: Use cases,

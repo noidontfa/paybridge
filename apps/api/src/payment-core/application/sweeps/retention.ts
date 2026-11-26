@@ -1,7 +1,7 @@
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import { Inject, Injectable } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import { Clock } from '../../domain/services/clock.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

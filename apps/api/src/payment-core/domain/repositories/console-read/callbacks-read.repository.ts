@@ -1,5 +1,5 @@
-import type { ReadScope } from '../organization-scope.js';
-import type { WebhookInboxStatus } from '../records.js';
+import type { ReadScope } from '../../value-objects/organization-scope.js';
+import type { WebhookInboxStatus } from '../../records.js';
 
 export interface CallbackListFilters {
   readonly gatewayId?: string;

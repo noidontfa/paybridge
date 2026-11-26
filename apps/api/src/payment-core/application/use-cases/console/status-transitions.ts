@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   StatusTransitionsReadRepository,
   type StatusTransitionListQuery,
   type StatusTransitionRow,
-} from '../../../domain/console-read/status-transitions-read.repository.js';
+} from '../../../domain/repositories/console-read/status-transitions-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The audit log cursor: newest first by `createdAt`. */

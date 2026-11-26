@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Clock } from '../../../domain/clock.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import { Clock } from '../../../domain/services/clock.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   OverviewReadRepository,
   type OverviewData,
-} from '../../../domain/console-read/overview-read.repository.js';
+} from '../../../domain/repositories/console-read/overview-read.repository.js';
 
 export const OVERVIEW_RANGES = ['24h', '7d', '30d'] as const;
 export type OverviewRange = (typeof OVERVIEW_RANGES)[number];

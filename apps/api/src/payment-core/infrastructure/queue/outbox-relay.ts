@@ -1,4 +1,4 @@
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   Inject,
@@ -14,9 +14,9 @@ import {
   resolveOutboxRelayEnabled,
   type Env,
 } from '../../../config/env.schema.js';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import type { OutboxEvent, OutboxEventType } from '../../domain/records.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import { QUEUES, jobIds } from './queue.constants.js';
 
 /**

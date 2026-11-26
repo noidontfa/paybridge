@@ -2,19 +2,19 @@ import type {
   NewPayment,
   Payment,
   PaymentChanges,
-} from '../../domain/payment.js';
+} from '../../domain/entities/payment.js';
 import type {
   NewPaymentTransaction,
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../../domain/payment-transaction.js';
+} from '../../domain/entities/payment-transaction.js';
 import type { ReviewReason } from '../../domain/statuses.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import type { PaymentRepository } from '../../domain/repositories.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { PaymentRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import {
   definedOnly,

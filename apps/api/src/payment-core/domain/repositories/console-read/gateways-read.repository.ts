@@ -1,4 +1,4 @@
-import type { ReadScope } from '../organization-scope.js';
+import type { ReadScope } from '../../value-objects/organization-scope.js';
 
 export const CALLBACK_STATUSES = [
   'RECEIVED',

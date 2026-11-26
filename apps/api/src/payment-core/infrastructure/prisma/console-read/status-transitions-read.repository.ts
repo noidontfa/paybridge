@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { escapeLike, uuidNeedle } from './read-helpers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import type { StatusTransitionEntityType as TransitionEntityType } from '../../../domain/records.js';
 import { scopeSql } from '../scope.js';
 import {
   StatusTransitionsReadRepository,
   type StatusTransitionListQuery,
   type StatusTransitionRow,
-} from '../../../domain/console-read/status-transitions-read.repository.js';
+} from '../../../domain/repositories/console-read/status-transitions-read.repository.js';
 
 interface RawRow {
   id: string;

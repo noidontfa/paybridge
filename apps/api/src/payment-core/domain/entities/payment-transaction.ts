@@ -1,5 +1,5 @@
-import type { NextAction, ProviderMetadata } from '../port/index.js';
-import type { AttemptStatus, ReviewReason } from './statuses.js';
+import type { NextAction, ProviderMetadata } from '../../port/index.js';
+import type { AttemptStatus, ReviewReason } from '../statuses.js';
 
 /**
  * One attempt to collect a Payment through one gateway. `id` is the Attempt

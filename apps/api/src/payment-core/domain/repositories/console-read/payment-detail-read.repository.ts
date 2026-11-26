@@ -1,10 +1,10 @@
-import type { ReadScope } from '../organization-scope.js';
-import type { StatusTransitionEntityType } from '../records.js';
+import type { ReadScope } from '../../value-objects/organization-scope.js';
+import type { StatusTransitionEntityType } from '../../records.js';
 import type {
   AttemptStatus,
   PaymentStatus,
   ReviewReason,
-} from '../statuses.js';
+} from '../../statuses.js';
 
 export interface TransitionRow {
   readonly id: string;

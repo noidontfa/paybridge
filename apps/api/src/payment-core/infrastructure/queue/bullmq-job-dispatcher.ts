@@ -5,7 +5,7 @@ import {
   JobDispatcher,
   type JobQueue,
   type JobRequest,
-} from '../../domain/job-dispatcher.js';
+} from '../../domain/services/job-dispatcher.js';
 import { QUEUES, toJobId } from './queue.constants.js';
 
 /**

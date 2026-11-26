@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   PaymentDetailReadRepository,
   type PaymentDetailRow,
-} from '../../../domain/console-read/payment-detail-read.repository.js';
+} from '../../../domain/repositories/console-read/payment-detail-read.repository.js';
 
 /**
  * The operator Payment detail (`GET /internal/payments/:id`). Read only: no

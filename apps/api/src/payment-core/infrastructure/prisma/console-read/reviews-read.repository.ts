@@ -3,7 +3,7 @@ import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { REVIEW_REASONS, type ReviewReason } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import {
   escapeLike,
@@ -15,7 +15,7 @@ import {
   type ReviewListQuery,
   type ReviewRow,
   type ReviewCounts,
-} from '../../../domain/console-read/reviews-read.repository.js';
+} from '../../../domain/repositories/console-read/reviews-read.repository.js';
 
 /**
  * Read model behind the operator Reviews (ADR 0005). A Review is a

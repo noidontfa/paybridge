@@ -3,7 +3,7 @@ import {
   CredentialCipher,
   UnknownCredentialKeyError,
   type SealedValue,
-} from '../../domain/credential-cipher.js';
+} from '../../domain/services/credential-cipher.js';
 
 const IV_BYTES = 12;
 const TAG_BYTES = 16;

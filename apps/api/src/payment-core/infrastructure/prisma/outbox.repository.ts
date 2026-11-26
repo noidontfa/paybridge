@@ -3,8 +3,8 @@ import type { NewOutboxEvent, OutboxEvent } from '../../domain/records.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import type { OutboxRepository } from '../../domain/repositories.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { OutboxRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 

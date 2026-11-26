@@ -24,7 +24,7 @@ import {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
 import { CurrentReadScope, CurrentScope } from './current-scope.decorator.js';
 
 const createSchema = z.object({

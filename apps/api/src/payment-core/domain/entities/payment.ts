@@ -1,5 +1,5 @@
 import type { PaymentTransaction } from './payment-transaction.js';
-import type { PaymentStatus } from './statuses.js';
+import type { PaymentStatus } from '../statuses.js';
 
 /**
  * The Payment aggregate root, loaded with its attempts (oldest first).

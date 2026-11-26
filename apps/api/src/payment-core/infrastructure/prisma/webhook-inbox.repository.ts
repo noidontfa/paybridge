@@ -7,11 +7,11 @@ import type {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
 import type {
   RecordedWebhook,
   WebhookInboxRepository,
-} from '../../domain/repositories.js';
+} from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 

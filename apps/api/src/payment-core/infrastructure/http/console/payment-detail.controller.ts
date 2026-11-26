@@ -13,7 +13,7 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/filters/error-response.dto.js';
 import { CurrentReadScope } from '../current-scope.decorator.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { RequirePermission } from '../../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../../constants.js';
 import { GetPaymentDetail } from '../../../application/use-cases/console/get-payment-detail.js';

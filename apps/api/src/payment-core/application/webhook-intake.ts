@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
-import { organizationScope } from '../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../domain/value-objects/organization-scope.js';
+import { organizationScope } from '../domain/value-objects/organization-scope.js';
 import { ConnectionPlugins } from './connection-plugins.js';
-import { JobDispatcher } from '../domain/job-dispatcher.js';
-import { TransactionRunner } from '../domain/transaction-runner.js';
+import { JobDispatcher } from '../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../domain/repositories/transaction-runner.js';
 import {
   InvalidCallbackError,
   type CallbackAck,

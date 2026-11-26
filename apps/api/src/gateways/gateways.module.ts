@@ -6,11 +6,9 @@ import {
   resolveStripeConfig,
   type Env,
 } from '../config/env.schema.js';
-import {
-  registration,
-  type GatewayRegistration,
-} from '../payment-core/gateway-manager/gateway-plugin-factory.js';
-import { GATEWAY_PLUGINS } from '../payment-core/gateway-manager/gateway-plugins.token.js';
+import type { GatewayRegistration } from '../payment-core/port/index.js';
+import { registration } from '../payment-core/port/gateway-plugin-factory.js';
+import { GATEWAY_PLUGINS } from '../payment-core/port/gateway-plugins.token.js';
 import { fakeGatewayFactory } from './fake/fake-gateway.plugin.js';
 import { stripeGatewayFactory } from './stripe/stripe-gateway.plugin.js';
 
@@ -77,9 +75,7 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
           );
         } else {
           // No env account: the factory still serves Gateway Connections.
-          registrations.push(
-            registration(stripeFactory, undefined as never),
-          );
+          registrations.push(registration(stripeFactory, undefined as never));
         }
         return registrations;
       },

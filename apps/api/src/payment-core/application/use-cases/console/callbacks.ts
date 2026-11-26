@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   CallbacksReadRepository,
   type CallbackDetailRow,
   type CallbackListQuery,
   type CallbackListRow,
-} from '../../../domain/console-read/callbacks-read.repository.js';
+} from '../../../domain/repositories/console-read/callbacks-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Callbacks list cursor: newest first by `receivedAt`. */

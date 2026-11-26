@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
 import { escapeLike, uuidNeedle } from './read-helpers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import {
   PaymentEventsReadRepository,
   type PaymentEventListQuery,
   type PaymentEventSummaryRow,
   type PaymentEventDetailRow,
-} from '../../../domain/console-read/payment-events-read.repository.js';
+} from '../../../domain/repositories/console-read/payment-events-read.repository.js';
 
 /** Read model behind the operator Payment Events pages (stored in `core_outbox_events`). */
 @Injectable()

@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { createHash, createHmac } from 'node:crypto';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Logger, type INestApplication } from '@nestjs/common';
@@ -14,7 +14,7 @@ import {
 } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { IdentityModule } from '../../src/identity/identity.module.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';

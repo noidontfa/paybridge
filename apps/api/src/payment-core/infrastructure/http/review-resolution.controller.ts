@@ -22,7 +22,7 @@ import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js'
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { PaymentService } from '../../application/payment.service.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
+import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
 import {
   CurrentActor,
   CurrentScope,

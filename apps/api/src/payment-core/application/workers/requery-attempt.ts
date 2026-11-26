@@ -1,17 +1,17 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   ALL_ORGANIZATIONS,
   organizationScope,
   type OrganizationScope,
-} from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
-import type { PaymentTransaction } from '../../domain/payment-transaction.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
+import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { isReviewRequeryEligible } from '../../domain/rules/review-requery.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   GatewayNotFoundError,
   isGatewayError,

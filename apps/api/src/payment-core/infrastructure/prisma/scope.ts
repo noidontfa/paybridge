@@ -1,5 +1,5 @@
 import { Prisma } from '../../../generated/prisma/client.js';
-import type { ReadScope } from '../../domain/organization-scope.js';
+import type { ReadScope } from '../../domain/value-objects/organization-scope.js';
 
 /**
  * The `where` fragment that limits a Prisma query to the scope's

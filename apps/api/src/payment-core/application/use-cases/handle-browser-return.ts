@@ -1,11 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
-import type { ReadScope } from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+import type { ReadScope } from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
-import { JobDispatcher } from '../../domain/job-dispatcher.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import { JobDispatcher } from '../../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** BullMQ job name for one attempt status query (`RequeryAttempt` consumes it). */
 export const QUERY_ATTEMPT_JOB = 'query-attempt';

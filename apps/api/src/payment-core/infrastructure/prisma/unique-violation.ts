@@ -1,5 +1,5 @@
 import { Prisma } from '../../../generated/prisma/client.js';
-import { UniqueViolationError } from '../../domain/repositories.js';
+import { UniqueViolationError } from '../../domain/repositories/repositories.js';
 
 /**
  * True when `error` is a unique-constraint violation (Prisma `P2002`). Internal

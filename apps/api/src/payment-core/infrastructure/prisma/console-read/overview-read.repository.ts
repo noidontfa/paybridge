@@ -7,13 +7,13 @@ import {
 } from '../../../domain/statuses.js';
 import { TERMINAL_PAYMENT_STATUSES as CLOSED_STATUSES } from '../../../domain/rules/payment-transitions.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeSql, scopeWhere } from '../scope.js';
 import {
   OverviewReadRepository,
   type OverviewWindow,
   type OverviewData,
-} from '../../../domain/console-read/overview-read.repository.js';
+} from '../../../domain/repositories/console-read/overview-read.repository.js';
 
 const RECENT_COUNT = 8;
 const CURRENCY = 'VND';

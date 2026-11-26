@@ -9,7 +9,7 @@ import { FixtureHttpClient } from '../../src/gateways/stripe/fixture-http-client
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { ImportEnvStripeAccount } from '../../src/payment-core/application/use-cases/import-env-stripe-account.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { CredentialCipher } from '../../src/payment-core/domain/credential-cipher.js';
+import { CredentialCipher } from '../../src/payment-core/domain/services/credential-cipher.js';
 import {
   DEFAULT_ORGANIZATION_ID,
   ensureOtherOrganization,

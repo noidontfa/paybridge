@@ -1,14 +1,17 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import { RequeryAttempt } from '../../src/payment-core/application/workers/requery-attempt.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import type { ReviewReason } from '../../src/payment-core/domain/statuses.js';
-import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { ReviewRequerySweep } from '../../src/payment-core/application/sweeps/review-requery-sweep.js';
 import { resetDatabase } from '../setup/reset-db.js';

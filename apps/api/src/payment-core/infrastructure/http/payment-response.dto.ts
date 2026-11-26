@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { PaymentSnapshot } from '../../application/use-cases/create-payment.js';
-import type { Payment } from '../../domain/payment.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import { PAYMENT_STATUSES, type PaymentStatus } from '../../domain/statuses.js';
 
 /** A Payment as the HTTP API returns it. */

@@ -6,9 +6,12 @@ import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { permissionsOf } from '../../src/identity/domain/permissions.js';
 import { PrincipalResolver } from '../../src/identity/port/principal-resolver.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import {
   DEFAULT_ORGANIZATION_ID,

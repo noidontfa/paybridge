@@ -3,9 +3,9 @@ import {
   type DynamicModule,
   type ModuleMetadata,
 } from '@nestjs/common';
-import type { GatewayRegistration } from './gateway-plugin-factory.js';
-import { GatewayManager } from './gateway-manager.js';
-import { GATEWAY_PLUGINS } from './gateway-plugins.token.js';
+import type { GatewayRegistration } from './port/gateway-plugin-factory.js';
+import { GatewayManager } from './application/gateway-manager.js';
+import { GATEWAY_PLUGINS } from './port/gateway-plugins.token.js';
 
 export interface GatewayManagerModuleOptions {
   /** Module(s) from the composition root that export `GATEWAY_PLUGINS`. */

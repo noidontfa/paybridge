@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import type { GatewayMode } from '../../../port/payment-gateway.port.js';
-import { GatewayManager } from '../../../gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../gateway-manager.js';
 import {
   GatewaysReadRepository,
   type CallbackStatus,
-} from '../../../domain/console-read/gateways-read.repository.js';
+} from '../../../domain/repositories/console-read/gateways-read.repository.js';
 
 /** Public origin of the API (`PUBLIC_BASE_URL`, no trailing slash). */
 export const PUBLIC_BASE_URL = Symbol('PUBLIC_BASE_URL');

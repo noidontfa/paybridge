@@ -1,4 +1,4 @@
-import type { PaymentGateway } from '../port/index.js';
+import type { PaymentGateway } from './payment-gateway.port.js';
 
 /**
  * Builds a Gateway Plugin instance from one set of credentials. Each plugin
@@ -12,11 +12,17 @@ export interface GatewayPluginFactory<C = never> {
    * (`fake`): its Gateway Connection holds none.
    */
   readonly credentialsSchema?: {
-    safeParse(
-      value: unknown,
-    ):
+    safeParse(value: unknown):
       | { success: true; data: C }
-      | { success: false; error: { issues: readonly { message: string; path: readonly PropertyKey[] }[] } };
+      | {
+          success: false;
+          error: {
+            issues: readonly {
+              message: string;
+              path: readonly PropertyKey[];
+            }[];
+          };
+        };
   };
   create(credentials: C): PaymentGateway;
 }
@@ -45,17 +51,4 @@ export function fixedPlugin(plugin: PaymentGateway): GatewayRegistration {
     { gatewayId: plugin.gatewayId, create: () => plugin },
     undefined,
   );
-}
-
-/** Identifies one built instance in the Gateway Manager's cache. */
-export interface PluginInstanceKey {
-  readonly connectionId?: string;
-  readonly credentialsVersion?: number;
-}
-
-export function pluginCacheKey(
-  gatewayId: string,
-  key: PluginInstanceKey = {},
-): string {
-  return `${gatewayId}|${key.connectionId ?? ''}|${key.credentialsVersion ?? ''}`;
 }

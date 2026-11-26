@@ -1,5 +1,5 @@
-import type { ReadScope } from '../organization-scope.js';
-import type { PaymentStatus } from '../statuses.js';
+import type { ReadScope } from '../../value-objects/organization-scope.js';
+import type { PaymentStatus } from '../../statuses.js';
 
 export interface OverviewWindow {
   readonly from: Date;

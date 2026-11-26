@@ -1,10 +1,13 @@
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import { Inject, Injectable } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import { REQUERIED_REVIEW_REASONS } from '../../domain/rules/apply-outcome.js';
 import { REVIEW_REQUERY_WINDOW_MS } from '../../domain/rules/review-requery.js';
-import { JobDispatcher, type JobOptions } from '../../domain/job-dispatcher.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
+import {
+  JobDispatcher,
+  type JobOptions,
+} from '../../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** Job name of one attempt in review to re-query, on the review-requery queue. */
 export const REVIEW_REQUERY_JOB = 'requery-review';

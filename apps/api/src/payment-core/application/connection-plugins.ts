@@ -3,12 +3,12 @@ import {
   GatewayDisabledError,
   GatewayNotConnectedError,
 } from '../domain/errors.js';
-import type { GatewayConnection } from '../domain/gateway-connection.js';
+import type { GatewayConnection } from '../domain/entities/gateway-connection.js';
 import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/organization.js';
-import { organizationScope } from '../domain/organization-scope.js';
-import { GatewayManager } from '../gateway-manager/gateway-manager.js';
-import { CredentialCipher } from '../domain/credential-cipher.js';
-import { TransactionRunner } from '../domain/transaction-runner.js';
+import { organizationScope } from '../domain/value-objects/organization-scope.js';
+import { GatewayManager } from './gateway-manager.js';
+import { CredentialCipher } from '../domain/services/credential-cipher.js';
+import { TransactionRunner } from '../domain/repositories/transaction-runner.js';
 import type { PaymentGateway } from '../port/index.js';
 
 /**

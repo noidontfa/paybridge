@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import type { Queue } from 'bullmq';
-import { AlertThrottle } from '../../domain/alert.js';
+import { AlertThrottle } from '../../domain/services/alert.js';
 import { QUEUES } from './queue.constants.js';
 
 /**

@@ -8,7 +8,7 @@ import {
   ReencryptGatewayCredentials,
 } from './application/use-cases/manage-gateway-connections.js';
 import { GatewayConnectionsController } from './infrastructure/http/gateway-connections.controller.js';
-import { CredentialCipher } from './domain/credential-cipher.js';
+import { CredentialCipher } from './domain/services/credential-cipher.js';
 import { AesCredentialCipher } from './infrastructure/crypto/credential-cipher.js';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConsoleReadModule } from './console-read.module.js';
@@ -22,7 +22,7 @@ import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
 import { ProcessWebhook } from './application/workers/process-webhook.js';
-import { Clock, SystemClock } from './domain/clock.js';
+import { Clock, SystemClock } from './domain/services/clock.js';
 import { HandleBrowserReturn } from './application/use-cases/handle-browser-return.js';
 import { RequeryAttempt } from './application/workers/requery-attempt.js';
 import { AttemptInitiateProcessor } from './infrastructure/queue/processors/attempt-initiate.processor.js';
@@ -33,7 +33,7 @@ import { DomainErrorInterceptor } from './infrastructure/http/domain-error.inter
 import { PaymentsController } from './infrastructure/http/payments.controller.js';
 import { ReviewResolutionController } from './infrastructure/http/review-resolution.controller.js';
 import { WebhooksController } from './infrastructure/http/webhooks.controller.js';
-import { TransactionRunner } from './domain/transaction-runner.js';
+import { TransactionRunner } from './domain/repositories/transaction-runner.js';
 import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';
 import { expirySweepOptionsProvider } from './infrastructure/config/expiry-sweep.options.js';
@@ -47,7 +47,7 @@ import { ReviewRequerySweepProcessor } from './infrastructure/queue/processors/r
 import { ReviewRequerySweep } from './application/sweeps/review-requery-sweep.js';
 import { ReviewRequerySweepScheduler } from './infrastructure/queue/schedulers/review-requery-sweep.scheduler.js';
 import { WebhookInboxSweepProcessor } from './infrastructure/queue/processors/webhook-inbox-sweep.processor.js';
-import { AlertSink } from './domain/alert.js';
+import { AlertSink } from './domain/services/alert.js';
 import { LoggerAlertSink } from './infrastructure/alerting/logger-alert-sink.js';
 import { WebhookInboxSweep } from './application/sweeps/webhook-inbox-sweep.js';
 import { WebhookInboxSweepScheduler } from './infrastructure/queue/schedulers/webhook-inbox-sweep.scheduler.js';

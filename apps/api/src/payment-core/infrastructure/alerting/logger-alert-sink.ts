@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AlertSink, type Alert } from '../../domain/alert.js';
+import { AlertSink, type Alert } from '../../domain/services/alert.js';
 
 /** Default alert sink: writes one error log line per alert. */
 @Injectable()

@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   ReviewsReadRepository,
   type ReviewCounts,
-} from '../../../domain/console-read/reviews-read.repository.js';
+} from '../../../domain/repositories/console-read/reviews-read.repository.js';
 
 /** `GET /internal/reviews/summary`: open, total and open-by-reason counts. */
 @Injectable()

@@ -1,13 +1,13 @@
-import type { GatewayConnection } from '../../domain/gateway-connection.js';
+import type { GatewayConnection } from '../../domain/entities/gateway-connection.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import type { SealedValue } from '../../domain/credential-cipher.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { SealedValue } from '../../domain/services/credential-cipher.js';
 import type {
   GatewayConnectionRepository,
   NewGatewayConnection,
-} from '../../domain/repositories.js';
+} from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 import { rethrowUniqueViolation } from './unique-violation.js';

@@ -1,7 +1,7 @@
 import { newId } from '../../src/payment-core/domain/ids.js';
-import type { NewPayment } from '../../src/payment-core/domain/payment.js';
+import type { NewPayment } from '../../src/payment-core/domain/entities/payment.js';
 import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
-import type { Repositories } from '../../src/payment-core/domain/repositories.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import {
   GatewaysReadRepository,
   type CallbackStatus,
   type GatewayCallbackHealth,
-} from '../../../domain/console-read/gateways-read.repository.js';
+} from '../../../domain/repositories/console-read/gateways-read.repository.js';
 
 /** Read side of the operator Gateways endpoints (ADR 0005). */
 @Injectable()

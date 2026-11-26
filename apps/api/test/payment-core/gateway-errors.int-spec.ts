@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
@@ -10,7 +10,10 @@ import {
   StartAttempt,
 } from '../../src/payment-core/application/use-cases/start-attempt.js';
 import { RequeryAttempt } from '../../src/payment-core/application/workers/requery-attempt.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import {

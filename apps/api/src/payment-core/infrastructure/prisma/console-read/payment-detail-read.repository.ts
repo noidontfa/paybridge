@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import { providerReportedAmount, uuidNeedle } from './read-helpers.js';
 import {
   PaymentDetailReadRepository,
   type PaymentDetailRow,
-} from '../../../domain/console-read/payment-detail-read.repository.js';
+} from '../../../domain/repositories/console-read/payment-detail-read.repository.js';
 
 /**
  * Read model behind the operator Payment detail (ADR 0005). Read only: it

@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../domain/organization-scope.js';
-import type { Payment } from '../domain/payment.js';
+} from '../domain/value-objects/organization-scope.js';
+import type { Payment } from '../domain/entities/payment.js';
 import {
   CreatePayment,
   type CreatePaymentInput,

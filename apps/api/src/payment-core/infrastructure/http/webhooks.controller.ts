@@ -18,7 +18,7 @@ import {
 } from '../../application/webhook-intake.js';
 import { DEFAULT_ORGANIZATION_ID } from '../../../identity/domain/organization.js';
 import { Public } from '../../../identity/http/principal.guard.js';
-import { UnknownGatewayError } from '../../gateway-manager/gateway-manager.js';
+import { UnknownGatewayError } from '../../application/gateway-manager.js';
 import type { CallbackAck, HeaderValues } from '../../port/index.js';
 
 /**

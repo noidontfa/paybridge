@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { PrismaClient } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../database/prisma.service.js';
-import type { Repositories } from '../../domain/repositories.js';
+import type { Repositories } from '../../domain/repositories/repositories.js';
 import {
   TransactionRunner,
   type TransactionOptions,
-} from '../../domain/transaction-runner.js';
+} from '../../domain/repositories/transaction-runner.js';
 import { createRepositories } from './repositories.js';
 
 const DEFAULT_TIMEOUT_MS = 10_000;

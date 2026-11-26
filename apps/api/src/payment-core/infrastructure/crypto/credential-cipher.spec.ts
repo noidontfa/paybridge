@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { UnknownCredentialKeyError } from '../../domain/credential-cipher.js';
+import { UnknownCredentialKeyError } from '../../domain/services/credential-cipher.js';
 import {
   AesCredentialCipher,
   InvalidCredentialKeysError,

@@ -19,15 +19,15 @@ import {
   ListPaymentEvents,
 } from './application/use-cases/console/payment-events.js';
 import { ListStatusTransitions } from './application/use-cases/console/status-transitions.js';
-import { Clock, SystemClock } from './domain/clock.js';
-import { CallbacksReadRepository } from './domain/console-read/callbacks-read.repository.js';
-import { GatewaysReadRepository } from './domain/console-read/gateways-read.repository.js';
-import { OverviewReadRepository } from './domain/console-read/overview-read.repository.js';
-import { PaymentDetailReadRepository } from './domain/console-read/payment-detail-read.repository.js';
-import { PaymentEventsReadRepository } from './domain/console-read/payment-events-read.repository.js';
-import { PaymentsReadRepository } from './domain/console-read/payments-read.repository.js';
-import { ReviewsReadRepository } from './domain/console-read/reviews-read.repository.js';
-import { StatusTransitionsReadRepository } from './domain/console-read/status-transitions-read.repository.js';
+import { Clock, SystemClock } from './domain/services/clock.js';
+import { CallbacksReadRepository } from './domain/repositories/console-read/callbacks-read.repository.js';
+import { GatewaysReadRepository } from './domain/repositories/console-read/gateways-read.repository.js';
+import { OverviewReadRepository } from './domain/repositories/console-read/overview-read.repository.js';
+import { PaymentDetailReadRepository } from './domain/repositories/console-read/payment-detail-read.repository.js';
+import { PaymentEventsReadRepository } from './domain/repositories/console-read/payment-events-read.repository.js';
+import { PaymentsReadRepository } from './domain/repositories/console-read/payments-read.repository.js';
+import { ReviewsReadRepository } from './domain/repositories/console-read/reviews-read.repository.js';
+import { StatusTransitionsReadRepository } from './domain/repositories/console-read/status-transitions-read.repository.js';
 import { CallbacksController } from './infrastructure/http/console/callbacks.controller.js';
 import { GatewaysController } from './infrastructure/http/console/gateways.controller.js';
 import { OverviewController } from './infrastructure/http/console/overview.controller.js';
@@ -49,7 +49,7 @@ import { PrismaStatusTransitionsReadRepository } from './infrastructure/prisma/c
  * The operator read endpoints under `/internal` (ADR 0005), laid out by
  * layer like the rest of Payment Core: controllers and query schemas in
  * `infrastructure/http/console/`, read use cases in `application/use-cases/console/`,
- * the read contracts in `domain/console-read/`, and their queries in
+ * the read contracts in `domain/repositories/console-read/`, and their queries in
  * `infrastructure/prisma/console-read/`. Needs the global
  * `PrismaModule` and `GatewayManagerModule`.
  */

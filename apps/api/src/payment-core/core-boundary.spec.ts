@@ -97,11 +97,11 @@ describe('Core dependency rule (pnpm lint)', () => {
   it('allows Core to import its own gateway port and Gateway Manager', async () => {
     const result = await lintSample({
       'src/payment-core/port/index.ts': 'export interface PaymentGateway {}\n',
-      'src/payment-core/gateway-manager/gateway-manager.ts':
+      'src/payment-core/application/gateway-manager.ts':
         "import type { PaymentGateway } from '../port/index.js';\n" +
         'export type Plugins = PaymentGateway[];\n',
       'src/payment-core/application/uses-manager.ts':
-        "import type { Plugins } from '../gateway-manager/gateway-manager.js';\n" +
+        "import type { Plugins } from './gateway-manager.js';\n" +
         'export type P = Plugins;\n',
     });
 

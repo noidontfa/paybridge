@@ -1,4 +1,4 @@
-import type { Repositories } from '../../domain/repositories.js';
+import type { Repositories } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { PrismaGatewayConnectionRepository } from './gateway-connection.repository.js';
 import { PrismaGatewayRawResponseRepository } from './gateway-raw-response.repository.js';

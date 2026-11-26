@@ -9,8 +9,8 @@ import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { ReencryptGatewayCredentials } from '../../src/payment-core/application/use-cases/manage-gateway-connections.js';
 import { RequeryAttempt } from '../../src/payment-core/application/workers/requery-attempt.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
-import { CredentialCipher } from '../../src/payment-core/domain/credential-cipher.js';
+import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/value-objects/organization-scope.js';
+import { CredentialCipher } from '../../src/payment-core/domain/services/credential-cipher.js';
 import { AesCredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import {
   createOrganization,

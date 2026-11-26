@@ -1,14 +1,14 @@
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   PROCESS_WEBHOOK_JOB,
   PROCESS_WEBHOOK_JOB_OPTIONS,
   type ProcessWebhookJobData,
 } from '../webhook-intake.js';
-import { Clock } from '../../domain/clock.js';
-import { JobDispatcher } from '../../domain/job-dispatcher.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
-import { AlertSink, AlertThrottle } from '../../domain/alert.js';
+import { Clock } from '../../domain/services/clock.js';
+import { JobDispatcher } from '../../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { AlertSink, AlertThrottle } from '../../domain/services/alert.js';
 
 /** A `PROCESSING` row locked longer ago than this lost its worker. */
 export const WEBHOOK_INBOX_LOCK_TIMEOUT_MS = 5 * 60 * 1000;

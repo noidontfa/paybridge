@@ -1,9 +1,9 @@
-import type { ReadScope } from '../organization-scope.js';
+import type { ReadScope } from '../../value-objects/organization-scope.js';
 import type {
   AttemptStatus,
   PaymentStatus,
   ReviewReason,
-} from '../statuses.js';
+} from '../../statuses.js';
 
 export type ReviewState = 'open' | 'closed';
 

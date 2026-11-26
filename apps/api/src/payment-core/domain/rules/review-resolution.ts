@@ -1,11 +1,11 @@
-import { parseAmount } from '../amount.js';
+import { parseAmount } from '../value-objects/amount.js';
 import {
   AttemptNotInReviewError,
   ReviewResolutionNotAllowedError,
   ReviewWindowOpenError,
 } from '../errors.js';
-import type { Payment } from '../payment.js';
-import type { PaymentTransaction } from '../payment-transaction.js';
+import type { Payment } from '../entities/payment.js';
+import type { PaymentTransaction } from '../entities/payment-transaction.js';
 import { REVIEW_REQUERY_WINDOW_MS } from './review-requery.js';
 
 /** The status an operator may set on a review. */

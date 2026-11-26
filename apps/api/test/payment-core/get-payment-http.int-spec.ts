@@ -3,10 +3,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { GLOBAL_PREFIX } from '../../src/constants.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import type { Repositories } from '../../src/payment-core/domain/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { bearer, createApiKey } from '../setup/api-keys.js';

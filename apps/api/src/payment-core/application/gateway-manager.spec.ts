@@ -2,7 +2,7 @@ import type { PaymentGateway } from '../port/index.js';
 import {
   fixedPlugin,
   type GatewayRegistration,
-} from './gateway-plugin-factory.js';
+} from '../port/gateway-plugin-factory.js';
 import {
   DuplicateGatewayError,
   GatewayManager,
@@ -137,7 +137,9 @@ describe('GatewayManager', () => {
   });
 
   it('builds a Gateway Connection instance from its credentials, cached by id and version', () => {
-    const { registration: stripe, create } = reg('stripe', { secretKey: 'env' });
+    const { registration: stripe, create } = reg('stripe', {
+      secretKey: 'env',
+    });
     const manager = new GatewayManager([stripe]);
     const conn = (version: number, secretKey: string) => ({
       id: 'c1',

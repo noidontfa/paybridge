@@ -17,7 +17,7 @@ import { validate as isUuid } from 'uuid';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { Public } from '../../../identity/http/principal.guard.js';
 import { PaymentService } from '../../application/payment.service.js';
-import { ALL_ORGANIZATIONS } from '../../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../domain/value-objects/organization-scope.js';
 import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,

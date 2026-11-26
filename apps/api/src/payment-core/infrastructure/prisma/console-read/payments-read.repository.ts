@@ -2,14 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import { escapeLike, uuidNeedle } from './read-helpers.js';
 import {
   PaymentsReadRepository,
   type PaymentListQuery,
   type PaymentListRow,
-} from '../../../domain/console-read/payments-read.repository.js';
+} from '../../../domain/repositories/console-read/payments-read.repository.js';
 
 /**
  * Read model behind the operator Payments list (ADR 0005). Read only: it

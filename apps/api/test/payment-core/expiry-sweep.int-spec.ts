@@ -6,13 +6,16 @@ import { PrismaModule } from '../../src/database/prisma.module.js';
 import { Prisma } from '../../src/generated/prisma/client.js';
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { expiredPendingPaymentsQuery } from '../../src/payment-core/infrastructure/prisma/payment.repository.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { JobDispatcher } from '../../src/payment-core/domain/job-dispatcher.js';
-import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
+import { JobDispatcher } from '../../src/payment-core/domain/services/job-dispatcher.js';
+import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/value-objects/organization-scope.js';
 import type { PaymentStatus } from '../../src/payment-core/domain/statuses.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {

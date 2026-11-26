@@ -1,4 +1,4 @@
-import { InvalidAmountError, UnsupportedCurrencyError } from './errors.js';
+import { InvalidAmountError, UnsupportedCurrencyError } from '../errors.js';
 
 /**
  * Supported currencies and the fraction digits each allows (spec: Amount and

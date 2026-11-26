@@ -20,7 +20,7 @@ import {
   type QueryInput,
   type QueryResult,
 } from '../../payment-core/port/index.js';
-import type { GatewayPluginFactory } from '../../payment-core/gateway-manager/gateway-plugin-factory.js';
+import type { GatewayPluginFactory } from '../../payment-core/port/index.js';
 
 export const STRIPE_GATEWAY_ID = 'stripe';
 

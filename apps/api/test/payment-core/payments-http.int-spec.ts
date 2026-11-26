@@ -3,7 +3,10 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { GLOBAL_PREFIX } from '../../src/constants.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
@@ -48,7 +51,10 @@ function body(overrides: Record<string, unknown> = {}) {
 }
 
 function post(payload: object) {
-  return request(app.getHttpServer()).post('/api/payments').set(bearer(apiKey)).send(payload);
+  return request(app.getHttpServer())
+    .post('/api/payments')
+    .set(bearer(apiKey))
+    .send(payload);
 }
 
 describe('POST /api/payments', () => {

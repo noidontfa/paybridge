@@ -1,5 +1,5 @@
-import type { ProviderMetadata } from '../port/index.js';
-import type { RefundStatus } from './statuses.js';
+import type { ProviderMetadata } from '../../port/index.js';
+import type { RefundStatus } from '../statuses.js';
 
 /** Fields only in Phase 1: there is no write path and no repository. */
 export interface Refund {

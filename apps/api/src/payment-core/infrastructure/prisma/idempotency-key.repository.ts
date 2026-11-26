@@ -5,8 +5,8 @@ import type {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import type { IdempotencyKeyRepository } from '../../domain/repositories.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { IdempotencyKeyRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 import { rethrowUniqueViolation } from './unique-violation.js';

@@ -1,10 +1,21 @@
-import type { PaymentGateway } from '../port/index.js';
-import {
-  pluginCacheKey,
-  type GatewayPluginFactory,
-  type GatewayRegistration,
-  type PluginInstanceKey,
-} from './gateway-plugin-factory.js';
+import type {
+  GatewayPluginFactory,
+  GatewayRegistration,
+  PaymentGateway,
+} from '../port/index.js';
+
+/** Identifies one built instance in the Gateway Manager's cache. */
+export interface PluginInstanceKey {
+  readonly connectionId?: string;
+  readonly credentialsVersion?: number;
+}
+
+export function pluginCacheKey(
+  gatewayId: string,
+  key: PluginInstanceKey = {},
+): string {
+  return `${gatewayId}|${key.connectionId ?? ''}|${key.credentialsVersion ?? ''}`;
+}
 
 /** Boot-time error: two plugins declare the same gateway identifier. */
 export class DuplicateGatewayError extends Error {
@@ -107,7 +118,10 @@ export class GatewayManager {
       readonly credentials: unknown;
     },
   ): PaymentGateway {
-    if (connection.credentials === null || connection.credentials === undefined) {
+    if (
+      connection.credentials === null ||
+      connection.credentials === undefined
+    ) {
       return this.resolve(gatewayId);
     }
     const entry = this.registrations.get(gatewayId);
@@ -127,7 +141,9 @@ export class GatewayManager {
   }
 
   /** The factory's credentials schema; undefined when the gateway takes none. */
-  credentialsSchema(gatewayId: string): GatewayPluginFactory['credentialsSchema'] {
+  credentialsSchema(
+    gatewayId: string,
+  ): GatewayPluginFactory['credentialsSchema'] {
     const entry = this.registrations.get(gatewayId);
     if (!entry) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
     return entry.factory.credentialsSchema;

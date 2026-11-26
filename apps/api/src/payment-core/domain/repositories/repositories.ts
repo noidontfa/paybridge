@@ -1,19 +1,19 @@
-import type { SealedValue } from './credential-cipher.js';
-import type { GatewayConnection } from './gateway-connection.js';
+import type { SealedValue } from '../services/credential-cipher.js';
+import type { GatewayConnection } from '../entities/gateway-connection.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from './organization-scope.js';
+} from '../value-objects/organization-scope.js';
 import type {
   NewPayment,
   Payment,
   PaymentChanges,
-} from './payment.js';
+} from '../entities/payment.js';
 import type {
   NewPaymentTransaction,
   PaymentTransaction,
   PaymentTransactionChanges,
-} from './payment-transaction.js';
+} from '../entities/payment-transaction.js';
 import type {
   GatewayRawResponse,
   IdempotencyRecord,
@@ -26,8 +26,8 @@ import type {
   StatusTransition,
   StatusTransitionEntityType,
   WebhookInboxEntry,
-} from './records.js';
-import type { ReviewReason } from './statuses.js';
+} from '../records.js';
+import type { ReviewReason } from '../statuses.js';
 
 /**
  * A write broke a unique constraint: someone else inserted the same row
@@ -57,7 +57,11 @@ export interface PaymentRepository {
   /** Throws `UniqueViolationError` when the Organization already has this Upstream Reference. */
   create(scope: OrganizationScope, payment: NewPayment): Promise<Payment>;
 
-  update(scope: ReadScope, id: string, changes: PaymentChanges): Promise<Payment>;
+  update(
+    scope: ReadScope,
+    id: string,
+    changes: PaymentChanges,
+  ): Promise<Payment>;
 
   /** Throws `UniqueViolationError` when the Payment already has an open attempt. */
   createAttempt(
@@ -209,10 +213,17 @@ export interface IdempotencyKeyRepository {
     record: NewIdempotencyRecord,
   ): Promise<IdempotencyRecord>;
 
-  find(scope: OrganizationScope, key: string): Promise<IdempotencyRecord | null>;
+  find(
+    scope: OrganizationScope,
+    key: string,
+  ): Promise<IdempotencyRecord | null>;
 
   /** Deletes the record for `key` if it expired at or before `now`. */
-  deleteIfExpired(scope: OrganizationScope, key: string, now: Date): Promise<void>;
+  deleteIfExpired(
+    scope: OrganizationScope,
+    key: string,
+    now: Date,
+  ): Promise<void>;
 
   /** Retention: deletes every record that expired at or before `cutoff`. */
   deleteExpiredBefore(scope: ReadScope, cutoff: Date): Promise<number>;

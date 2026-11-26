@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { PaymentTransaction } from '../../domain/payment-transaction.js';
+import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import { ATTEMPT_STATUSES, type AttemptStatus } from '../../domain/statuses.js';
 import type { NextAction } from '../../port/index.js';
 import type { StartAttemptResult } from '../../application/use-cases/start-attempt.js';

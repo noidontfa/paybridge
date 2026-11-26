@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   AttemptInReviewError,
   PaymentExpiryPassedError,
@@ -13,24 +13,21 @@ import {
   ALL_ORGANIZATIONS,
   organizationScope,
   type OrganizationScope,
-} from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import type {
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../../domain/payment-transaction.js';
+} from '../../domain/entities/payment-transaction.js';
 import {
   INITIAL_ATTEMPT_STATUS,
   isOpenAttempt,
 } from '../../domain/rules/attempt-transitions.js';
-import {
-  GatewayManager,
-  UnknownGatewayError,
-} from '../../gateway-manager/gateway-manager.js';
+import { GatewayManager, UnknownGatewayError } from '../gateway-manager.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import type { Repositories } from '../../domain/repositories.js';
-import { TransactionRunner } from '../../domain/transaction-runner.js';
-import { JobDispatcher } from '../../domain/job-dispatcher.js';
+import type { Repositories } from '../../domain/repositories/repositories.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { JobDispatcher } from '../../domain/services/job-dispatcher.js';
 import {
   GatewayRejectedError,
   GatewayUnavailableError,
