@@ -6,6 +6,10 @@ export const USER_ROLES = [
 ] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
+/** The Roles an Organization's own Users can be moved between. */
+export const MANAGED_ROLES = ['OPERATOR', 'ORGANIZATION_ADMIN'] as const;
+export type ManagedRole = (typeof MANAGED_ROLES)[number];
+
 /** Human name of a Role, as the Console shows it. */
 export const ROLE_LABELS: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super Admin',

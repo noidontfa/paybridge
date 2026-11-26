@@ -3,7 +3,7 @@ export const ORGANIZATION_STATUSES = ['ACTIVE', 'SUSPENDED'] as const;
 export type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
 
 /**
- * The tenant of PayBridge: every Payment and everything under it belongs to
+ * The unit of isolation in PayBridge: every Payment and everything under it belongs to
  * exactly one Organization (ADR 0006).
  */
 export interface Organization {

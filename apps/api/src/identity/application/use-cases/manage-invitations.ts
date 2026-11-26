@@ -36,10 +36,21 @@ export interface InvitationManager {
 const canManageSuperAdmins = (m: InvitationManager): boolean =>
   m.permissions.includes('super-admins:manage');
 
-/** Whether the manager may see or change an Invitation. */
-function mayManage(m: InvitationManager, invitation: Invitation): boolean {
+/**
+ * Whether the manager may see (`read`) or change (`write`) an Invitation. A
+ * Super Admin who chose "all Organizations" may read every Organization's,
+ * but a change needs the one Organization they chose.
+ */
+function mayAccess(
+  m: InvitationManager,
+  invitation: Invitation,
+  access: 'read' | 'write',
+): boolean {
   if (invitation.role === 'SUPER_ADMIN') return canManageSuperAdmins(m);
-  return m.organizationId !== null && invitation.organizationId === m.organizationId;
+  if (access === 'read' && m.allOrganizations) return true;
+  return (
+    m.organizationId !== null && invitation.organizationId === m.organizationId
+  );
 }
 
 @Injectable()
@@ -123,7 +134,7 @@ export class ResendInvitation {
     const token = newToken();
     const email = await this.runner.run(async (repos) => {
       const invitation = await repos.invitations.findById(id);
-      if (!invitation || !mayManage(by, invitation)) {
+      if (!invitation || !mayAccess(by, invitation, 'write')) {
         throw new InvitationNotFoundError();
       }
       const renewed = await repos.invitations.renew(
@@ -149,7 +160,7 @@ export class RevokeInvitation {
     const now = this.clock.now();
     await this.runner.run(async (repos) => {
       const invitation = await repos.invitations.findById(id);
-      if (!invitation || !mayManage(by, invitation)) {
+      if (!invitation || !mayAccess(by, invitation, 'write')) {
         throw new InvitationNotFoundError();
       }
       if (!(await repos.invitations.revoke(id, now))) {
@@ -173,15 +184,8 @@ export class ListPendingInvitations {
       scope,
       this.clock.now(),
     );
-    return rows.filter((row) => mayManageOrAll(by, row));
+    return rows.filter((row) => mayAccess(by, row, 'read'));
   }
-}
-
-function mayManageOrAll(by: InvitationManager, row: Invitation): boolean {
-  if (by.allOrganizations) {
-    return row.role !== 'SUPER_ADMIN' || canManageSuperAdmins(by);
-  }
-  return mayManage(by, row);
 }
 
 export { InvitationMailer };

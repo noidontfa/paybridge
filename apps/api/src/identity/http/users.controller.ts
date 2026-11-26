@@ -30,10 +30,10 @@ import {
   LastOrganizationAdminError,
   UserNotFoundError,
 } from '../domain/errors.js';
-import { ROLE_LABELS, type User } from '../domain/user.js';
+import { MANAGED_ROLES, ROLE_LABELS, type User } from '../domain/user.js';
 
 const roleSchema = z.object({
-  role: z.enum(['OPERATOR', 'ORGANIZATION_ADMIN']),
+  role: z.enum(MANAGED_ROLES),
 });
 
 /** The one Organization the call works in: the caller's, or a Super Admin's choice. */
