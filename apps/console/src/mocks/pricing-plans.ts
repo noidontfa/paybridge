@@ -4,6 +4,7 @@
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { PRICING_PLAN_LIMITS, type PricingPlan, type PricingPlanInput } from '@/lib/api/pricing-plans';
+import { pricingTablesOf } from './pricing-tables';
 import type { MockStore } from './store';
 
 type ErrorInit = { status: number; error: string; code: string; message: string; details?: unknown };
@@ -105,7 +106,7 @@ export function pricingPlansHandlers(
       message: `${field}: ${message}`,
       details: { field },
     });
-  const detail = (plan: PricingPlan) => ({ ...plan, pricingTables: [] });
+  const detail = (plan: PricingPlan) => ({ ...plan, pricingTables: pricingTablesOf(store, plan.id) });
   const find = (id: unknown) => store.pricingPlans.find((p) => p.id === String(id));
   const body = async (request: Request) => (await request.json().catch(() => ({}))) as Partial<PricingPlanInput>;
   const setStatus = (request: Request, id: unknown, status: PricingPlan['status']) => {
@@ -154,6 +155,14 @@ export function pricingPlansHandlers(
     http.delete(`${path}/:id`, ({ request, params }) => {
       const index = store.pricingPlans.findIndex((p) => p.id === String(params.id));
       if (index < 0) return notFound(request);
+      if (pricingTablesOf(store, String(params.id)).length > 0) {
+        return error(request, {
+          status: 409,
+          error: 'Conflict',
+          code: 'PRICING_PLAN_IN_PRICING_TABLES',
+          message: 'This Pricing Plan is shown in Pricing Tables; remove it from them or archive it instead',
+        });
+      }
       store.pricingPlans.splice(index, 1);
       return HttpResponse.json({ deleted: true });
     }),
