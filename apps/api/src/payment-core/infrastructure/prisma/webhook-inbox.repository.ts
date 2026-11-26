@@ -4,7 +4,12 @@ import type {
   NewWebhookInboxEntry,
   WebhookInboxEntry,
 } from '../../domain/records.js';
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../../domain/organization-scope.js';
 import type { DbContext } from './db.js';
+import { scopeWhere } from './scope.js';
 
 export interface RecordedWebhook {
   readonly entry: WebhookInboxEntry;
@@ -30,10 +35,14 @@ export class PrismaWebhookInboxRepository {
    * dedupe key exists (`ON CONFLICT DO NOTHING`, so it never aborts the
    * surrounding transaction). Returns the stored row either way.
    */
-  async record(callback: NewWebhookInboxEntry): Promise<RecordedWebhook> {
+  async record(
+    scope: OrganizationScope,
+    callback: NewWebhookInboxEntry,
+  ): Promise<RecordedWebhook> {
     const { count } = await this.ctx.db.webhookInbox.createMany({
       data: {
         id: callback.id ?? newId(),
+        organizationId: scope.organizationId,
         gatewayId: callback.gatewayId,
         dedupeKey: callback.dedupeKey,
         providerEventId: callback.providerEventId ?? null,
@@ -46,7 +55,8 @@ export class PrismaWebhookInboxRepository {
     });
     const row = await this.ctx.db.webhookInbox.findUniqueOrThrow({
       where: {
-        gatewayId_dedupeKey: {
+        organizationId_gatewayId_dedupeKey: {
+          organizationId: scope.organizationId,
           gatewayId: callback.gatewayId,
           dedupeKey: callback.dedupeKey,
         },
@@ -55,8 +65,13 @@ export class PrismaWebhookInboxRepository {
     return { entry: toEntry(row), duplicate: count === 0 };
   }
 
-  async findById(id: string): Promise<WebhookInboxEntry | null> {
-    const row = await this.ctx.db.webhookInbox.findUnique({ where: { id } });
+  async findById(
+    scope: ReadScope,
+    id: string,
+  ): Promise<WebhookInboxEntry | null> {
+    const row = await this.ctx.db.webhookInbox.findUnique({
+      where: { id, ...scopeWhere(scope) },
+    });
     return row ? toEntry(row) : null;
   }
 
@@ -66,18 +81,26 @@ export class PrismaWebhookInboxRepository {
    * null when the row is missing, already `PROCESSED`, or being processed
    * (`PROCESSING`), so a duplicate job does nothing.
    */
-  async claim(id: string, now: Date): Promise<WebhookInboxEntry | null> {
+  async claim(
+    scope: ReadScope,
+    id: string,
+    now: Date,
+  ): Promise<WebhookInboxEntry | null> {
     const { count } = await this.ctx.db.webhookInbox.updateMany({
-      where: { id, status: { in: ['RECEIVED', 'FAILED'] } },
+      where: {
+        ...scopeWhere(scope),
+        id,
+        status: { in: ['RECEIVED', 'FAILED'] },
+      },
       data: { status: 'PROCESSING', lockedAt: now, attempts: { increment: 1 } },
     });
-    return count === 0 ? null : this.findById(id);
+    return count === 0 ? null : this.findById(scope, id);
   }
 
   /** Marks a row done. Use the transaction that applied its change. */
-  async markProcessed(id: string, now: Date): Promise<void> {
+  async markProcessed(scope: ReadScope, id: string, now: Date): Promise<void> {
     await this.ctx.db.webhookInbox.update({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       data: {
         status: 'PROCESSED',
         processedAt: now,
@@ -88,9 +111,9 @@ export class PrismaWebhookInboxRepository {
   }
 
   /** Marks a row failed with the error, for the inbox sweep to retry. */
-  async markFailed(id: string, error: string): Promise<void> {
+  async markFailed(scope: ReadScope, id: string, error: string): Promise<void> {
     await this.ctx.db.webhookInbox.update({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       data: { status: 'FAILED', lockedAt: null, lastError: error },
     });
   }
@@ -100,9 +123,13 @@ export class PrismaWebhookInboxRepository {
    * died) to `RECEIVED` and clears the lock. A row locked at or after the
    * cutoff is not touched. Returns the number of rows reset.
    */
-  async resetStaleProcessing(cutoff: Date): Promise<number> {
+  async resetStaleProcessing(scope: ReadScope, cutoff: Date): Promise<number> {
     const { count } = await this.ctx.db.webhookInbox.updateMany({
-      where: { status: 'PROCESSING', lockedAt: { lt: cutoff } },
+      where: {
+        ...scopeWhere(scope),
+        status: 'PROCESSING',
+        lockedAt: { lt: cutoff },
+      },
       data: { status: 'RECEIVED', lockedAt: null },
     });
     return count;
@@ -113,11 +140,13 @@ export class PrismaWebhookInboxRepository {
    * `RECEIVED` row, and `FAILED` rows tried at most `maxAttempts` times.
    */
   async findDispatchableIds(
+    scope: ReadScope,
     maxAttempts: number,
     limit: number,
   ): Promise<string[]> {
     const rows = await this.ctx.db.webhookInbox.findMany({
       where: {
+        ...scopeWhere(scope),
         OR: [
           { status: 'RECEIVED' },
           { status: 'FAILED', attempts: { lte: maxAttempts } },
@@ -132,11 +161,16 @@ export class PrismaWebhookInboxRepository {
 
   /** `FAILED` rows tried more than `maxAttempts` times: left for manual handling. */
   async findExhausted(
+    scope: ReadScope,
     maxAttempts: number,
     limit: number,
   ): Promise<WebhookInboxEntry[]> {
     const rows = await this.ctx.db.webhookInbox.findMany({
-      where: { status: 'FAILED', attempts: { gt: maxAttempts } },
+      where: {
+        ...scopeWhere(scope),
+        status: 'FAILED',
+        attempts: { gt: maxAttempts },
+      },
       orderBy: { receivedAt: 'asc' },
       take: limit,
     });
@@ -147,9 +181,13 @@ export class PrismaWebhookInboxRepository {
    * Retention: deletes rows received at or before `cutoff`, except `FAILED`
    * rows, which are never deleted automatically.
    */
-  async deleteReceivedBefore(cutoff: Date): Promise<number> {
+  async deleteReceivedBefore(scope: ReadScope, cutoff: Date): Promise<number> {
     const { count } = await this.ctx.db.webhookInbox.deleteMany({
-      where: { receivedAt: { lte: cutoff }, status: { not: 'FAILED' } },
+      where: {
+        ...scopeWhere(scope),
+        receivedAt: { lte: cutoff },
+        status: { not: 'FAILED' },
+      },
     });
     return count;
   }

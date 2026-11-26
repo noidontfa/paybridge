@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Clock } from '../../../domain/clock.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   OverviewReadRepository,
   type OverviewData,
@@ -43,12 +44,12 @@ export class GetOverview {
     @Inject(Clock) private readonly clock: Clock,
   ) {}
 
-  async execute(range: OverviewRange): Promise<OverviewView> {
+  async execute(scope: ReadScope, range: OverviewRange): Promise<OverviewView> {
     const { span, bucket } = WINDOWS[range];
     const to = this.clock.now();
     const from = new Date(to.getTime() - span);
     const bucketCount = span / bucket;
-    const data = await this.overview.overview({
+    const data = await this.overview.overview(scope, {
       from,
       to,
       bucketMs: bucket,

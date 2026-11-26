@@ -17,11 +17,16 @@ export interface NewStatusTransition {
   readonly trigger: string;
   /** Who caused it, e.g. `merchant`, `system`, an operator id. */
   readonly actor: string;
+  /** The Role the acting User held; absent for system and customer actors. */
+  readonly actorRole?: string | null;
+  /** The acting User's name; absent for system and customer actors. */
+  readonly actorName?: string | null;
   readonly reason?: string | null;
 }
 
 export interface StatusTransition extends NewStatusTransition {
   readonly id: string;
+  readonly organizationId: string;
   readonly reason: string | null;
   readonly createdAt: Date;
 }
@@ -45,6 +50,7 @@ export interface NewOutboxEvent {
 
 export interface OutboxEvent {
   readonly id: string;
+  readonly organizationId: string;
   readonly eventType: OutboxEventType;
   readonly paymentId: string;
   readonly payload: unknown;
@@ -73,6 +79,7 @@ export interface NewWebhookInboxEntry {
 
 export interface WebhookInboxEntry {
   readonly id: string;
+  readonly organizationId: string;
   readonly gatewayId: string;
   readonly dedupeKey: string;
   readonly providerEventId: string | null;
@@ -105,6 +112,7 @@ export interface IdempotencyRecord extends Omit<
   NewIdempotencyRecord,
   'createdAt'
 > {
+  readonly organizationId: string;
   readonly createdAt: Date;
 }
 
@@ -121,5 +129,6 @@ export interface NewGatewayRawResponse {
 
 export interface GatewayRawResponse extends NewGatewayRawResponse {
   readonly id: string;
+  readonly organizationId: string;
   readonly createdAt: Date;
 }

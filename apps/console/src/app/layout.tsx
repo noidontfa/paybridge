@@ -4,7 +4,7 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { MockBanner } from '@/components/mock-banner';
 import { Providers } from '@/components/providers';
 import { OperatorProvider } from '@/lib/operator';
-import { getCurrentOperator } from '@/server/current-operator';
+import { getSessionOperator } from '@/server/session-user';
 import { Toaster } from '@/components/ui/sonner';
 import { DensityEffect } from '@/components/settings-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -23,7 +23,8 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 // The mock-mode banner reads the server environment at request time, never the build.
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
+export default async function RootLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
+  const operator = await getSessionOperator();
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
@@ -31,17 +32,22 @@ export default function RootLayout({ children, modal }: { children: React.ReactN
           <TooltipProvider>
             {/* Providers wraps the sidebar too: its Exceptions badge is a query. */}
             <Providers>
-              <OperatorProvider operator={getCurrentOperator()}>
-              <SidebarProvider>
-                <DensityEffect />
-                <AppSidebar />
-                <SidebarInset className="min-w-0 overflow-x-hidden">
-                  {getEnvironment().mockMode && <MockBanner />}
-                  {children}
-                  {modal}
-                </SidebarInset>
-              </SidebarProvider>
-              </OperatorProvider>
+              {operator ? (
+                <OperatorProvider operator={operator}>
+                  <SidebarProvider>
+                    <DensityEffect />
+                    <AppSidebar />
+                    <SidebarInset className="min-w-0 overflow-x-hidden">
+                      {getEnvironment().mockMode && <MockBanner />}
+                      {children}
+                      {modal}
+                    </SidebarInset>
+                  </SidebarProvider>
+                </OperatorProvider>
+              ) : (
+                // Nobody is signed in: only the sign-in page, without the shell.
+                children
+              )}
               <Toaster />
             </Providers>
           </TooltipProvider>

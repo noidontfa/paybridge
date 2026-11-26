@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
@@ -19,6 +20,7 @@ import { isUniqueViolation } from '../../src/payment-core/infrastructure/prisma/
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 31: the locking rules, proven with two real connections. Competing
 // operations (webhook, expiry, merchant cancel, start attempt) race on one
@@ -55,7 +57,9 @@ beforeAll(async () => {
   worker = moduleRef.get(ProcessWebhook);
   expirePayment = moduleRef.get(ExpirePayment);
   runner = moduleRef.get(TransactionRunner);
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -120,7 +124,7 @@ async function holdPaymentLock(paymentId: string) {
   const locked = gate();
   const release = gate();
   const done = runner.run(async (repos) => {
-    await repos.payments.findForUpdate(paymentId);
+    await repos.payments.findForUpdate(defaultScope, paymentId);
     locked.open();
     await release.promise;
   });
@@ -129,7 +133,7 @@ async function holdPaymentLock(paymentId: string) {
 }
 
 async function createPayment(): Promise<Payment> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -138,7 +142,7 @@ async function createPayment(): Promise<Payment> {
 }
 
 function startAttempt(paymentId: string) {
-  return service.startAttempt({
+  return service.startAttempt(defaultScope, {
     paymentId,
     gatewayId: fake.gatewayId,
     returnUrl: RETURN_URL,
@@ -165,14 +169,17 @@ async function storeSuccessCallback(
     amount: '150000',
     ...payload,
   });
-  const { entry } = await runner.repositories.webhookInbox.record({
-    gatewayId: fake.gatewayId,
-    dedupeKey: newId(),
-    attemptKey,
-    rawBody: callback.rawBody,
-    headers: callback.headers,
-    query: callback.query,
-  });
+  const { entry } = await runner.repositories.webhookInbox.record(
+    defaultScope,
+    {
+      gatewayId: fake.gatewayId,
+      dedupeKey: newId(),
+      attemptKey,
+      rawBody: callback.rawBody,
+      headers: callback.headers,
+      query: callback.query,
+    },
+  );
   return entry.id;
 }
 
@@ -219,9 +226,11 @@ describe('Payment lock', () => {
     const first = await holdPaymentLock(payment.id);
 
     let settled = false;
-    const second = service.cancelPayment(payment.id).finally(() => {
-      settled = true;
-    });
+    const second = service
+      .cancelPayment(defaultScope, payment.id)
+      .finally(() => {
+        settled = true;
+      });
     // The second transition is blocked on the row lock, on its own connection.
     await eventually(async () => (await lockWaiters()) >= 1, 'cancel to wait');
     await sleep(100);
@@ -240,14 +249,14 @@ describe('Payment lock', () => {
     const release = gate();
     // First: expires the Payment under the lock, commits after the release.
     const first = runner.run(async (repos) => {
-      const p = await repos.payments.findForUpdate(payment.id);
+      const p = await repos.payments.findForUpdate(defaultScope, payment.id);
       locked.open();
       await release.promise;
-      await repos.payments.update(p!.id, { status: 'EXPIRED' });
+      await repos.payments.update(defaultScope, p!.id, { status: 'EXPIRED' });
     });
     await locked.promise;
 
-    const second = service.cancelPayment(payment.id).then(
+    const second = service.cancelPayment(defaultScope, payment.id).then(
       () => 'resolved',
       (error: unknown) => error,
     );
@@ -354,7 +363,7 @@ describe('merchant cancel racing start attempt', () => {
     const payment = await createPayment();
     const holder = await holdPaymentLock(payment.id);
 
-    const cancel = service.cancelPayment(payment.id).then(
+    const cancel = service.cancelPayment(defaultScope, payment.id).then(
       () => 'cancelled',
       () => 'rejected',
     );
@@ -395,7 +404,7 @@ describe('merchant cancel racing start attempt', () => {
 
     const start = startAttempt(payment.id);
     await initiating.promise;
-    const cancelled = await service.cancelPayment(payment.id);
+    const cancelled = await service.cancelPayment(defaultScope, payment.id);
     expect(cancelled.status).toBe('CANCELLED');
     initiateRelease.open();
     await start;
@@ -410,7 +419,7 @@ describe('merchant cancel racing start attempt', () => {
       fake.reset();
       const payment = await createPayment();
       await Promise.allSettled([
-        service.cancelPayment(payment.id),
+        service.cancelPayment(defaultScope, payment.id),
         startAttempt(payment.id),
         startAttempt(payment.id),
       ]);
@@ -435,7 +444,7 @@ describe('one open attempt per Payment (database partial index)', () => {
     const commit = gate();
     // Connection A inserts an open attempt and holds its transaction open.
     const first = runner.run(async (repos) => {
-      await repos.payments.createAttempt({
+      await repos.payments.createAttempt(defaultScope, {
         id: newId(),
         paymentId: payment.id,
         gatewayId: fake.gatewayId,
@@ -450,7 +459,7 @@ describe('one open attempt per Payment (database partial index)', () => {
     // A's uncommitted row, then fails on the partial unique index.
     const second = runner
       .run((repos) =>
-        repos.payments.createAttempt({
+        repos.payments.createAttempt(defaultScope, {
           id: newId(),
           paymentId: payment.id,
           gatewayId: fake.gatewayId,
@@ -474,7 +483,7 @@ describe('one open attempt per Payment (database partial index)', () => {
     const results = await Promise.allSettled(
       Array.from({ length: 6 }, () =>
         runner.run((repos) =>
-          repos.payments.createAttempt({
+          repos.payments.createAttempt(defaultScope, {
             id: newId(),
             paymentId: payment.id,
             gatewayId: fake.gatewayId,
@@ -579,7 +588,7 @@ describe('no transaction open during a gateway call', () => {
           await hook();
           return { rawPayload: {} };
         }),
-      () => service.cancelPayment(payment.id),
+      () => service.cancelPayment(defaultScope, payment.id),
     );
     expect((await paymentRow(payment.id)).status).toBe('CANCELLED');
   });

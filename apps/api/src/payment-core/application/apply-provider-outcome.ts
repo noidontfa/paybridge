@@ -7,6 +7,7 @@ import {
   decideOutcome,
   type OutcomeDecision,
 } from '../domain/rules/apply-outcome.js';
+import { organizationScope } from '../domain/organization-scope.js';
 import { isOpenAttempt } from '../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../domain/rules/payment-transitions.js';
 import type { ReviewReason } from '../domain/statuses.js';
@@ -127,12 +128,19 @@ export async function applyProviderOutcome(
       break;
     case 'no-change':
       if (Object.keys(providerData).length > 0) {
-        updated = await repos.payments.updateAttempt(attempt.id, providerData);
+        updated = await repos.payments.updateAttempt(
+          organizationScope(payment.organizationId),
+          attempt.id,
+          providerData,
+        );
       }
       break;
   }
 
-  const after = await repos.payments.findById(payment.id);
+  const after = await repos.payments.findById(
+    organizationScope(payment.organizationId),
+    payment.id,
+  );
   if (!after) throw new Error(`Payment ${payment.id} vanished`);
   return {
     decision,
@@ -154,19 +162,22 @@ export async function succeedPayment(
       `Payment ${payment.id} cannot succeed from ${payment.status}`,
     );
   }
-  const succeeded = await repos.payments.update(payment.id, {
+  const scope = organizationScope(payment.organizationId);
+  const succeeded = await repos.payments.update(scope, payment.id, {
     status: 'SUCCEEDED',
   });
-  await repos.statusTransitions.record({
+  await repos.statusTransitions.record(scope, {
     entityType: 'PAYMENT',
     entityId: payment.id,
     fromStatus: payment.status,
     toStatus: succeeded.status,
     trigger: cause.trigger,
     actor: cause.actor,
+    actorRole: cause.actorRole ?? null,
+    actorName: cause.actorName ?? null,
     reason: `attempt ${attempt.id} succeeded`,
   });
-  await repos.outbox.add({
+  await repos.outbox.add(scope, {
     eventType: 'PaymentSucceeded',
     paymentId: payment.id,
     payload: {
@@ -194,6 +205,8 @@ export async function cancelOtherOpenAttempts(
       await recordAttemptTransition(repos, other, 'CANCELLED', {
         trigger: cause.trigger,
         actor: cause.actor,
+        actorRole: cause.actorRole,
+        actorName: cause.actorName,
         reason: `payment succeeded through attempt ${succeededId}`,
       }),
     );
@@ -225,7 +238,7 @@ async function openReview(
       refundRequired: true,
     },
   );
-  await repos.outbox.add({
+  await repos.outbox.add(organizationScope(payment.organizationId), {
     eventType: 'PaymentRequiresReview',
     paymentId: payment.id,
     payload: {

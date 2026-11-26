@@ -7,6 +7,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetOverview,
@@ -19,6 +22,7 @@ import { type OverviewQuery, overviewQuerySchema } from './overview.query.js';
  * the Console's `overviewSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/overview`)
 export class OverviewController {
   constructor(@Inject(GetOverview) private readonly getOverview: GetOverview) {}
@@ -32,9 +36,10 @@ export class OverviewController {
   @ApiOkResponse({ description: 'The Console overview shape' })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async overview(
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(overviewQuerySchema)) query: OverviewQuery,
   ) {
-    const view = await this.getOverview.execute(query.range);
+    const view = await this.getOverview.execute(scope, query.range);
     const { data } = view;
     return {
       range: view.range,

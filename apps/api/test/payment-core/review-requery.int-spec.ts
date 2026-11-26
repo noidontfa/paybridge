@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
@@ -12,6 +13,7 @@ import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.consta
 import { ReviewRequerySweep } from '../../src/payment-core/reliability/review-requery-sweep.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 28: attempts in review for AMBIGUOUS_PROVIDER_STATUS or
 // AMOUNT_MISMATCH are re-queried on a schedule, for 72 hours.
@@ -72,7 +74,9 @@ beforeAll(async () => {
   requery = moduleRef.get(RequeryAttempt);
   sweep = moduleRef.get(ReviewRequerySweep);
   runner = moduleRef.get(TransactionRunner);
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -93,26 +97,28 @@ async function seedReview(
   openedAt: Date = NOW,
   options: { payment?: 'SUCCEEDED' } = {},
 ) {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
   const attemptId = newId();
   await runner.run(async (tx) => {
-    await tx.payments.createAttempt({
+    await tx.payments.createAttempt(defaultScope, {
       id: attemptId,
       paymentId: payment.id,
       gatewayId: fake.gatewayId,
       status: 'REQUIRES_REVIEW',
     });
-    await tx.payments.updateAttempt(attemptId, {
+    await tx.payments.updateAttempt(defaultScope, attemptId, {
       reviewReason: reason,
       reviewOpenedAt: openedAt,
       refundRequired: true,
     });
     if (options.payment) {
-      await tx.payments.update(payment.id, { status: options.payment });
+      await tx.payments.update(defaultScope, payment.id, {
+        status: options.payment,
+      });
     }
   });
   return { paymentId: payment.id, attemptId };

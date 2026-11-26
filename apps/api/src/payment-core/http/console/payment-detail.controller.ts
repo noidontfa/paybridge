@@ -12,6 +12,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { GetPaymentDetail } from '../../application/use-cases/console/get-payment-detail.js';
 
@@ -20,6 +23,7 @@ import { GetPaymentDetail } from '../../application/use-cases/console/get-paymen
  * public ingress). The response shape is the Console's `operatorPaymentSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentDetailController {
   constructor(
@@ -33,8 +37,11 @@ export class PaymentDetailController {
   })
   @ApiOkResponse({ description: 'The operator Payment detail' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async detail(@Param('id') id: string) {
-    const p = await this.getPayment.execute(id);
+  async detail(
+    @CurrentReadScope() scope: ReadScope,
+    @Param('id') id: string,
+  ) {
+    const p = await this.getPayment.execute(scope, id);
     if (!p) throw new NotFoundException(`Payment "${id}" not found`);
     return {
       id: p.id,

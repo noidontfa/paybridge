@@ -3,6 +3,13 @@
 // database access: times are offsets from the moment the seed runs.
 
 export type GatewayId = 'stripe' | 'fake';
+
+/**
+ * The Organization a Payment belongs to. `primary` is the default
+ * Organization (the one the public payments API is scoped to until API Keys); `acme` is a
+ * second Organization, so isolation between Organizations is visible.
+ */
+export type OrganizationKey = 'primary' | 'acme';
 export type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'CANCELLED' | 'EXPIRED';
 export type AttemptStatus =
   | 'CREATED'
@@ -49,6 +56,13 @@ export interface AttemptSpec {
 
 export interface PaymentSpec {
   key: string;
+  /** Default `primary`. */
+  organization?: OrganizationKey;
+  /**
+   * The Upstream Reference without the `SEED-` prefix; default: the key. Two
+   * Organizations may share one (it is unique per Organization).
+   */
+  reference?: string;
   amount: string;
   createdAgoH: number;
   status: PaymentStatus;
@@ -100,7 +114,14 @@ const accepted = (afterMin = 2) =>
 const paid = (afterMin: number, trigger = 'webhook') =>
   tr('PENDING', 'SUCCEEDED', trigger, 'system', { afterMin });
 const paymentPaid = (afterMin: number, trigger = 'webhook') =>
-  tr('PENDING', 'SUCCEEDED', trigger, 'system', { afterMin }, 'attempt succeeded');
+  tr(
+    'PENDING',
+    'SUCCEEDED',
+    trigger,
+    'system',
+    { afterMin },
+    'attempt succeeded',
+  );
 
 function succeededOn(
   key: string,
@@ -142,7 +163,12 @@ export function paymentSpecs(): PaymentSpec[] {
       createdAgoH: 2,
       status: 'PENDING',
       attempts: [
-        { key: 'a1', gateway: 'stripe', status: 'CREATED', transitions: [started()] },
+        {
+          key: 'a1',
+          gateway: 'stripe',
+          status: 'CREATED',
+          transitions: [started()],
+        },
       ],
       transitions: [],
     },
@@ -176,7 +202,10 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'fake',
           status: 'PENDING',
-          nextAction: { type: 'REDIRECT', url: 'https://fake.example.com/pay/SEED-P04' },
+          nextAction: {
+            type: 'REDIRECT',
+            url: 'https://fake.example.com/pay/SEED-P04',
+          },
           transitions: [started(), accepted()],
         },
       ],
@@ -208,7 +237,10 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'fake',
           status: 'PENDING',
-          nextAction: { type: 'VOUCHER', details: { code: 'SEEDP06', bank: 'Seed Bank' } },
+          nextAction: {
+            type: 'VOUCHER',
+            details: { code: 'SEEDP06', bank: 'Seed Bank' },
+          },
           transitions: [started(), accepted()],
         },
       ],
@@ -229,7 +261,14 @@ export function paymentSpecs(): PaymentSpec[] {
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'CANCELLED', 'gateway_switch', 'customer', { afterMin: 10 }, 'customer chose another gateway'),
+            tr(
+              'PENDING',
+              'CANCELLED',
+              'gateway_switch',
+              'customer',
+              { afterMin: 10 },
+              'customer chose another gateway',
+            ),
           ],
         },
         {
@@ -256,11 +295,17 @@ export function paymentSpecs(): PaymentSpec[] {
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'CANCELLED', 'merchant_cancel', 'merchant', { afterMin: 30 }),
+            tr('PENDING', 'CANCELLED', 'merchant_cancel', 'merchant', {
+              afterMin: 30,
+            }),
           ],
         },
       ],
-      transitions: [tr('PENDING', 'CANCELLED', 'merchant_cancel', 'merchant', { afterMin: 30 })],
+      transitions: [
+        tr('PENDING', 'CANCELLED', 'merchant_cancel', 'merchant', {
+          afterMin: 30,
+        }),
+      ],
     },
     {
       key: 'P10',
@@ -279,7 +324,9 @@ export function paymentSpecs(): PaymentSpec[] {
           ],
         },
       ],
-      transitions: [tr('PENDING', 'EXPIRED', 'expiry', 'system', { afterMin: 1440 })],
+      transitions: [
+        tr('PENDING', 'EXPIRED', 'expiry', 'system', { afterMin: 1440 }),
+      ],
     },
     {
       key: 'P11',
@@ -293,7 +340,14 @@ export function paymentSpecs(): PaymentSpec[] {
           status: 'FAILED',
           transitions: [
             started(),
-            tr('CREATED', 'FAILED', 'gateway_rejected', 'system', { afterMin: 2 }, 'card_declined'),
+            tr(
+              'CREATED',
+              'FAILED',
+              'gateway_rejected',
+              'system',
+              { afterMin: 2 },
+              'card_declined',
+            ),
           ],
         },
       ],
@@ -310,11 +364,22 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'stripe',
           status: 'REQUIRES_REVIEW',
-          review: { reason: 'AMBIGUOUS_PROVIDER_STATUS', openedAgoH: 100, refundRequired: true },
+          review: {
+            reason: 'AMBIGUOUS_PROVIDER_STATUS',
+            openedAgoH: 100,
+            refundRequired: true,
+          },
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'status_query', 'system', { agoH: 100 }, 'AMBIGUOUS_PROVIDER_STATUS'),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'status_query',
+              'system',
+              { agoH: 100 },
+              'AMBIGUOUS_PROVIDER_STATUS',
+            ),
           ],
         },
       ],
@@ -330,11 +395,22 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'fake',
           status: 'REQUIRES_REVIEW',
-          review: { reason: 'AMBIGUOUS_PROVIDER_STATUS', openedAgoH: 10, refundRequired: true },
+          review: {
+            reason: 'AMBIGUOUS_PROVIDER_STATUS',
+            openedAgoH: 10,
+            refundRequired: true,
+          },
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'status_query', 'system', { agoH: 10 }, 'AMBIGUOUS_PROVIDER_STATUS'),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'status_query',
+              'system',
+              { agoH: 10 },
+              'AMBIGUOUS_PROVIDER_STATUS',
+            ),
           ],
         },
       ],
@@ -359,7 +435,14 @@ export function paymentSpecs(): PaymentSpec[] {
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'webhook', 'system', { agoH: 80 }, 'AMOUNT_MISMATCH'),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'webhook',
+              'system',
+              { agoH: 80 },
+              'AMOUNT_MISMATCH',
+            ),
           ],
         },
       ],
@@ -375,17 +458,37 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'stripe',
           status: 'REQUIRES_REVIEW',
-          review: { reason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT', openedAgoH: 250, refundRequired: true },
+          review: {
+            reason: 'LATE_SUCCESS_ON_CLOSED_PAYMENT',
+            openedAgoH: 250,
+            refundRequired: true,
+          },
           transitions: [
             started(),
             accepted(),
             tr('PENDING', 'EXPIRED', 'expiry', 'system', { afterMin: 1440 }),
-            tr('EXPIRED', 'REQUIRES_REVIEW', 'webhook', 'system', { agoH: 250 }, 'LATE_SUCCESS_ON_CLOSED_PAYMENT'),
-            tr('REQUIRES_REVIEW', 'REQUIRES_REVIEW', 'operator_note', OPERATOR, { agoH: 200 }, 'Refund requested from the Stripe dashboard'),
+            tr(
+              'EXPIRED',
+              'REQUIRES_REVIEW',
+              'webhook',
+              'system',
+              { agoH: 250 },
+              'LATE_SUCCESS_ON_CLOSED_PAYMENT',
+            ),
+            tr(
+              'REQUIRES_REVIEW',
+              'REQUIRES_REVIEW',
+              'operator_note',
+              OPERATOR,
+              { agoH: 200 },
+              'Refund requested from the Stripe dashboard',
+            ),
           ],
         },
       ],
-      transitions: [tr('PENDING', 'EXPIRED', 'expiry', 'system', { afterMin: 1440 })],
+      transitions: [
+        tr('PENDING', 'EXPIRED', 'expiry', 'system', { afterMin: 1440 }),
+      ],
     },
     {
       key: 'P16',
@@ -404,11 +507,22 @@ export function paymentSpecs(): PaymentSpec[] {
           gateway: 'fake',
           status: 'REQUIRES_REVIEW',
           createdAfterMin: 5,
-          review: { reason: 'DUPLICATE_SUCCESS', openedAgoH: 150, refundRequired: true },
+          review: {
+            reason: 'DUPLICATE_SUCCESS',
+            openedAgoH: 150,
+            refundRequired: true,
+          },
           transitions: [
             started(5),
             accepted(6),
-            tr('PENDING', 'REQUIRES_REVIEW', 'webhook', 'system', { agoH: 150 }, 'DUPLICATE_SUCCESS'),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'webhook',
+              'system',
+              { agoH: 150 },
+              'DUPLICATE_SUCCESS',
+            ),
           ],
         },
       ],
@@ -425,17 +539,41 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'stripe',
           status: 'SUCCEEDED',
-          review: { reason: 'AMBIGUOUS_PROVIDER_STATUS', openedAgoH: 200, refundRequired: false },
+          review: {
+            reason: 'AMBIGUOUS_PROVIDER_STATUS',
+            openedAgoH: 200,
+            refundRequired: false,
+          },
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'status_query', 'system', { agoH: 200 }, 'AMBIGUOUS_PROVIDER_STATUS'),
-            tr('REQUIRES_REVIEW', 'SUCCEEDED', 'operator_resolution', OPERATOR, { agoH: 150 }),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'status_query',
+              'system',
+              { agoH: 200 },
+              'AMBIGUOUS_PROVIDER_STATUS',
+            ),
+            tr(
+              'REQUIRES_REVIEW',
+              'SUCCEEDED',
+              'operator_resolution',
+              OPERATOR,
+              { agoH: 150 },
+            ),
           ],
         },
       ],
       transitions: [
-        tr('PENDING', 'SUCCEEDED', 'operator_resolution', OPERATOR, { agoH: 150 }, 'attempt succeeded'),
+        tr(
+          'PENDING',
+          'SUCCEEDED',
+          'operator_resolution',
+          OPERATOR,
+          { agoH: 150 },
+          'attempt succeeded',
+        ),
       ],
     },
     {
@@ -448,12 +586,25 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'fake',
           status: 'FAILED',
-          review: { reason: 'AMBIGUOUS_PROVIDER_STATUS', openedAgoH: 300, refundRequired: false },
+          review: {
+            reason: 'AMBIGUOUS_PROVIDER_STATUS',
+            openedAgoH: 300,
+            refundRequired: false,
+          },
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'status_query', 'system', { agoH: 300 }, 'AMBIGUOUS_PROVIDER_STATUS'),
-            tr('REQUIRES_REVIEW', 'FAILED', 'operator_resolution', OPERATOR, { agoH: 200 }),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'status_query',
+              'system',
+              { agoH: 300 },
+              'AMBIGUOUS_PROVIDER_STATUS',
+            ),
+            tr('REQUIRES_REVIEW', 'FAILED', 'operator_resolution', OPERATOR, {
+              agoH: 200,
+            }),
           ],
         },
       ],
@@ -469,11 +620,22 @@ export function paymentSpecs(): PaymentSpec[] {
           key: 'a1',
           gateway: 'stripe',
           status: 'FAILED',
-          review: { reason: 'AMBIGUOUS_PROVIDER_STATUS', openedAgoH: 400, refundRequired: false },
+          review: {
+            reason: 'AMBIGUOUS_PROVIDER_STATUS',
+            openedAgoH: 400,
+            refundRequired: false,
+          },
           transitions: [
             started(),
             accepted(),
-            tr('PENDING', 'REQUIRES_REVIEW', 'status_query', 'system', { agoH: 400 }, 'AMBIGUOUS_PROVIDER_STATUS'),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'status_query',
+              'system',
+              { agoH: 400 },
+              'AMBIGUOUS_PROVIDER_STATUS',
+            ),
             tr(
               'REQUIRES_REVIEW',
               'FAILED',
@@ -491,14 +653,87 @@ export function paymentSpecs(): PaymentSpec[] {
     succeededOn('P20', 'stripe', 240 + 1, '2000000'),
     succeededOn('P21', 'fake', 480, '2100000'),
     succeededOn('P22', 'stripe', 672, '2200000'),
+    // --- A second Organization. AC01 reuses the Upstream Reference of P01:
+    // the same reference is allowed in two Organizations.
+    {
+      key: 'AC01',
+      organization: 'acme',
+      reference: 'P01',
+      amount: '990000',
+      createdAgoH: 2,
+      status: 'PENDING',
+      attempts: [],
+      transitions: [],
+    },
+    {
+      ...succeededOn('AC02', 'stripe', 6, '1250000'),
+      organization: 'acme',
+    },
+    {
+      key: 'AC03',
+      organization: 'acme',
+      amount: '770000',
+      createdAgoH: 120,
+      status: 'PENDING',
+      attempts: [
+        {
+          key: 'a1',
+          gateway: 'stripe',
+          status: 'REQUIRES_REVIEW',
+          review: {
+            reason: 'AMOUNT_MISMATCH',
+            openedAgoH: 100,
+            refundRequired: true,
+            providerReportedAmount: '700000',
+          },
+          transitions: [
+            started(),
+            accepted(),
+            tr(
+              'PENDING',
+              'REQUIRES_REVIEW',
+              'webhook',
+              'system',
+              { agoH: 100 },
+              'AMOUNT_MISMATCH',
+            ),
+          ],
+        },
+      ],
+      transitions: [],
+    },
   ];
 }
 
 export function callbackSpecs(): CallbackSpec[] {
   return [
-    { key: 'C1', gateway: 'stripe', status: 'PROCESSED', attempt: 'P07/a1', providerEventId: 'SEED-evt-1', receivedAgoH: 29.75, attempts: 1 },
-    { key: 'C2', gateway: 'stripe', status: 'RECEIVED', attempt: 'P03/a1', providerEventId: 'SEED-evt-2', receivedAgoH: 0.5, attempts: 0 },
-    { key: 'C3', gateway: 'fake', status: 'PROCESSING', attempt: 'P04/a1', providerEventId: 'SEED-evt-3', receivedAgoH: 0.1, attempts: 1 },
+    {
+      key: 'C1',
+      gateway: 'stripe',
+      status: 'PROCESSED',
+      attempt: 'P07/a1',
+      providerEventId: 'SEED-evt-1',
+      receivedAgoH: 29.75,
+      attempts: 1,
+    },
+    {
+      key: 'C2',
+      gateway: 'stripe',
+      status: 'RECEIVED',
+      attempt: 'P03/a1',
+      providerEventId: 'SEED-evt-2',
+      receivedAgoH: 0.5,
+      attempts: 0,
+    },
+    {
+      key: 'C3',
+      gateway: 'fake',
+      status: 'PROCESSING',
+      attempt: 'P04/a1',
+      providerEventId: 'SEED-evt-3',
+      receivedAgoH: 0.1,
+      attempts: 1,
+    },
     {
       key: 'C4',
       gateway: 'stripe',
@@ -509,18 +744,93 @@ export function callbackSpecs(): CallbackSpec[] {
       attempts: 3,
       lastError: 'Payment lock timeout after 3 attempts',
     },
-    { key: 'C5', gateway: 'fake', status: 'PROCESSED', attempt: 'P08/a2', providerEventId: null, receivedAgoH: 47.5, attempts: 1 },
-    { key: 'C6', gateway: 'stripe', status: 'PROCESSED', attempt: null, providerEventId: 'SEED-evt-6', receivedAgoH: 12, attempts: 1 },
+    {
+      key: 'C5',
+      gateway: 'fake',
+      status: 'PROCESSED',
+      attempt: 'P08/a2',
+      providerEventId: null,
+      receivedAgoH: 47.5,
+      attempts: 1,
+    },
+    {
+      key: 'C6',
+      gateway: 'stripe',
+      status: 'PROCESSED',
+      attempt: null,
+      providerEventId: 'SEED-evt-6',
+      receivedAgoH: 12,
+      attempts: 1,
+    },
+    {
+      key: 'C7',
+      gateway: 'stripe',
+      status: 'PROCESSED',
+      attempt: 'AC02/a1',
+      providerEventId: 'SEED-evt-7',
+      receivedAgoH: 5.75,
+      attempts: 1,
+    },
   ];
 }
 
 export function eventSpecs(): EventSpec[] {
   return [
-    { key: 'E1', type: 'PaymentCreated', payment: 'P01', when: { afterMin: 0 }, published: false },
-    { key: 'E2', type: 'PaymentCreated', payment: 'P07', when: { afterMin: 0 }, published: true },
-    { key: 'E3', type: 'PaymentSucceeded', payment: 'P07', when: { afterMin: 15 }, published: true },
-    { key: 'E4', type: 'PaymentCancelled', payment: 'P09', when: { afterMin: 30 }, published: true },
-    { key: 'E5', type: 'PaymentExpired', payment: 'P10', when: { afterMin: 1440 }, published: false },
-    { key: 'E6', type: 'PaymentRequiresReview', payment: 'P12', when: {agoH: 100}, published: true },
+    {
+      key: 'E1',
+      type: 'PaymentCreated',
+      payment: 'P01',
+      when: { afterMin: 0 },
+      published: false,
+    },
+    {
+      key: 'E2',
+      type: 'PaymentCreated',
+      payment: 'P07',
+      when: { afterMin: 0 },
+      published: true,
+    },
+    {
+      key: 'E3',
+      type: 'PaymentSucceeded',
+      payment: 'P07',
+      when: { afterMin: 15 },
+      published: true,
+    },
+    {
+      key: 'E4',
+      type: 'PaymentCancelled',
+      payment: 'P09',
+      when: { afterMin: 30 },
+      published: true,
+    },
+    {
+      key: 'E5',
+      type: 'PaymentExpired',
+      payment: 'P10',
+      when: { afterMin: 1440 },
+      published: false,
+    },
+    {
+      key: 'E6',
+      type: 'PaymentRequiresReview',
+      payment: 'P12',
+      when: { agoH: 100 },
+      published: true,
+    },
+    {
+      key: 'E7',
+      type: 'PaymentCreated',
+      payment: 'AC02',
+      when: { afterMin: 0 },
+      published: true,
+    },
+    {
+      key: 'E8',
+      type: 'PaymentSucceeded',
+      payment: 'AC02',
+      when: { afterMin: 15 },
+      published: true,
+    },
   ];
 }

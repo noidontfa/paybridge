@@ -7,6 +7,7 @@ import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 
 // POST /api/payments over HTTP: request validation, the response shape and the
 // mapping of domain errors to status codes. Rules are covered in depth by
@@ -14,6 +15,7 @@ import { createTestPrismaClient } from '../setup/test-prisma.js';
 
 const NOW = new Date('2026-05-01T10:00:00.000Z');
 const prisma = createTestPrismaClient();
+let apiKey: string;
 let app: INestApplication;
 
 beforeAll(async () => {
@@ -24,6 +26,7 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
+  apiKey = await createApiKey(prisma);
 });
 
 afterAll(async () => {
@@ -45,7 +48,7 @@ function body(overrides: Record<string, unknown> = {}) {
 }
 
 function post(payload: object) {
-  return request(app.getHttpServer()).post('/api/payments').send(payload);
+  return request(app.getHttpServer()).post('/api/payments').set(bearer(apiKey)).send(payload);
 }
 
 describe('POST /api/payments', () => {

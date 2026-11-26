@@ -1,4 +1,14 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { resolveCredentialKeys, type Env } from '../config/env.schema.js';
+import { ConnectionPlugins } from './application/connection-plugins.js';
+import { ImportEnvStripeAccount } from './application/use-cases/import-env-stripe-account.js';
+import {
+  ManageGatewayConnections,
+  ReencryptGatewayCredentials,
+} from './application/use-cases/manage-gateway-connections.js';
+import { GatewayConnectionsController } from './http/gateway-connections.controller.js';
+import { CredentialCipher } from './infrastructure/crypto/credential-cipher.js';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConsoleReadModule } from './console/console-read.module.js';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
@@ -63,6 +73,7 @@ import {
   controllers: [
     AttemptsController,
     BrowserReturnController,
+    GatewayConnectionsController,
     PaymentsController,
     ReviewResolutionController,
     WebhooksController,
@@ -71,6 +82,18 @@ import {
     { provide: APP_INTERCEPTOR, useClass: DomainErrorInterceptor },
     { provide: AlertSink, useClass: LoggerAlertSink },
     { provide: Clock, useClass: SystemClock },
+    {
+      provide: CredentialCipher,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) =>
+        CredentialCipher.fromConfig(
+          resolveCredentialKeys({
+            GATEWAY_CREDENTIAL_KEYS: config.get('GATEWAY_CREDENTIAL_KEYS', {
+              infer: true,
+            }),
+          }),
+        ),
+    },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     expirySweepOptionsProvider,
     outboxRelayOptionsProvider,
@@ -79,6 +102,7 @@ import {
     AttemptStatusQueryProcessor,
     BestEffortCancel,
     CancelPayment,
+    ConnectionPlugins,
     CreatePayment,
     ExpirePayment,
     ExpirySweep,
@@ -86,6 +110,8 @@ import {
     ExpirySweepScheduler,
     GetPayment,
     HandleBrowserReturn,
+    ImportEnvStripeAccount,
+    ManageGatewayConnections,
     OutboxRelay,
     PaymentExpiryProcessor,
     PaymentService,
@@ -93,6 +119,7 @@ import {
     ProviderQueryRateLimiter,
     RetentionCleanup,
     RetentionProcessor,
+    ReencryptGatewayCredentials,
     RequeryAttempt,
     ResolveReview,
     RetentionScheduler,
@@ -107,6 +134,14 @@ import {
     WebhookInboxSweepScheduler,
     WebhookIntake,
   ],
-  exports: [Clock, PaymentService, QueueModule, TransactionRunner],
+  exports: [
+    Clock,
+    CredentialCipher,
+    PaymentService,
+    ImportEnvStripeAccount,
+    QueueModule,
+    ReencryptGatewayCredentials,
+    TransactionRunner,
+  ],
 })
 export class PaymentCoreModule {}

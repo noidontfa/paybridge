@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
@@ -19,6 +20,7 @@ import {
 } from '../../src/payment-core/reliability/expiry-sweep.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 23 end to end: the schedule registered at boot, the sweep and the
 // expiry worker running on the compose Redis, with a fake clock.
@@ -55,7 +57,7 @@ function queue(moduleRef: TestingModule, name: string): Queue {
 async function createPendingPayment(): Promise<string> {
   const id = newId();
   await runner.run((tx) =>
-    tx.payments.create({
+    tx.payments.create(defaultScope, {
       id,
       merchantOrderId: `order-${id}`,
       amount: '1000',
@@ -68,7 +70,8 @@ async function createPendingPayment(): Promise<string> {
 }
 
 async function statusOf(id: string): Promise<string | undefined> {
-  return (await runner.repositories.payments.findById(id))?.status;
+  return (await runner.repositories.payments.findById(defaultScope, id))
+    ?.status;
 }
 
 /** Waits until the expiry queue has no job left to run. */
@@ -123,7 +126,9 @@ describe('expiry sweep schedule', () => {
     const id = await createPendingPayment();
     const app = await bootInstance();
     const sweep = app.get(ExpirySweep);
-    const fake = app.get(FakeGatewayPlugin);
+    const fake = app
+      .get(GatewayManager, { strict: false })
+      .resolve('fake') as FakeGatewayPlugin;
 
     // The last sweep before the deadline leaves it alone.
     clock.set(new Date(DEADLINE.getTime() - 1));

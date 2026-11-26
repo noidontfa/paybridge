@@ -7,6 +7,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { GetReviewSummary } from '../../application/use-cases/console/get-review-summary.js';
 import { ListReviews } from '../../application/use-cases/console/list-reviews.js';
@@ -21,6 +24,7 @@ import {
  * `reviewSummarySchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/reviews`)
 export class ReviewsController {
   constructor(
@@ -31,7 +35,8 @@ export class ReviewsController {
 
   @Get()
   @ApiOperation({
-    summary: 'List Reviews: PaymentTransactions with a review reason (operator)',
+    summary:
+      'List Reviews: PaymentTransactions with a review reason (operator)',
     description:
       'Filters: reason, gatewayId, state (open, the default, or closed), q (Payment id, Attempt Key or Upstream Reference). Sorted by the time the Review opened, oldest first unless order=desc. Keyset paging with an opaque cursor; limit 1 to 100 (default 20).',
   })
@@ -41,10 +46,11 @@ export class ReviewsController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(reviewsListQuerySchema))
     query: ReviewsListQuery,
   ) {
-    const page = await this.listReviews.execute(query);
+    const page = await this.listReviews.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -67,7 +73,7 @@ export class ReviewsController {
     summary: 'Review counts: open, total and open by reason (operator)',
   })
   @ApiOkResponse({ description: '`{ open, total, byReason }`' })
-  summary() {
-    return this.getReviewSummary.execute();
+  summary(@CurrentReadScope() scope: ReadScope) {
+    return this.getReviewSummary.execute(scope);
   }
 }

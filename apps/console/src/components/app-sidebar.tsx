@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { NavMain } from '@/components/nav-main';
 import { NavSecondary } from '@/components/nav-secondary';
 import { NavUser } from '@/components/nav-user';
+import { OrganizationSwitcher } from '@/components/organization-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -14,9 +15,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { mainNav, PRODUCT_NAME, secondaryNav } from '@/lib/navigation';
+import { useCan } from '@/lib/operator';
+import { mainNav, platformNav, PRODUCT_NAME, secondaryNav } from '@/lib/navigation';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const showPlatform = useCan('organizations:manage');
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -32,9 +35,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain sections={mainNav} />
+        <NavMain sections={showPlatform ? [...mainNav, platformNav] : mainNav} />
         <NavSecondary items={secondaryNav} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

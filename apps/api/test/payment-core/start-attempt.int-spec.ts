@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
@@ -24,6 +25,7 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // startAttempt through PaymentService against the migrated test database,
 // with the fake Gateway Plugin standing in for the provider.
@@ -54,7 +56,9 @@ beforeAll(async () => {
   service = moduleRef.get(PaymentService);
   runner = moduleRef.get(TransactionRunner);
   repos = runner.repositories;
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -71,7 +75,7 @@ beforeEach(async () => {
 async function createPayment(
   overrides: Record<string, unknown> = {},
 ): Promise<Payment> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -81,7 +85,7 @@ async function createPayment(
 }
 
 function start(payment: Payment, overrides: Record<string, unknown> = {}) {
-  return service.startAttempt({
+  return service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId: fake.gatewayId,
     returnUrl: RETURN_URL,
@@ -206,10 +210,13 @@ describe('PaymentService.startAttempt: gateway accepts', () => {
     expect(result.attempt).toMatchObject(expected);
     expect(result.payment.status).toBe('PENDING');
     expect(result.payment.attempts).toEqual([result.attempt]);
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     expect(stored?.attempts).toEqual([expect.objectContaining(expected)]);
     expect(
-      await repos.gatewayRawResponses.listForAttempt(result.attempt.id),
+      await repos.gatewayRawResponses.listForAttempt(
+        defaultScope,
+        result.attempt.id,
+      ),
     ).toEqual([
       expect.objectContaining({
         operation: 'initiate',
@@ -219,6 +226,7 @@ describe('PaymentService.startAttempt: gateway accepts', () => {
     expect(
       (
         await repos.statusTransitions.listForEntity(
+          defaultScope,
           'PAYMENT_TRANSACTION',
           result.attempt.id,
         )
@@ -256,6 +264,7 @@ describe('PaymentService.startAttempt: gateway rejects', () => {
     expect(
       (
         await repos.statusTransitions.listForEntity(
+          defaultScope,
           'PAYMENT_TRANSACTION',
           rejected.attempt.id,
         )
@@ -305,7 +314,7 @@ describe('PaymentService.startAttempt: rejected before the gateway call', () => 
 
   it('rejects an unknown Payment', async () => {
     await expect(
-      service.startAttempt({
+      service.startAttempt(defaultScope, {
         paymentId: newId(),
         gatewayId: 'fake',
         returnUrl: RETURN_URL,
@@ -368,9 +377,13 @@ describe('PaymentService.startAttempt: state changed during the gateway call', (
       providerMetadata: { session: 'late' },
     });
     expect(
-      await repos.gatewayRawResponses.listForAttempt(result.attempt.id),
+      await repos.gatewayRawResponses.listForAttempt(
+        defaultScope,
+        result.attempt.id,
+      ),
     ).toHaveLength(1);
     const trail = await repos.statusTransitions.listForEntity(
+      defaultScope,
       'PAYMENT_TRANSACTION',
       result.attempt.id,
     );

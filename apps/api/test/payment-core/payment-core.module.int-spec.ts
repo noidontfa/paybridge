@@ -9,6 +9,7 @@ import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gat
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // PaymentCoreModule wires the runner, the clock and the queues for later
 // tickets' use cases.
@@ -36,7 +37,7 @@ it('provides a transaction runner on the configured database', async () => {
   const id = newId();
 
   await runner.run((repos) =>
-    repos.payments.create({
+    repos.payments.create(defaultScope, {
       id,
       merchantOrderId: `order-${id}`,
       amount: '1000',
@@ -46,7 +47,9 @@ it('provides a transaction runner on the configured database', async () => {
     }),
   );
 
-  expect((await runner.repositories.payments.findById(id))?.id).toBe(id);
+  expect(
+    (await runner.repositories.payments.findById(defaultScope, id))?.id,
+  ).toBe(id);
 });
 
 it('provides the system clock and the Core queues', () => {

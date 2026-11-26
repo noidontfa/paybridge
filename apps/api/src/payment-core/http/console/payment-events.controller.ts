@@ -15,6 +15,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetPaymentEvent,
@@ -31,6 +34,7 @@ import {
  * (no payload) and `paymentEventSchema` (with payload).
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/payment-events`)
 export class PaymentEventsController {
   constructor(
@@ -50,10 +54,11 @@ export class PaymentEventsController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(paymentEventsListQuerySchema))
     query: PaymentEventsListQuery,
   ) {
-    const page = await this.listEvents.execute(query);
+    const page = await this.listEvents.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -70,8 +75,8 @@ export class PaymentEventsController {
   @ApiOperation({ summary: 'One Payment Event with its payload (operator)' })
   @ApiOkResponse({ description: 'The Payment Event' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async get(@Param('id') id: string) {
-    const row = await this.getEvent.execute(id);
+  async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
+    const row = await this.getEvent.execute(scope, id);
     if (!row) throw new NotFoundException(`Payment Event ${id} not found`);
     return {
       id: row.id,

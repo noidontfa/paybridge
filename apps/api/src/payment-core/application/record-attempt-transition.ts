@@ -5,6 +5,7 @@ import type {
 } from '../domain/payment-transaction.js';
 import { canTransitionAttempt } from '../domain/rules/attempt-transitions.js';
 import type { AttemptStatus } from '../domain/statuses.js';
+import { organizationScope } from '../domain/organization-scope.js';
 import type { Repositories } from '../infrastructure/prisma/repositories.js';
 
 /** What caused an attempt transition, written to the status-transition trail. */
@@ -13,6 +14,10 @@ export interface TransitionCause {
   readonly trigger: string;
   /** e.g. `customer`, `system`, an operator id. */
   readonly actor: string;
+  /** The Role the acting User held, when the actor is a User. */
+  readonly actorRole?: string;
+  /** The acting User's name, when the actor is a User. */
+  readonly actorName?: string;
   readonly reason?: string | null;
 }
 
@@ -39,17 +44,20 @@ export async function recordAttemptTransition(
   if (!canTransitionAttempt(attempt.status, to)) {
     throw new InvalidAttemptTransitionError(attempt.id, attempt.status, to);
   }
-  const updated = await repos.payments.updateAttempt(attempt.id, {
+  const scope = organizationScope(attempt.organizationId);
+  const updated = await repos.payments.updateAttempt(scope, attempt.id, {
     ...changes,
     status: to,
   });
-  await repos.statusTransitions.record({
+  await repos.statusTransitions.record(scope, {
     entityType: 'PAYMENT_TRANSACTION',
     entityId: attempt.id,
     fromStatus: attempt.status,
     toStatus: to,
     trigger: cause.trigger,
     actor: cause.actor,
+    actorRole: cause.actorRole ?? null,
+    actorName: cause.actorName ?? null,
     reason: cause.reason ?? null,
   });
   return updated;

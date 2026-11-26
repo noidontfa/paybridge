@@ -20,6 +20,8 @@ import {
 import { ErrorResponseDto } from '../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PaymentService } from '../application/payment.service.js';
+import type { OrganizationScope } from '../domain/organization-scope.js';
+import { CurrentScope } from './current-scope.decorator.js';
 import {
   StartAttemptResponseDto,
   toStartAttemptResponse,
@@ -54,10 +56,14 @@ export class AttemptsController {
       'The Payment is not PENDING, has passed its expiry, has an open attempt, or has an attempt in review',
   })
   async start(
+    @CurrentScope() scope: OrganizationScope,
     @Param('paymentId', new ParseUUIDPipe()) paymentId: string,
     @Body(new ZodValidationPipe(startAttemptSchema)) body: StartAttemptBody,
   ): Promise<StartAttemptResponseDto> {
-    const result = await this.payments.startAttempt({ paymentId, ...body });
+    const result = await this.payments.startAttempt(scope, {
+      paymentId,
+      ...body,
+    });
     return toStartAttemptResponse(result);
   }
 }

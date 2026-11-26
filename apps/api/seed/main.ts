@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { parseArgs } from 'node:util';
-import { runSeed, SeedRefusedError } from './seed.js';
+import { runSeed, SEED_PASSWORD, SeedRefusedError } from './seed.js';
 
 // `pnpm db:seed [-- --bulk 500] [-- --force]` (runs through `prisma db seed`).
 // Same env-file precedence as the Nest app and prisma.config.ts.
@@ -29,11 +29,16 @@ async function main(): Promise<void> {
     bulk,
   });
   console.log(
-    `Seeded ${result.payments} Payments, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
+    `Seeded ${result.users} Users (password: ${SEED_PASSWORD}) and ${result.payments} Payments in ${result.organizations} Organizations, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
   );
+  for (const k of result.apiKeys) {
+    console.log(`API Key (${k.label}${k.revoked ? ', revoked' : ''}): ${k.key}`);
+  }
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof SeedRefusedError ? `Refused: ${error.message}` : error);
+  console.error(
+    error instanceof SeedRefusedError ? `Refused: ${error.message}` : error,
+  );
   process.exit(1);
 });

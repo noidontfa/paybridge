@@ -56,6 +56,7 @@ export function toPaymentTransaction(
 ): PaymentTransaction {
   return {
     id: row.id,
+    organizationId: row.organizationId,
     paymentId: row.paymentId,
     gatewayId: row.gatewayId,
     status: row.status,
@@ -76,6 +77,7 @@ export function toPayment(
 ): Payment {
   return {
     id: row.id,
+    organizationId: row.organizationId,
     merchantOrderId: row.merchantOrderId,
     amount: decimalToString(row.amount),
     currency: row.currency,

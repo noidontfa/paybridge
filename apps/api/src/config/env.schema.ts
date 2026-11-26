@@ -51,6 +51,19 @@ const envObject = z.object({
       })
       .optional(),
   ),
+  /**
+   * Public origin of the Console, used to build the links in emails (Password
+   * Reset). Unset => `http://localhost:8888`.
+   */
+  CONSOLE_BASE_URL: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine((v) => /^https?:\/\/[^\s/]+/.test(v) && URL.canParse(v), {
+        message: 'must be an http(s) URL',
+      })
+      .default('http://localhost:8888'),
+  ),
   /** Swagger UI toggle. Unset => enabled everywhere except production. */
   SWAGGER_ENABLED: z.stringbool().optional(),
   DATABASE_URL: z
@@ -80,6 +93,45 @@ const envObject = z.object({
     .min(1)
     .max(1000)
     .default(100),
+  /**
+   * ES256 signing key of access tokens: a PKCS#8 PEM (P-256), newlines may be
+   * written as `\n`. Unset => a fresh key per process (development and tests
+   * only: restarting then signs everyone out). Production refuses to start
+   * without it.
+   */
+  AUTH_JWT_PRIVATE_KEY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
+  /**
+   * Rotation: public keys (SPKI PEM, `\n` for newlines, comma separated) of
+   * earlier signing keys. They stay in the published JWKS and verify tokens
+   * signed before the rotation, so nobody is signed out. Drop a key once the
+   * access-token lifetime has passed.
+   */
+  AUTH_JWT_RETIRED_PUBLIC_KEYS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
+  /**
+   * Keys that encrypt Gateway Connection credentials: `id:base64key` pairs
+   * separated by commas, each key 32 random bytes; the first encrypts, all
+   * decrypt. Unset => a fixed development key (never in production, which
+   * refuses to start without it).
+   */
+  GATEWAY_CREDENTIAL_KEYS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine(
+        (v) =>
+          v
+            .split(',')
+            .every((e) => /^[A-Za-z0-9_-]+:[A-Za-z0-9+/]{43}=$/.test(e.trim())),
+        { message: 'must be id:base64key pairs, each key 32 bytes' },
+      )
+      .optional(),
+  ),
   /** Stripe Gateway Plugin: all three keys or none. */
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
@@ -88,6 +140,21 @@ const envObject = z.object({
 
 export const envSchema = envObject
   .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && !env.AUTH_JWT_PRIVATE_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_JWT_PRIVATE_KEY'],
+        message: 'is required in production (an ES256 PKCS#8 PEM key)',
+      });
+    }
+    if (env.NODE_ENV === 'production' && !env.GATEWAY_CREDENTIAL_KEYS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GATEWAY_CREDENTIAL_KEYS'],
+        message:
+          'is required in production (id:base64key pairs; each key 32 random bytes)',
+      });
+    }
     const missing = STRIPE_KEYS.filter((k) => !env[k]);
     if (missing.length > 0 && missing.length < STRIPE_KEYS.length) {
       ctx.addIssue({
@@ -141,6 +208,16 @@ export function resolveOutboxRelayEnabled(
   env: Pick<Env, 'NODE_ENV' | 'OUTBOX_RELAY_ENABLED'>,
 ): boolean {
   return env.OUTBOX_RELAY_ENABLED ?? env.NODE_ENV !== 'test';
+}
+
+/** Fixed key for development and tests; never accepted in production. */
+export const DEVELOPMENT_CREDENTIAL_KEYS =
+  'dev:cGF5YnJpZGdlLWRldi1rZXktbm90LWZvci1wcm9kISE=';
+
+export function resolveCredentialKeys(
+  env: Pick<Env, 'GATEWAY_CREDENTIAL_KEYS'>,
+): string {
+  return env.GATEWAY_CREDENTIAL_KEYS ?? DEVELOPMENT_CREDENTIAL_KEYS;
 }
 
 export interface StripeConfig {

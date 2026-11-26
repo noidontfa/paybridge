@@ -8,6 +8,7 @@ import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { expiredPendingPaymentsQuery } from '../../src/payment-core/infrastructure/prisma/payment.repository.js';
 import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
+import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
 import type { PaymentStatus } from '../../src/payment-core/domain/statuses.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
@@ -22,6 +23,7 @@ import { ExpirySweepProcessor } from '../../src/payment-core/reliability/process
 import { PaymentExpiryProcessor } from '../../src/payment-core/reliability/processors/payment-expiry.processor.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 23: the sweep finds PENDING Payments past their deadline in
 // PostgreSQL and queues each one with its id as job id. Both workers are
@@ -78,7 +80,7 @@ async function payment(
 ): Promise<string> {
   const id = newId();
   await moduleRef.get(TransactionRunner).run((tx) =>
-    tx.payments.create({
+    tx.payments.create(defaultScope, {
       id,
       merchantOrderId: `order-${id}`,
       amount: '1000',
@@ -143,7 +145,7 @@ describe('ExpirySweep', () => {
     for (let i = 10; i > 10 - BATCH_SIZE; i--) {
       const stuck = await payment(minutes(-i));
       await moduleRef.get(TransactionRunner).run((tx) =>
-        tx.payments.createAttempt({
+        tx.payments.createAttempt(defaultScope, {
           id: newId(),
           paymentId: stuck,
           gatewayId: 'fake',
@@ -189,7 +191,11 @@ describe('expiry index', () => {
     for (let i = 0; i < 20; i++) {
       await payment(minutes(i - 10), i % 2 ? 'PENDING' : 'SUCCEEDED');
     }
-    const query = expiredPendingPaymentsQuery(NOW, BATCH_SIZE);
+    const query = expiredPendingPaymentsQuery(
+      ALL_ORGANIZATIONS,
+      NOW,
+      BATCH_SIZE,
+    );
 
     // A tiny table would be scanned sequentially anyway; switching seq scans
     // off shows whether the index can serve this exact query at all.

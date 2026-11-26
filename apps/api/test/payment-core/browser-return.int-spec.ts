@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -12,6 +13,11 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import {
+  defaultScope,
+  ensureOtherOrganization,
+  otherScope,
+} from '../setup/organizations.js';
 
 // Ticket 20: the browser return writes nothing and queues a status query; the
 // status query applies the provider answer through the shared outcome rules.
@@ -55,7 +61,9 @@ beforeAll(async () => {
   await app.init();
   service = moduleRef.get(PaymentService);
   requery = moduleRef.get(RequeryAttempt);
-  fake = moduleRef.get(FakeGatewayPlugin, { strict: false });
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -71,12 +79,12 @@ beforeEach(async () => {
 });
 
 async function pendingAttempt() {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
   });
-  const { attempt } = await service.startAttempt({
+  const { attempt } = await service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId: fake.gatewayId,
     returnUrl: 'https://shop.example/return',
@@ -163,6 +171,22 @@ describe('GET /api/payments/:id/return', () => {
 
   it('404 for an unknown Payment', async () => {
     await request(app.getHttpServer()).get(returnUrl(newId())).expect(404);
+  });
+
+  it("serves a Payment of another Organization, and nothing else's", async () => {
+    await ensureOtherOrganization(prisma);
+    const { payment } = await service.createPayment(otherScope, {
+      amount: '150000',
+      currency: 'VND',
+      upstreamReference: `order-${newId()}`,
+    });
+    const res = await request(app.getHttpServer())
+      .get(returnUrl(payment.id))
+      .expect(200);
+    expect(res.body.id).toBe(payment.id);
+    expect(res.body.organizationId ?? payment.organizationId).toBe(
+      payment.organizationId,
+    );
   });
 });
 

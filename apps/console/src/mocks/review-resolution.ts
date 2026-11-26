@@ -3,7 +3,7 @@
  * rules Payment Core enforces (Payment Core spec, "Review exit"), mutates the
  * fixture store, and rejects with the API's error envelope:
  *
- * - 400 `VALIDATION_FAILED`: the body is malformed (actor, attempt id, note of
+ * - 400 `VALIDATION_FAILED`: the body is malformed (attempt id, note of
  *   1 to 2000 characters after trimming, `status` of SUCCEEDED or FAILED,
  *   `amount` a decimal string and required for SUCCEEDED);
  * - 404 `PAYMENT_NOT_FOUND`, `ATTEMPT_NOT_FOUND`;
@@ -33,7 +33,9 @@ const HOUR = 3_600_000;
 
 const bodySchema = z.object({
   attemptId: z.string().min(1, 'attemptId is required'),
-  actor: z.string().trim().min(1, 'actor is required'),
+  // The real API takes the actor from the signed-in User's token, not the body;
+  // mock mode has no sign-in, so it falls back to the mock identity.
+  actor: z.string().trim().min(1, 'actor must not be empty').default('operator'),
   note: z.string().trim().min(1, 'note is required').max(REVIEW_NOTE_MAX_LENGTH, `note must be at most ${REVIEW_NOTE_MAX_LENGTH} characters`),
   status: z.enum(['SUCCEEDED', 'FAILED']).optional(),
   amount: decimalStringSchema.optional(),

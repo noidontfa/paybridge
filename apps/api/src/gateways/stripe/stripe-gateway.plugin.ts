@@ -1,5 +1,6 @@
 import { Logger, type LoggerService } from '@nestjs/common';
 import Stripe from 'stripe';
+import { z } from 'zod';
 import {
   GatewayNotFoundError,
   GatewayRejectedError,
@@ -19,6 +20,7 @@ import {
   type QueryInput,
   type QueryResult,
 } from '../../payment-core/port/index.js';
+import type { GatewayPluginFactory } from '../../payment-core/gateway-manager/gateway-plugin-factory.js';
 
 export const STRIPE_GATEWAY_ID = 'stripe';
 
@@ -331,3 +333,18 @@ function translateError(error: unknown, operation: StripeOperation): Error {
   }
   return error instanceof Error ? error : new Error(String(error));
 }
+
+/** Registers the Stripe plugin: one instance per set of Stripe credentials. */
+/** What a Stripe Gateway Connection stores. */
+export const stripeCredentialsSchema = z.object({
+  secretKey: z.string().regex(/^(sk|rk)_/, 'must start with "sk_" or "rk_"'),
+  webhookSecret: z.string().regex(/^whsec_/, 'must start with "whsec_"'),
+  publishableKey: z.string().regex(/^pk_/, 'must start with "pk_"'),
+});
+
+export const stripeGatewayFactory: GatewayPluginFactory<StripeGatewayOptions> =
+  {
+    gatewayId: STRIPE_GATEWAY_ID,
+    credentialsSchema: stripeCredentialsSchema.strict(),
+    create: (options) => new StripeGatewayPlugin(options),
+  };

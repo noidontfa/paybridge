@@ -3,10 +3,11 @@ import {
   PaymentNotFoundError,
   PaymentNotPendingError,
 } from '../../domain/errors.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import {
   BestEffortCancel,
@@ -31,13 +32,13 @@ const CANCEL_CAUSE = { trigger: 'merchant_cancel', actor: 'merchant' } as const;
 export class CancelPayment {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
-  async execute(paymentId: string): Promise<Payment> {
+  async execute(scope: OrganizationScope, paymentId: string): Promise<Payment> {
     const { payment, cancelled } = await this.runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(paymentId);
+      const locked = await repos.payments.findForUpdate(scope, paymentId);
       if (!locked) throw new PaymentNotFoundError(paymentId);
       if (locked.status === 'CANCELLED') {
         return { payment: locked, cancelled: [] };
@@ -58,17 +59,17 @@ export class CancelPayment {
         );
       }
 
-      const updated = await repos.payments.update(locked.id, {
+      const updated = await repos.payments.update(scope, locked.id, {
         status: 'CANCELLED',
       });
-      await repos.statusTransitions.record({
+      await repos.statusTransitions.record(scope, {
         entityType: 'PAYMENT',
         entityId: locked.id,
         fromStatus: locked.status,
         toStatus: updated.status,
         ...CANCEL_CAUSE,
       });
-      await repos.outbox.add({
+      await repos.outbox.add(scope, {
         eventType: 'PaymentCancelled',
         paymentId: locked.id,
         payload: {
@@ -79,19 +80,22 @@ export class CancelPayment {
           status: updated.status,
         },
       });
-      const reloaded = await repos.payments.findById(locked.id);
+      const reloaded = await repos.payments.findById(scope, locked.id);
       return { payment: reloaded ?? updated, cancelled };
     });
 
     // After commit; never throws. Only plugins that declare supportsCancel.
-    await this.cancels.cancel(cancelled.filter((a) => this.canCancel(a)));
+    const cancellable: CancellableAttempt[] = [];
+    for (const a of cancelled) if (await this.canCancel(a)) cancellable.push(a);
+    await this.cancels.cancel(cancellable);
     return payment;
   }
 
-  private canCancel(attempt: CancellableAttempt): boolean {
+  private async canCancel(attempt: CancellableAttempt): Promise<boolean> {
     try {
-      return this.gateways.resolve(attempt.gatewayId).capabilities
-        .supportsCancel;
+      return (
+        await this.plugins.forExisting(attempt.organizationId, attempt.gatewayId)
+      ).capabilities.supportsCancel;
     } catch {
       return false;
     }

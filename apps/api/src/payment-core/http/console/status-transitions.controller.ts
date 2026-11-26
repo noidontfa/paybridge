@@ -7,6 +7,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { ListStatusTransitions } from '../../application/use-cases/console/status-transitions.js';
 import {
@@ -15,10 +18,10 @@ import {
 } from './status-transitions.query.js';
 
 /**
- * Operator endpoint (no authentication in Phase 1; keep `/internal` off the
- * public ingress). The response shape is the Console's `auditListSchema`.
+ * Operator endpoint (needs a signed-in User). The response shape is the Console's `auditListSchema`.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/status-transitions`)
 export class StatusTransitionsController {
   constructor(
@@ -28,7 +31,8 @@ export class StatusTransitionsController {
 
   @Get()
   @ApiOperation({
-    summary: 'List the audit log of status transitions, newest first (operator)',
+    summary:
+      'List the audit log of status transitions, newest first (operator)',
     description:
       'Filters: entityType, entityId, trigger, actor, q (entity id, Payment id or Upstream Reference). Each row carries the paymentId it belongs to. Keyset paging with an opaque cursor; limit 1 to 100 (default 20).',
   })
@@ -38,10 +42,11 @@ export class StatusTransitionsController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(statusTransitionsListQuerySchema))
     query: StatusTransitionsListQuery,
   ) {
-    const page = await this.listTransitions.execute(query);
+    const page = await this.listTransitions.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -51,6 +56,11 @@ export class StatusTransitionsController {
         toStatus: row.toStatus,
         trigger: row.trigger,
         actor: row.actor,
+        actorRole: row.actorRole,
+        actorName: row.actorName,
+        // Platform staff acting in an Organization are labelled as such.
+        actorLabel:
+          row.actorRole === 'SUPER_ADMIN' ? 'Super Admin (PayBridge)' : null,
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         paymentId: row.paymentId,

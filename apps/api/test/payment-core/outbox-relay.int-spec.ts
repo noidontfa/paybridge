@@ -21,6 +21,7 @@ import {
 } from '../../src/payment-core/reliability/outbox-relay.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // The outbox relay against the migrated test database and the compose Redis.
 // "Redis unavailable" is simulated with a TCP proxy in front of Redis that the
@@ -67,7 +68,7 @@ beforeEach(async () => {
 });
 
 async function createPayment(): Promise<string> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${crypto.randomUUID()}`,
@@ -136,7 +137,7 @@ describe('OutboxRelay.publishPending', () => {
       'PaymentRequiresReview',
     ];
     for (const eventType of others) {
-      await runner.repositories.outbox.add({
+      await runner.repositories.outbox.add(defaultScope, {
         eventType,
         paymentId,
         payload: { eventType },
@@ -157,7 +158,7 @@ describe('OutboxRelay.publishPending', () => {
     const paymentId = await createPayment();
     const small = relayWith({ batchSize: 2 });
     for (let i = 0; i < 4; i += 1) {
-      await runner.repositories.outbox.add({
+      await runner.repositories.outbox.add(defaultScope, {
         eventType: 'PaymentSucceeded',
         paymentId,
         payload: { i },

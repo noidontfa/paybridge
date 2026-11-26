@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { escapeLike, uuidNeedle } from './developer-views.shared.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeSql } from '../scope.js';
 
 export type TransitionEntityType = 'PAYMENT' | 'PAYMENT_TRANSACTION' | 'REFUND';
 
@@ -29,6 +31,8 @@ export interface StatusTransitionRow {
   readonly toStatus: string;
   readonly trigger: string;
   readonly actor: string;
+  readonly actorRole: string | null;
+  readonly actorName: string | null;
   readonly reason: string | null;
   readonly createdAt: Date;
   /** A Payment resolves to itself, a PaymentTransaction to its Payment, a Refund to none. */
@@ -43,6 +47,8 @@ interface RawRow {
   to_status: string;
   trigger: string;
   actor: string;
+  actor_role: string | null;
+  actor_name: string | null;
   reason: string | null;
   created_at: Date;
   payment_id: string | null;
@@ -58,10 +64,13 @@ export class StatusTransitionsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first. */
-  async list(query: StatusTransitionListQuery): Promise<StatusTransitionRow[]> {
+  async list(
+    scope: ReadScope,
+    query: StatusTransitionListQuery,
+  ): Promise<StatusTransitionRow[]> {
     const rows = await this.prisma.$queryRaw<RawRow[]>`
       SELECT st.id, st.entity_type, st.entity_id, st.from_status, st.to_status,
-             st.trigger, st.actor, st.reason, st.created_at, p.id AS payment_id
+             st.trigger, st.actor, st.actor_role, st.actor_name, st.reason, st.created_at, p.id AS payment_id
       FROM core_status_transitions st
       LEFT JOIN core_payment_transactions pt
         ON st.entity_type = 'PAYMENT_TRANSACTION' AND pt.id = st.entity_id
@@ -70,7 +79,7 @@ export class StatusTransitionsReadRepository {
                     WHEN 'PAYMENT' THEN st.entity_id
                     WHEN 'PAYMENT_TRANSACTION' THEN pt.payment_id
                   END
-      ${this.where(query)}
+      ${this.where(scope, query)}
       ORDER BY st.created_at DESC, st.id DESC
       LIMIT ${query.limit + 1}`;
     return rows.map((row) => ({
@@ -81,15 +90,20 @@ export class StatusTransitionsReadRepository {
       toStatus: row.to_status,
       trigger: row.trigger,
       actor: row.actor,
+      actorRole: row.actor_role,
+      actorName: row.actor_name,
       reason: row.reason,
       createdAt: row.created_at,
       paymentId: row.payment_id,
     }));
   }
 
-  private where(query: StatusTransitionListQuery): Prisma.Sql {
+  private where(
+    scope: ReadScope,
+    query: StatusTransitionListQuery,
+  ): Prisma.Sql {
     const { filters, after } = query;
-    const conditions: Prisma.Sql[] = [];
+    const conditions: Prisma.Sql[] = [scopeSql(scope, 'st.organization_id')];
     if (filters.entityType) {
       conditions.push(
         Prisma.sql`st.entity_type = ${filters.entityType}::core_status_transition_entity_type`,

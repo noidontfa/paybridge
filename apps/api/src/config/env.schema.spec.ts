@@ -11,6 +11,17 @@ const REDIS_URL = 'redis://localhost:6379';
 const required = { DATABASE_URL, REDIS_URL };
 
 describe('envSchema', () => {
+  it('refuses to start in production without credential encryption keys', () => {
+    const prod = { ...required, NODE_ENV: 'production', AUTH_JWT_PRIVATE_KEY: 'k' };
+    expect(() => envSchema.parse(prod)).toThrow(/GATEWAY_CREDENTIAL_KEYS/);
+    expect(
+      envSchema.parse({
+        ...prod,
+        GATEWAY_CREDENTIAL_KEYS: `k1:${Buffer.alloc(32, 1).toString('base64')}`,
+      }).GATEWAY_CREDENTIAL_KEYS,
+    ).toMatch(/^k1:/);
+  });
+
   it('applies defaults', () => {
     const env = envSchema.parse(required);
     expect(env.NODE_ENV).toBe('development');
@@ -45,6 +56,21 @@ describe('envSchema', () => {
         envSchema.safeParse({ ...required, PUBLIC_BASE_URL: bad }).success,
       ).toBe(false);
     }
+  });
+
+  it('requires the access-token signing key in production only', () => {
+    expect(envSchema.safeParse(required).success).toBe(true);
+    expect(
+      envSchema.safeParse({ ...required, NODE_ENV: 'production' }).success,
+    ).toBe(false);
+    expect(
+      envSchema.safeParse({
+        ...required,
+        NODE_ENV: 'production',
+        AUTH_JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\n...',
+        GATEWAY_CREDENTIAL_KEYS: `k1:${Buffer.alloc(32, 1).toString('base64')}`,
+      }).success,
+    ).toBe(true);
   });
 
   it('requires a PostgreSQL DATABASE_URL', () => {

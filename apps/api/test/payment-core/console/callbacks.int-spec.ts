@@ -10,6 +10,7 @@ import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { testDatabaseUrl } from '../../setup/test-database.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 07: GET /internal/callbacks[/:id] over HTTP on real PostgreSQL.
 
@@ -48,6 +49,7 @@ async function insertCallback(input: CallbackInput = {}): Promise<string> {
   await prisma.webhookInbox.create({
     data: {
       id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       gatewayId: input.gatewayId ?? 'stripe',
       dedupeKey: `dedupe-${id}`,
       providerEventId: input.providerEventId ?? null,
@@ -72,6 +74,7 @@ async function insertPaymentWithAttempt(ref: string) {
   await prisma.payment.create({
     data: {
       id: paymentId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: ref,
       amount: new Prisma.Decimal('1000'),
       currency: 'VND',
@@ -84,6 +87,7 @@ async function insertPaymentWithAttempt(ref: string) {
   await prisma.paymentTransaction.create({
     data: {
       id: attemptId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       paymentId,
       gatewayId: 'stripe',
       status: 'PENDING',
@@ -123,9 +127,7 @@ describe('seeded data', () => {
     const orphan = details.filter((d) => d.paymentId === null);
     expect(orphan).toHaveLength(1);
     expect(orphan[0].attemptKey).not.toBeNull();
-    expect(
-      details.find((d) => d.status === 'FAILED')?.lastError,
-    ).toBeTruthy();
+    expect(details.find((d) => d.status === 'FAILED')?.lastError).toBeTruthy();
   });
 });
 
@@ -165,9 +167,24 @@ describe('list', () => {
 
   describe('filters', () => {
     beforeEach(async () => {
-      await insertCallback({ providerEventId: 'a', gatewayId: 'stripe', status: 'FAILED', receivedAt: new Date(T0 - 3 * MIN) });
-      await insertCallback({ providerEventId: 'b', gatewayId: 'fake', status: 'FAILED', receivedAt: new Date(T0 - 2 * MIN) });
-      await insertCallback({ providerEventId: 'c', gatewayId: 'fake', status: 'PROCESSED', receivedAt: new Date(T0 - 1 * MIN) });
+      await insertCallback({
+        providerEventId: 'a',
+        gatewayId: 'stripe',
+        status: 'FAILED',
+        receivedAt: new Date(T0 - 3 * MIN),
+      });
+      await insertCallback({
+        providerEventId: 'b',
+        gatewayId: 'fake',
+        status: 'FAILED',
+        receivedAt: new Date(T0 - 2 * MIN),
+      });
+      await insertCallback({
+        providerEventId: 'c',
+        gatewayId: 'fake',
+        status: 'PROCESSED',
+        receivedAt: new Date(T0 - 1 * MIN),
+      });
     });
 
     it('filters by gateway and by status, alone or together', async () => {
@@ -178,7 +195,8 @@ describe('list', () => {
     });
 
     it('searches Callback id, Provider Event id, Attempt Key and the Payment it resolves to', async () => {
-      const { paymentId, attemptId } = await insertPaymentWithAttempt('ORD-Search_1');
+      const { paymentId, attemptId } =
+        await insertPaymentWithAttempt('ORD-Search_1');
       const linked = await insertCallback({
         providerEventId: 'Evt-Linked',
         attemptKey: attemptId,
@@ -230,7 +248,10 @@ describe('list', () => {
         });
       }
       const first = await list('?limit=3');
-      await insertCallback({ providerEventId: 'late', receivedAt: new Date(T0 + MIN) });
+      await insertCallback({
+        providerEventId: 'late',
+        receivedAt: new Date(T0 + MIN),
+      });
       const rest = await list(`?limit=3&cursor=${first.nextCursor}`);
       expect(rest.nextCursor).toBeNull();
       expect(
@@ -241,7 +262,10 @@ describe('list', () => {
 
   it.each([
     ['a malformed cursor', '?cursor=%25%25'],
-    ['a cursor that is not ours', `?cursor=${Buffer.from('12').toString('base64url')}`],
+    [
+      'a cursor that is not ours',
+      `?cursor=${Buffer.from('12').toString('base64url')}`,
+    ],
     ['an unknown status', '?status=DONE'],
     ['limit 0', '?limit=0'],
     ['limit above 100', '?limit=101'],

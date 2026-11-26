@@ -6,6 +6,7 @@ import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { testDatabaseUrl } from '../../setup/test-database.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 07: GET /internal/status-transitions (the audit log) over HTTP on
 // real PostgreSQL.
@@ -31,6 +32,7 @@ async function insertPayment(ref: string) {
   await prisma.payment.create({
     data: {
       id: paymentId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: ref,
       amount: new Prisma.Decimal('1000'),
       currency: 'VND',
@@ -43,6 +45,7 @@ async function insertPayment(ref: string) {
   await prisma.paymentTransaction.create({
     data: {
       id: attemptId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       paymentId,
       gatewayId: 'stripe',
       status: 'PENDING',
@@ -70,6 +73,7 @@ async function insertTransition(input: TransitionInput): Promise<string> {
   await prisma.statusTransition.create({
     data: {
       id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       entityType: input.entityType ?? 'PAYMENT',
       entityId: input.entityId,
       fromStatus: input.from ?? null,
@@ -93,13 +97,19 @@ describe('seeded data', () => {
       nodeEnv: 'test',
       now: new Date(),
     });
-    const count = await prisma.statusTransition.count();
+    // The API is scoped to the default Organization: the second Organization's
+    // audit rows must not appear.
+    const count = await prisma.statusTransition.count({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+    });
     const page = await list('?limit=100');
     // Paged in full by following the cursor.
     const all = [...page.items];
     let cursor = page.nextCursor;
     while (cursor) {
-      const next = await list(`?limit=100&cursor=${encodeURIComponent(cursor)}`);
+      const next = await list(
+        `?limit=100&cursor=${encodeURIComponent(cursor)}`,
+      );
       all.push(...next.items);
       cursor = next.nextCursor;
     }
@@ -121,7 +131,9 @@ describe('seeded data', () => {
     );
     expect(all.every((t) => t.paymentId !== null)).toBe(true);
     const attempts = await prisma.paymentTransaction.findMany();
-    for (const row of all.filter((t) => t.entityType === 'PAYMENT_TRANSACTION')) {
+    for (const row of all.filter(
+      (t) => t.entityType === 'PAYMENT_TRANSACTION',
+    )) {
       expect(row.paymentId).toBe(
         attempts.find((a) => a.id === row.entityId)?.paymentId,
       );
@@ -132,7 +144,10 @@ describe('seeded data', () => {
 describe('list', () => {
   it('carries every audit field, newest first', async () => {
     const { paymentId, attemptId } = await insertPayment('A');
-    await insertTransition({ entityId: paymentId, createdAt: new Date(T0 - MIN) });
+    await insertTransition({
+      entityId: paymentId,
+      createdAt: new Date(T0 - MIN),
+    });
     const id = await insertTransition({
       entityType: 'PAYMENT_TRANSACTION',
       entityId: attemptId,
@@ -157,14 +172,21 @@ describe('list', () => {
       createdAt: new Date(T0).toISOString(),
       paymentId,
     });
-    expect(items[1]).toMatchObject({ fromStatus: null, reason: null, paymentId });
+    expect(items[1]).toMatchObject({
+      fromStatus: null,
+      reason: null,
+      paymentId,
+    });
   });
 
   it('resolves a Payment to itself, a PaymentTransaction to its Payment and a Refund to none', async () => {
     const { paymentId, attemptId } = await insertPayment('A');
     const refundId = newId();
     await insertTransition({ entityType: 'PAYMENT', entityId: paymentId });
-    await insertTransition({ entityType: 'PAYMENT_TRANSACTION', entityId: attemptId });
+    await insertTransition({
+      entityType: 'PAYMENT_TRANSACTION',
+      entityId: attemptId,
+    });
     await insertTransition({ entityType: 'REFUND', entityId: refundId });
     const byType = new Map(
       (await list()).items.map((t) => [t.entityType, t.paymentId]),
@@ -184,8 +206,17 @@ describe('list', () => {
     beforeEach(async () => {
       ({ paymentId, attemptId } = await insertPayment('INV-Alpha'));
       const other = await insertPayment('ORD_100%');
-      await insertTransition({ entityId: paymentId, trigger: 'create_payment', createdAt: new Date(T0 - 4 * MIN) });
-      await insertTransition({ entityType: 'PAYMENT_TRANSACTION', entityId: attemptId, trigger: 'start_attempt', createdAt: new Date(T0 - 3 * MIN) });
+      await insertTransition({
+        entityId: paymentId,
+        trigger: 'create_payment',
+        createdAt: new Date(T0 - 4 * MIN),
+      });
+      await insertTransition({
+        entityType: 'PAYMENT_TRANSACTION',
+        entityId: attemptId,
+        trigger: 'start_attempt',
+        createdAt: new Date(T0 - 3 * MIN),
+      });
       await insertTransition({
         entityType: 'PAYMENT_TRANSACTION',
         entityId: attemptId,
@@ -193,32 +224,55 @@ describe('list', () => {
         actor: 'operator:alice',
         createdAt: new Date(T0 - 2 * MIN),
       });
-      await insertTransition({ entityId: other.paymentId, trigger: 'create_payment', actor: 'operator:bob', createdAt: new Date(T0 - 1 * MIN) });
+      await insertTransition({
+        entityId: other.paymentId,
+        trigger: 'create_payment',
+        actor: 'operator:bob',
+        createdAt: new Date(T0 - 1 * MIN),
+      });
     });
     const triggers = async (query: string) =>
       (await list(query)).items.map((t) => t.trigger);
 
     it('filters by entity type', async () => {
-      expect(await triggers('?entityType=PAYMENT_TRANSACTION')).toEqual(['operator_resolution', 'start_attempt']);
+      expect(await triggers('?entityType=PAYMENT_TRANSACTION')).toEqual([
+        'operator_resolution',
+        'start_attempt',
+      ]);
       expect(await triggers('?entityType=REFUND')).toEqual([]);
     });
 
     it('filters by entity id', async () => {
-      expect(await triggers(`?entityId=${attemptId}`)).toEqual(['operator_resolution', 'start_attempt']);
+      expect(await triggers(`?entityId=${attemptId}`)).toEqual([
+        'operator_resolution',
+        'start_attempt',
+      ]);
       expect(await triggers(`?entityId=${newId()}`)).toEqual([]);
     });
 
     it('filters by trigger and by actor', async () => {
-      expect(await triggers('?trigger=create_payment')).toEqual(['create_payment', 'create_payment']);
-      expect(await triggers('?actor=operator:alice')).toEqual(['operator_resolution']);
-      expect(await triggers('?trigger=create_payment&actor=operator:bob')).toEqual(['create_payment']);
-      expect(await triggers('?trigger=&actor=&entityType=&entityId=&q=')).toHaveLength(4);
+      expect(await triggers('?trigger=create_payment')).toEqual([
+        'create_payment',
+        'create_payment',
+      ]);
+      expect(await triggers('?actor=operator:alice')).toEqual([
+        'operator_resolution',
+      ]);
+      expect(
+        await triggers('?trigger=create_payment&actor=operator:bob'),
+      ).toEqual(['create_payment']);
+      expect(
+        await triggers('?trigger=&actor=&entityType=&entityId=&q='),
+      ).toHaveLength(4);
     });
 
     it('searches Payment id, Upstream Reference and entity id, ignoring case', async () => {
       expect(await triggers(`?q=${paymentId.toUpperCase()}`)).toHaveLength(3);
       expect(await triggers(`?q=${paymentId}`)).toHaveLength(3);
-      expect(await triggers(`?q=${attemptId}`)).toEqual(['operator_resolution', 'start_attempt']);
+      expect(await triggers(`?q=${attemptId}`)).toEqual([
+        'operator_resolution',
+        'start_attempt',
+      ]);
       expect(await triggers('?q=inv-alp')).toHaveLength(3);
       expect(await triggers('?q=%25')).toEqual(['create_payment']);
       expect(await triggers('?q=nothing-like-this')).toEqual([]);
@@ -229,7 +283,10 @@ describe('list', () => {
     it('pages through every row once, with ties on the time', async () => {
       const { paymentId } = await insertPayment('A');
       for (let i = 0; i < 11; i++) {
-        await insertTransition({ entityId: paymentId, createdAt: new Date(T0 - (i % 3) * MIN) });
+        await insertTransition({
+          entityId: paymentId,
+          createdAt: new Date(T0 - (i % 3) * MIN),
+        });
       }
       const all = (await list('?limit=100')).items.map((t) => t.id);
       const seen: string[] = [];
@@ -251,19 +308,30 @@ describe('list', () => {
     it('loses and repeats nothing when a transition is added between requests', async () => {
       const { paymentId } = await insertPayment('A');
       for (let i = 0; i < 6; i++) {
-        await insertTransition({ entityId: paymentId, createdAt: new Date(T0 - i * MIN) });
+        await insertTransition({
+          entityId: paymentId,
+          createdAt: new Date(T0 - i * MIN),
+        });
       }
       const first = await list('?limit=3');
-      await insertTransition({ entityId: paymentId, createdAt: new Date(T0 + MIN) });
+      await insertTransition({
+        entityId: paymentId,
+        createdAt: new Date(T0 + MIN),
+      });
       const rest = await list(`?limit=3&cursor=${first.nextCursor}`);
       expect(rest.nextCursor).toBeNull();
-      expect(new Set([...first.items, ...rest.items].map((t) => t.id)).size).toBe(6);
+      expect(
+        new Set([...first.items, ...rest.items].map((t) => t.id)).size,
+      ).toBe(6);
     });
   });
 
   it.each([
     ['a malformed cursor', '?cursor=%25%25'],
-    ['a cursor that is not ours', `?cursor=${Buffer.from('12').toString('base64url')}`],
+    [
+      'a cursor that is not ours',
+      `?cursor=${Buffer.from('12').toString('base64url')}`,
+    ],
     ['an unknown entity type', '?entityType=ORDER'],
     ['an entity id that is not a UUID', '?entityId=abc'],
     ['limit 0', '?limit=0'],
