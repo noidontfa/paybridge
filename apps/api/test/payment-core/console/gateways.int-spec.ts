@@ -74,6 +74,14 @@ async function insertPaymentOn(...gatewayIds: string[]): Promise<void> {
   }
 }
 
+/** The per-connection Callback URL names the default Organization's connection. */
+async function fakeConnectionId(): Promise<string> {
+  const row = await prisma.gatewayConnection.findFirstOrThrow({
+    where: { organizationId: DEFAULT_ORGANIZATION_ID, gatewayId: 'fake' },
+  });
+  return row.id;
+}
+
 const STRIPE_ENV = {
   STRIPE_SECRET_KEY: 'sk_test_gateways_spec',
   STRIPE_WEBHOOK_SECRET: 'whsec_gateways_spec',
@@ -98,7 +106,7 @@ describe('gateways without Stripe configured', () => {
         registered: true,
         configured: true,
         mode: 'test',
-        callbackUrl: 'https://pay.example.com/api/webhooks/fake',
+        callbackUrl: `https://pay.example.com/api/webhooks/fake/${await fakeConnectionId()}`,
       },
     ]);
   });
@@ -222,7 +230,7 @@ describe('gateways with Stripe configured', () => {
         registered: true,
         configured: true,
         mode: 'test',
-        callbackUrl: 'https://pay.example.com/api/webhooks/fake',
+        callbackUrl: `https://pay.example.com/api/webhooks/fake/${await fakeConnectionId()}`,
       },
       {
         id: 'stripe',

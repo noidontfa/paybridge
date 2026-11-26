@@ -20,7 +20,7 @@ import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
-import { defaultScope } from '../setup/organizations.js';
+import { DEFAULT_ORGANIZATION_ID, defaultScope } from '../setup/organizations.js';
 
 // Ticket 19: a stored webhook is applied to its attempt and Payment by the
 // ProcessWebhook worker service, against the migrated test database with the
@@ -451,7 +451,10 @@ describe('dispatch', () => {
 
     await moduleRef
       .get(WebhookIntake)
-      .receive(defaultScope, { gatewayId: 'fake', ...callback });
+      .receive(
+        { organizationId: DEFAULT_ORGANIZATION_ID },
+        { gatewayId: 'fake', ...callback },
+      );
 
     await vi.waitFor(
       async () => {

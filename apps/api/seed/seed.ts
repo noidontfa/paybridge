@@ -3,6 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
+import { API_KEY_PREFIX, hashApiKey } from '../src/identity/application/api-key-secret.js';
 import type { UserRole } from '../src/identity/domain/user.js';
 import {
   DEVELOPMENT_CREDENTIAL_KEYS,
@@ -51,6 +52,8 @@ export interface SeedResult {
   organizations: number;
   gatewayConnections: number;
   users: number;
+  /** The development API Keys, in clear text (they are public dev fixtures). */
+  apiKeys: readonly SeedApiKey[];
   payments: number;
   attempts: number;
   transitions: number;
@@ -161,6 +164,35 @@ const SEED_GATEWAY_CONNECTIONS: readonly {
   { organization: 'acme', gatewayId: 'stripe', enabled: false },
 ];
 
+export interface SeedApiKey {
+  readonly label: string;
+  readonly key: string;
+  readonly organization: OrganizationKey;
+  readonly revoked: boolean;
+}
+
+/** Fixed development keys, so the public API can be called right after seeding. */
+export const SEED_API_KEYS: readonly SeedApiKey[] = [
+  {
+    label: 'Seed: default Organization',
+    key: `${API_KEY_PREFIX}seed_default_000000000000000000000000`,
+    organization: 'primary',
+    revoked: false,
+  },
+  {
+    label: 'Seed: default Organization (old, revoked)',
+    key: `${API_KEY_PREFIX}seed_default_old_0000000000000000000000`,
+    organization: 'primary',
+    revoked: true,
+  },
+  {
+    label: 'Seed: Acme Retail',
+    key: `${API_KEY_PREFIX}seed_acme_00000000000000000000000000`,
+    organization: 'acme',
+    revoked: false,
+  },
+];
+
 function assertAllowed(options: SeedOptions): void {
   if (options.nodeEnv === 'production') {
     throw new SeedRefusedError(
@@ -220,6 +252,22 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             where: { id: id(`user:${user.key}`) },
             update: data,
             create: { id: id(`user:${user.key}`), ...data },
+          });
+        }
+        // Keys are replaced on every run, so a revoked one never revives.
+        await tx.apiKey.deleteMany({
+          where: { id: { in: SEED_API_KEYS.map((k) => id(`api-key:${k.label}`)) } },
+        });
+        for (const k of SEED_API_KEYS) {
+          await tx.apiKey.create({
+            data: {
+              id: id(`api-key:${k.label}`),
+              organizationId: ORGANIZATIONS[k.organization].id,
+              label: k.label,
+              prefix: k.key.slice(0, API_KEY_PREFIX.length + 8),
+              keyHash: hashApiKey(k.key),
+              revokedAt: k.revoked ? new Date(now - DAY) : null,
+            },
           });
         }
         // Gateway Connections: kept across re-runs, reset to the seeded state.
@@ -303,6 +351,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     organizations: Object.keys(ORGANIZATIONS).length,
     gatewayConnections: SEED_GATEWAY_CONNECTIONS.length,
     users: SEED_USERS.length,
+    apiKeys: SEED_API_KEYS,
     payments: rows.payments.length,
     attempts: rows.attempts.length,
     transitions: rows.transitions.length,

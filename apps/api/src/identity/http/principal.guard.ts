@@ -23,7 +23,7 @@ export class PrincipalGuard implements CanActivate {
     @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean | undefined>(
       IS_PUBLIC,
       [context.getHandler(), context.getClass()],
@@ -32,7 +32,7 @@ export class PrincipalGuard implements CanActivate {
     const request = context
       .switchToHttp()
       .getRequest<Record<string, unknown>>();
-    request[PRINCIPAL_REQUEST_KEY] = this.resolver.resolve(request);
+    request[PRINCIPAL_REQUEST_KEY] = await this.resolver.resolve(request);
     return true;
   }
 }

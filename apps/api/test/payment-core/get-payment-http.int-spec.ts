@@ -9,12 +9,14 @@ import type { Repositories } from '../../src/payment-core/infrastructure/prisma/
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 import { defaultScope } from '../setup/organizations.js';
 
 // GET /api/payments/:id over HTTP: the Payment with all its attempts.
 
 const NOW = new Date('2026-05-01T10:00:00.000Z');
 const prisma = createTestPrismaClient();
+let apiKey: string;
 let app: INestApplication;
 
 beforeAll(async () => {
@@ -25,6 +27,7 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
+  apiKey = await createApiKey(prisma);
 });
 
 afterAll(async () => {
@@ -39,14 +42,14 @@ beforeEach(async () => {
 async function createPayment(): Promise<{ id: string; ref: string }> {
   const ref = `order-${newId()}`;
   const res = await request(app.getHttpServer())
-    .post('/api/payments')
+    .post('/api/payments').set(bearer(apiKey))
     .send({ amount: '150000', currency: 'VND', upstreamReference: ref })
     .expect(201);
   return { id: res.body.id as string, ref };
 }
 
 function get(id: string) {
-  return request(app.getHttpServer()).get(`/api/payments/${id}`);
+  return request(app.getHttpServer()).get(`/api/payments/${id}`).set(bearer(apiKey));
 }
 
 describe('GET /api/payments/:id', () => {

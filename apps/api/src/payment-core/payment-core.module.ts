@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resolveCredentialKeys, type Env } from '../config/env.schema.js';
 import { ConnectionPlugins } from './application/connection-plugins.js';
+import { ImportEnvStripeAccount } from './application/use-cases/import-env-stripe-account.js';
 import {
   ManageGatewayConnections,
   ReencryptGatewayCredentials,
@@ -109,6 +110,7 @@ import {
     ExpirySweepScheduler,
     GetPayment,
     HandleBrowserReturn,
+    ImportEnvStripeAccount,
     ManageGatewayConnections,
     OutboxRelay,
     PaymentExpiryProcessor,
@@ -136,6 +138,7 @@ import {
     Clock,
     CredentialCipher,
     PaymentService,
+    ImportEnvStripeAccount,
     QueueModule,
     ReencryptGatewayCredentials,
     TransactionRunner,

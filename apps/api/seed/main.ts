@@ -31,6 +31,9 @@ async function main(): Promise<void> {
   console.log(
     `Seeded ${result.users} Users (password: ${SEED_PASSWORD}) and ${result.payments} Payments in ${result.organizations} Organizations, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
   );
+  for (const k of result.apiKeys) {
+    console.log(`API Key (${k.label}${k.revoked ? ', revoked' : ''}): ${k.key}`);
+  }
 }
 
 main().catch((error: unknown) => {

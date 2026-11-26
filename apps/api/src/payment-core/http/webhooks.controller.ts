@@ -11,9 +11,13 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import { WebhookIntake } from '../application/webhook-intake.js';
-import type { OrganizationScope } from '../domain/organization-scope.js';
-import { CurrentScope } from './current-scope.decorator.js';
+import {
+  UnknownGatewayConnectionError,
+  WebhookIntake,
+  type CallbackTarget,
+} from '../application/webhook-intake.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/organization.js';
+import { Public } from '../../identity/http/principal.guard.js';
 import { UnknownGatewayError } from '../gateway-manager/gateway-manager.js';
 import type { CallbackAck, HeaderValues } from '../port/index.js';
 
@@ -22,31 +26,67 @@ import type { CallbackAck, HeaderValues } from '../port/index.js';
  * acknowledgement the Gateway Plugin defines, in the provider's format.
  */
 @ApiTags('webhooks')
+@Public()
 @Controller('webhooks')
 export class WebhooksController {
   constructor(@Inject(WebhookIntake) private readonly intake: WebhookIntake) {}
 
+  @Post(':gatewayId/:connectionId')
+  @ApiOperation({
+    summary:
+      'Receive a provider callback for one Gateway Connection (verified, stored, acknowledged)',
+  })
+  receiveForConnection(
+    @Param('gatewayId') gatewayId: string,
+    @Param('connectionId') connectionId: string,
+    @Req() req: RawBodyRequest<Request>,
+    @Res() res: Response,
+  ): Promise<void> {
+    return this.handle({ connectionId }, gatewayId, req, res);
+  }
+
+  /**
+   * Legacy route, kept until the Stripe dashboard points at the per-connection
+   * URL: it forwards to the default Organization's Gateway Connection.
+   */
   @Post(':gatewayId')
   @ApiOperation({
-    summary: 'Receive a provider callback (verified, stored, acknowledged)',
+    summary: 'Legacy callback route (default Organization)',
+    deprecated: true,
   })
-  async receive(
-    @CurrentScope() scope: OrganizationScope,
+  receive(
     @Param('gatewayId') gatewayId: string,
     @Req() req: RawBodyRequest<Request>,
     @Res() res: Response,
   ): Promise<void> {
+    return this.handle(
+      { organizationId: DEFAULT_ORGANIZATION_ID },
+      gatewayId,
+      req,
+      res,
+    );
+  }
+
+  private async handle(
+    target: CallbackTarget,
+    gatewayId: string,
+    req: RawBodyRequest<Request>,
+    res: Response,
+  ): Promise<void> {
     const rawBody = await readRawBody(req);
     let ack: CallbackAck;
     try {
-      ack = await this.intake.receive(scope, {
+      ack = await this.intake.receive(target, {
         gatewayId,
         rawBody,
         headers: req.headers,
         query: req.query as HeaderValues,
       });
     } catch (error) {
-      if (error instanceof UnknownGatewayError) {
+      if (
+        error instanceof UnknownGatewayError ||
+        error instanceof UnknownGatewayConnectionError
+      ) {
         throw new NotFoundException(`Unknown gateway "${gatewayId}"`);
       }
       throw error;
