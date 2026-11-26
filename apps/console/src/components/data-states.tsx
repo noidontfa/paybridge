@@ -1,4 +1,4 @@
-import { FileQuestionIcon, TriangleAlertIcon } from 'lucide-react';
+import { Building2Icon, FileQuestionIcon, TriangleAlertIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { isApiError } from '@/lib/api/errors';
 
@@ -14,6 +14,18 @@ export function NotFoundState({ title, description }: { title: string; descripti
 }
 
 export function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  // A Super Admin who has not chosen one Organization: not a failure, a prompt.
+  if (isApiError(error) && error.code === 'ORGANIZATION_REQUIRED') {
+    return (
+      <div role="status" className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-10 text-center">
+        <Building2Icon className="size-8 text-muted-foreground" aria-hidden />
+        <h2 className="text-base font-medium">Choose an Organization</h2>
+        <p className="text-sm text-muted-foreground">
+          This screen works inside one Organization. Pick one in the Organization menu in the sidebar, then it will load.
+        </p>
+      </div>
+    );
+  }
   return (
     <div role="alert" className="flex flex-col items-center gap-2 rounded-xl border border-destructive/30 p-10 text-center">
       <TriangleAlertIcon className="size-8 text-destructive" aria-hidden />
