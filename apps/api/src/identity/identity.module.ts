@@ -10,6 +10,8 @@ import { RequestPasswordReset } from './application/use-cases/request-password-r
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
+import { ManageUsers } from './application/use-cases/manage-users.js';
+import { UsersController } from './http/users.controller.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
@@ -37,7 +39,12 @@ import { UserRepository } from './port/user.repository.js';
  * Needs the global `PrismaModule`.
  */
 @Module({
-  controllers: [AuthController, JwksController, OrganizationsController],
+  controllers: [
+    AuthController,
+    JwksController,
+    OrganizationsController,
+    UsersController,
+  ],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
@@ -74,6 +81,7 @@ import { UserRepository } from './port/user.repository.js';
     RequestPasswordReset,
     CompletePasswordReset,
     ChangePassword,
+    ManageUsers,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })
