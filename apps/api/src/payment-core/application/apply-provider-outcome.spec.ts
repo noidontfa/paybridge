@@ -84,6 +84,7 @@ const payment: Payment = {
   id: 'pay-1',
   organizationId: 'org-1',
   merchantOrderId: 'order-1',
+  checkoutOrigin: null,
   amount: '150000',
   currency: 'VND',
   status: 'PENDING',

@@ -157,6 +157,27 @@ const envObject = z.object({
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
   STRIPE_PUBLISHABLE_KEY: optionalKey(['pk_'], '"pk_"'),
+
+  // --- Embedded Checkout (ticket 07): starting checkout Payments ---
+  /** Most checkout Payments started per Publishable Key in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_KEY: z.coerce.number().int().min(1).default(120),
+  /** Most checkout Payments started per client IP in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_IP: z.coerce.number().int().min(1).default(20),
+  /** Length of the checkout start rate-limit window, in seconds. */
+  CHECKOUT_START_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(60),
+  /**
+   * Express `trust proxy`, so the client IP (checkout rate limits) is the
+   * caller's, not the load balancer's: a hop count, `true`, or addresses /
+   * subnets, comma separated. Unset => the socket address.
+   */
+  TRUST_PROXY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
 });
 
 export const envSchema = envObject
@@ -205,6 +226,18 @@ export const envSchema = envObject
   }));
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Express's `trust proxy` setting from `TRUST_PROXY`, or undefined to leave it off. */
+export function resolveTrustProxy(
+  value: string | undefined,
+): boolean | number | string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed;
+}
 
 /** Resolved values derived from the raw environment. */
 export function isProduction(env: Pick<Env, 'NODE_ENV'>): boolean {

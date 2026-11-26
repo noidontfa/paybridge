@@ -108,6 +108,12 @@ export interface PaymentRepository {
     scope: OrganizationScope,
     merchantOrderId: string,
   ): Promise<string | null>;
+
+  /** True once the Embedded Checkout created a Payment for the Pricing Plan. */
+  anyForPricingPlan(
+    scope: OrganizationScope,
+    pricingPlanId: string,
+  ): Promise<boolean>;
 }
 
 /**

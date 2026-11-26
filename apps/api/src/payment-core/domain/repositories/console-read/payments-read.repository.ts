@@ -7,6 +7,8 @@ export interface PaymentListFilters {
   readonly status?: PaymentStatus;
   /** Matches a Payment that has a PaymentTransaction on this gateway. */
   readonly gatewayId?: string;
+  /** Checkout Payments of one Pricing Plan. */
+  readonly pricingPlanId?: string;
   /** Payment id (exact) or part of the Upstream Reference (any case). */
   readonly q?: string;
   /** Inclusive bounds on `createdAt`. */

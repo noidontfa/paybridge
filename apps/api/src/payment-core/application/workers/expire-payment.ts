@@ -5,7 +5,10 @@ import {
   organizationScope,
   type OrganizationScope,
 } from '../../domain/value-objects/organization-scope.js';
-import type { Payment } from '../../domain/entities/payment.js';
+import {
+  checkoutOriginPayload,
+  type Payment,
+} from '../../domain/entities/payment.js';
 import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
@@ -258,6 +261,7 @@ async function expirePayment(
       currency: expired.currency,
       status: expired.status,
       expiresAt: expired.expiresAt.toISOString(),
+      ...checkoutOriginPayload(expired),
     },
   });
 }

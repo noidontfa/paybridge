@@ -10,7 +10,11 @@ import {
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
 import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
-import type { Payment } from '../../domain/entities/payment.js';
+import {
+  checkoutOriginPayload,
+  type CheckoutOrigin,
+  type Payment,
+} from '../../domain/entities/payment.js';
 import { resolvePaymentExpiry } from '../../domain/payment-expiry.js';
 import type { IdempotencyRecord } from '../../domain/records.js';
 import { INITIAL_PAYMENT_STATUS } from '../../domain/rules/payment-transitions.js';
@@ -29,6 +33,11 @@ export interface CreatePaymentInput {
   readonly upstreamReference: string;
   /** Payment Expiry. Default 30 minutes after creation. */
   readonly expiresAt?: Date;
+  /**
+   * Set only by the Embedded Checkout (through `CheckoutPayments`): stored on
+   * the Payment and copied into its Payment Events.
+   */
+  readonly checkoutOrigin?: CheckoutOrigin;
 }
 
 export interface CreatePaymentOptions {
@@ -125,6 +134,7 @@ export class CreatePayment {
           currency: amount.currency,
           status: INITIAL_PAYMENT_STATUS,
           expiresAt,
+          ...(input.checkoutOrigin && { checkoutOrigin: input.checkoutOrigin }),
         });
         await repos.statusTransitions.record(scope, {
           entityType: 'PAYMENT',
@@ -144,6 +154,7 @@ export class CreatePayment {
             currency: payment.currency,
             status: payment.status,
             expiresAt: payment.expiresAt.toISOString(),
+            ...checkoutOriginPayload(payment),
           },
         });
         const snapshot = toSnapshot(payment);
@@ -244,6 +255,8 @@ export function hashRequest(input: CreatePaymentInput): string {
     input.currency,
     input.upstreamReference,
     input.expiresAt?.toISOString() ?? null,
+    // Only checkout Payments have one; API requests hash as they always did.
+    ...(input.checkoutOrigin ? [input.checkoutOrigin] : []),
   ]);
   return createHash('sha256').update(canonical).digest('hex');
 }

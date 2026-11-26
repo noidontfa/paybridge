@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  CheckoutOrganizationSuspendedError,
   InvalidPublishableKeyError,
   isOriginAllowed,
   normaliseAllowedOrigins,
@@ -129,8 +130,9 @@ export interface CheckoutCaller {
 
 /**
  * Finds the Organization behind a Publishable Key presented from a browser.
- * An unknown or revoked key, or one of a suspended Organization, is refused;
- * so is a request whose `Origin` is missing or not allowed for the key.
+ * An unknown or revoked key is refused, and so is a request whose `Origin`
+ * is missing or not allowed for the key. A suspended Organization's key is
+ * refused as "unavailable" (`CheckoutOrganizationSuspendedError`).
  */
 @Injectable()
 export class AuthenticatePublishableKey {
@@ -153,10 +155,12 @@ export class AuthenticatePublishableKey {
     const organization = await this.organizations.findById(
       stored.organizationId,
     );
-    if (!organization || organization.status !== 'ACTIVE') {
-      throw new InvalidPublishableKeyError();
-    }
+    if (!organization) throw new InvalidPublishableKeyError();
     if (!isOriginAllowed(stored, origin)) throw new OriginNotAllowedError();
+    // Checked last, so only an allowed website learns the checkout is shut.
+    if (organization.status !== 'ACTIVE') {
+      throw new CheckoutOrganizationSuspendedError();
+    }
     return {
       organizationId: stored.organizationId,
       publishableKeyId: stored.id,
