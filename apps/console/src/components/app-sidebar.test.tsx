@@ -185,7 +185,7 @@ describe('Console sidebar', () => {
   });
 
   describe('Settings items', () => {
-    const names = ['Users', 'Invitations', 'API Keys', 'Gateway Connections', 'Webhook Endpoints'];
+    const names = ['Users', 'Invitations', 'API Keys', 'Publishable Keys', 'Gateway Connections', 'Webhook Endpoints'];
 
     it('hides what the User has no Permission for', () => {
       renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'reviews:resolve'] });
@@ -202,6 +202,7 @@ describe('Console sidebar', () => {
           'payments:view',
           'users:manage',
           'api-keys:manage',
+          'publishable-keys:manage',
           'gateway-connections:manage',
           'webhook-endpoints:manage',
         ],

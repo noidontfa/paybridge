@@ -400,6 +400,27 @@ describe('seed Webhook Endpoint', () => {
   });
 });
 
+describe('seed Publishable Keys', () => {
+  it('creates a key for the default Organization allowing a local origin, kept across re-runs', async () => {
+    const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    expect(first.publishableKeys.length).toBeGreaterThanOrEqual(1);
+    for (const issued of first.publishableKeys) {
+      const row = await prisma.publishableKey.findUniqueOrThrow({
+        where: { key: issued.key },
+      });
+      expect(issued.key).toMatch(/^pb_pk_seed_/);
+      expect(row.revokedAt).toBeNull();
+      expect(row.allowedOrigins).toEqual(issued.allowedOrigins);
+    }
+    const primary = first.publishableKeys.find(
+      (k) => k.organization === 'primary',
+    )!;
+    expect(primary.allowedOrigins).toContain('http://localhost:5173');
+  });
+});
+
 describe('seed users', () => {
   it('includes a deactivated User next to active ones', async () => {
     await seed();

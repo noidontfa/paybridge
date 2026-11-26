@@ -37,6 +37,11 @@ async function main(): Promise<void> {
   console.log(
     `Webhook Endpoint: ${result.webhookEndpoint.url} (signing secret ${result.webhookEndpoint.secret}); receive with \`pnpm webhooks:receive\`.`,
   );
+  for (const k of result.publishableKeys) {
+    console.log(
+      `Publishable Key (${k.label}, ${k.allowedOrigins.join(' ')}): ${k.key}`,
+    );
+  }
 }
 
 main().catch((error: unknown) => {

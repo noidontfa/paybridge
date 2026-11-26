@@ -105,6 +105,7 @@ describe('Role to Permission map', () => {
         'api-keys:manage',
         'gateway-connections:manage',
         'webhook-endpoints:manage',
+        'publishable-keys:manage',
       ],
     ],
     [
@@ -118,6 +119,7 @@ describe('Role to Permission map', () => {
         'webhook-endpoints:manage',
         'organizations:manage',
         'super-admins:manage',
+        'publishable-keys:manage',
       ],
     ],
   ] as const)('%s holds exactly its Permissions', async (role, expected) => {

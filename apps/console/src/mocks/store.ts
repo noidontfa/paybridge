@@ -87,6 +87,9 @@ export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
   readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
 
+  /** The Organization's Publishable Keys. */
+  readonly publishableKeys: import('@/lib/api/publishable-keys').PublishableKey[] = [];
+
   /** Pending Invitations, for the Invitations page. */
   readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
 

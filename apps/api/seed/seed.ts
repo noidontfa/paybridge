@@ -8,6 +8,7 @@ import {
   hashApiKey,
 } from '../src/identity/application/api-key-secret.js';
 import type { UserRole } from '../src/identity/domain/entities/user.js';
+import { PUBLISHABLE_KEY_PREFIX } from '../src/identity/application/publishable-key-secret.js';
 import { DEVELOPMENT_CREDENTIAL_KEYS } from '../src/config/env.schema.js';
 import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { PAYMENT_EVENT_KINDS } from '../src/webhooks/domain/entities/event-kinds.js';
@@ -57,6 +58,8 @@ export interface SeedResult {
   users: number;
   /** The development API Keys, in clear text (they are public dev fixtures). */
   apiKeys: readonly SeedApiKey[];
+  /** The development Publishable Keys (public by nature). */
+  publishableKeys: readonly SeedPublishableKey[];
   payments: number;
   attempts: number;
   transitions: number;
@@ -209,6 +212,51 @@ export const SEED_WEBHOOK_ENDPOINT = {
   secret: `${WEBHOOK_SECRET_PREFIX}seed_default_00000000000000000000000000`,
 } as const;
 
+export interface SeedPublishableKey {
+  readonly label: string;
+  readonly key: string;
+  readonly organization: OrganizationKey;
+  readonly allowedOrigins: readonly string[];
+}
+
+/**
+ * Fixed development Publishable Keys, so an embedded checkout can be tried
+ * from a local host page (for example `http://localhost:5173`) right after
+ * seeding.
+ */
+export const SEED_PUBLISHABLE_KEYS: readonly SeedPublishableKey[] = [
+  {
+    label: 'Seed: local host page',
+    key: `${PUBLISHABLE_KEY_PREFIX}seed_default_000000000000000000000000`,
+    organization: 'primary',
+    allowedOrigins: ['http://localhost:5173'],
+  },
+];
+
+/** Publishable Keys are replaced on every run, like API Keys. */
+async function seedPublishableKeys(tx: Tx, now: number): Promise<void> {
+  await tx.publishableKey.deleteMany({
+    where: {
+      id: {
+        in: SEED_PUBLISHABLE_KEYS.map((k) => id(`publishable-key:${k.label}`)),
+      },
+    },
+  });
+  for (const k of SEED_PUBLISHABLE_KEYS) {
+    await tx.publishableKey.create({
+      data: {
+        id: id(`publishable-key:${k.label}`),
+        organizationId: ORGANIZATIONS[k.organization].id,
+        label: k.label,
+        key: k.key,
+        allowedOrigins: [...k.allowedOrigins],
+        createdAt: new Date(now - DAY),
+        updatedAt: new Date(now - DAY),
+      },
+    });
+  }
+}
+
 function assertAllowed(options: SeedOptions): void {
   if (options.nodeEnv === 'production') {
     throw new SeedRefusedError(
@@ -288,6 +336,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             },
           });
         }
+        await seedPublishableKeys(tx, now);
         // Gateway Connections: kept across re-runs, reset to the seeded state.
         // The credentials are obvious dummies, encrypted like real ones.
         const cipher = AesCredentialCipher.fromConfig(
@@ -373,6 +422,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     gatewayConnections: SEED_GATEWAY_CONNECTIONS.length,
     users: SEED_USERS.length,
     apiKeys: SEED_API_KEYS,
+    publishableKeys: SEED_PUBLISHABLE_KEYS,
     payments: rows.payments.length,
     attempts: rows.attempts.length,
     transitions: rows.transitions.length,

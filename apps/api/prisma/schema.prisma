@@ -137,6 +137,7 @@ model Organization {
   webhookEndpoints    WebhookEndpoint[]
   webhookDeliveries   WebhookDelivery[]
   webhookAttempts     WebhookDeliveryAttempt[]
+  publishableKeys     PublishableKey[]
 
   @@map("iam_organizations")
 }
@@ -244,6 +245,32 @@ model ApiKey {
 
   @@index([organizationId], map: "iam_api_keys_organization_id_idx")
   @@map("iam_api_keys")
+}
+
+/// A public key for Customers' browsers on the Organization's allowed
+/// websites; it works only on the checkout endpoints (ADR 0009). Not secret,
+/// so it is stored in clear and shown again at any time. The writer of each
+/// change is kept on the row (a Super Admin shows as the platform).
+model PublishableKey {
+  id              String    @id @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  label           String
+  key             String    @unique
+  allowedOrigins  String[]  @map("allowed_origins")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @map("updated_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdByRole   String?   @map("created_by_role")
+  createdByName   String?   @map("created_by_name")
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updatedByRole   String?   @map("updated_by_role")
+  updatedByName   String?   @map("updated_by_name")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId], map: "iam_publishable_keys_organization_id_idx")
+  @@map("iam_publishable_keys")
 }
 
 // ---------------------------------------------------------------------------

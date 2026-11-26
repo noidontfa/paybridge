@@ -18,6 +18,7 @@ import { paymentsListHandlers } from './payments-list';
 import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
 import { platformHandlers } from './platform';
+import { publishableKeysHandlers } from './publishable-keys';
 import { usersHandlers } from './users';
 import { webhookEndpointsHandlers } from './webhook-endpoints';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
@@ -80,6 +81,7 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ),
     ...platformHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...apiKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...publishableKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...usersHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...invitationsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewayConnectionsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
