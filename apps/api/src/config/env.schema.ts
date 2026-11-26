@@ -136,6 +136,18 @@ const envObject = z.object({
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
   STRIPE_PUBLISHABLE_KEY: optionalKey(['pk_'], '"pk_"'),
+
+  // --- Embedded Checkout (ticket 07): starting checkout Payments ---
+  /** Most checkout Payments started per Publishable Key in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_KEY: z.coerce.number().int().min(1).default(120),
+  /** Most checkout Payments started per client IP in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_IP: z.coerce.number().int().min(1).default(20),
+  /** Length of the checkout start rate-limit window, in seconds. */
+  CHECKOUT_START_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(60),
 });
 
 export const envSchema = envObject

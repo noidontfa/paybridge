@@ -137,6 +137,7 @@ model Organization {
   apiKeys             ApiKey[]
   pricingPlans        PricingPlan[]
   publishableKeys     PublishableKey[]
+  checkoutSessions    CheckoutSession[]
 
   @@map("iam_organizations")
 }
@@ -162,7 +163,7 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
 
@@ -172,17 +173,17 @@ model User {
 
 /// A refresh token, stored hashed. Tokens of one sign-in form a family.
 model RefreshToken {
-  id          String    @id @db.Uuid
-  familyId    String    @map("family_id") @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
-  tokenHash   String    @unique @map("token_hash")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  id            String    @id @db.Uuid
+  familyId      String    @map("family_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   /// Absolute lifetime: 7 days from sign-in, carried over on rotation.
-  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Idle lifetime: 24 hours from this token's creation.
-  idleExpiresAt DateTime @map("idle_expires_at") @db.Timestamptz(3)
-  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
-  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  idleExpiresAt DateTime  @map("idle_expires_at") @db.Timestamptz(3)
+  usedAt        DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
@@ -289,6 +290,15 @@ model Payment {
   expiresAt       DateTime      @map("expires_at") @db.Timestamptz(3)
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Checkout origin (embedded checkout): set together, once, when the
+  /// Embedded Checkout created the Payment; null for API Payments. Plain
+  /// columns, no foreign key into `chk_`, so Core stays independent.
+  pricingPlanId   String?       @map("pricing_plan_id") @db.Uuid
+  /// The Pricing Plan's name when the Payment was created.
+  pricingPlanName String?       @map("pricing_plan_name")
+  /// Customer Reference: the Organization's opaque id for its Customer.
+  customerRef     String?       @map("customer_ref")
+  customerEmail   String?       @map("customer_email")
 
   organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   transactions    PaymentTransaction[]
@@ -300,6 +310,8 @@ model Payment {
   /// Operator Payments list: keyset paging by creation time or amount (id is the tiebreaker), inside one Organization.
   @@index([organizationId, createdAt, id], map: "core_payments_org_created_at_id_idx")
   @@index([organizationId, amount, id], map: "core_payments_org_amount_id_idx")
+  /// Payments list filtered by Pricing Plan, newest first.
+  @@index([organizationId, pricingPlanId, createdAt, id], map: "core_payments_org_pricing_plan_idx")
   @@map("core_payments")
 }
 
@@ -536,8 +548,37 @@ model PricingPlan {
   createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime          @map("updated_at") @db.Timestamptz(3)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  checkoutSessions CheckoutSession[]
 
   @@index([organizationId, createdAt, id], map: "chk_pricing_plans_org_created_at_idx")
   @@map("chk_pricing_plans")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): checkout sessions
+// ---------------------------------------------------------------------------
+
+/// One Payment the Embedded Checkout started: which browser session (the
+/// SHA-256 of the token the SDK keeps), Pricing Plan and Customer Reference it
+/// was for, and through which Publishable Key. Resuming looks up the latest
+/// row for the same session, Pricing Plan and Customer Reference. `payment_id`
+/// points into Payment Core without a foreign key (Core stays independent).
+model CheckoutSession {
+  id                String   @id @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  sessionTokenHash  String   @map("session_token_hash")
+  pricingPlanId     String   @map("pricing_plan_id") @db.Uuid
+  /// Empty string when the Customer gave none, so it compares as a value.
+  customerReference String   @map("customer_reference")
+  customerEmail     String   @map("customer_email")
+  publishableKeyId  String   @map("publishable_key_id") @db.Uuid
+  paymentId         String   @unique(map: "chk_checkout_sessions_payment_id_uq") @map("payment_id") @db.Uuid
+  createdAt         DateTime @map("created_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pricingPlan  PricingPlan  @relation(fields: [pricingPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId, sessionTokenHash, pricingPlanId, customerReference, customerEmail, createdAt], map: "chk_checkout_sessions_lookup_idx")
+  @@map("chk_checkout_sessions")
 }

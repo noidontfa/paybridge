@@ -4,7 +4,10 @@ import type {
   PaymentTransaction as PaymentTransactionRow,
 } from '../../../generated/prisma/client.js';
 import type * as DbEnums from '../../../generated/prisma/enums.js';
-import type { Payment } from '../../domain/entities/payment.js';
+import type {
+  CheckoutOrigin,
+  Payment,
+} from '../../domain/entities/payment.js';
 import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import type {
   AttemptStatus,
@@ -85,6 +88,17 @@ export function toPayment(
     expiresAt: row.expiresAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    checkoutOrigin: toCheckoutOrigin(row),
     attempts: attempts.map(toPaymentTransaction),
+  };
+}
+
+function toCheckoutOrigin(row: PaymentRow): CheckoutOrigin | null {
+  if (row.pricingPlanId === null || row.pricingPlanName === null) return null;
+  return {
+    pricingPlanId: row.pricingPlanId,
+    pricingPlanName: row.pricingPlanName,
+    customerReference: row.customerRef,
+    customerEmail: row.customerEmail,
   };
 }
