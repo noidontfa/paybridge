@@ -260,14 +260,18 @@ describe('forwardToApi', () => {
         expect(orgHeader(calls[0]!)).toBe(ORG);
       });
 
-      it('forwards "all" and falls back to nothing for anything else', async () => {
+      it('forwards "all" and falls back to "all" for no or invalid choice', async () => {
         const all = recordingFetch();
         await call(all.fetchImpl, `${cookie('access-A', 'refresh-A')}; pb_org=all`, undefined, 'GET');
         expect(orgHeader(all.calls[0]!)).toBe('all');
 
         const junk = recordingFetch();
         await call(junk.fetchImpl, `${cookie('access-A', 'refresh-A')}; pb_org=not-an-id`, undefined, 'GET');
-        expect(orgHeader(junk.calls[0]!)).toBeNull();
+        expect(orgHeader(junk.calls[0]!)).toBe('all');
+
+        const none = recordingFetch();
+        await call(none.fetchImpl, cookie('access-A', 'refresh-A'), undefined, 'GET');
+        expect(orgHeader(none.calls[0]!)).toBe('all');
       });
 
       it('never lets the browser send the header itself', async () => {
@@ -279,7 +283,7 @@ describe('forwardToApi', () => {
           ['internal', 'reviews'],
           { baseUrl: 'http://api.internal:3000', fetch: fetchImpl },
         );
-        expect(orgHeader(calls[0]!)).toBeNull();
+        expect(orgHeader(calls[0]!)).toBe('all');
       });
     });
   });

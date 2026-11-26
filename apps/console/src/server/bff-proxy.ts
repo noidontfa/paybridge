@@ -104,8 +104,13 @@ export async function forwardToApi(request: Request, path: string[], options: Fo
 
   // A Super Admin's chosen Organization (or "all") rides along; the API
   // ignores it for everyone else. The browser's own header was not copied.
-  const organization = authenticate ? readCookie(request, ORGANIZATION_COOKIE) : undefined;
-  if (organization && (organization === 'all' || UUID.test(organization))) headers.set('x-organization-id', organization);
+  // With no valid choice it defaults to "all", which is what the switcher
+  // shows; the API still refuses writes until one Organization is chosen.
+  if (authenticate) {
+    const organization = readCookie(request, ORGANIZATION_COOKIE);
+    const chosen = organization && (organization === 'all' || UUID.test(organization)) ? organization : 'all';
+    headers.set('x-organization-id', chosen);
+  }
 
   if (authenticate && !accessToken && !(await refresh())) return sessionExpired(request);
 
