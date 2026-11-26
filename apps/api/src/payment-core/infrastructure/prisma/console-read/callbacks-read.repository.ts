@@ -1,49 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
-import type { WebhookInboxStatus } from '../../../domain/records.js';
-import {
-  escapeLike,
-  toStringRecord,
-  uuidNeedle,
-} from './developer-views.shared.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import { escapeLike, toStringRecord, uuidNeedle } from './read-helpers.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
-
-export interface CallbackListFilters {
-  readonly gatewayId?: string;
-  readonly status?: WebhookInboxStatus;
-  /** Callback id or Attempt Key (exact), Provider Event id, Payment id or Upstream Reference. */
-  readonly q?: string;
-}
-
-export interface CallbackListQuery {
-  readonly filters: CallbackListFilters;
-  /** `receivedAt` and id of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface CallbackListRow {
-  readonly id: string;
-  readonly gatewayId: string;
-  readonly providerEventId: string | null;
-  readonly attemptKey: string | null;
-  readonly status: WebhookInboxStatus;
-  readonly attempts: number;
-  readonly receivedAt: Date;
-  readonly processedAt: Date | null;
-}
-
-export interface CallbackDetailRow extends CallbackListRow {
-  readonly headers: Record<string, string>;
-  readonly query: Record<string, string>;
-  /** The body exactly as received, decoded as UTF-8 text. */
-  readonly rawBody: string;
-  readonly lastError: string | null;
-  /** Payment of the PaymentTransaction the Attempt Key names, if one exists. */
-  readonly paymentId: string | null;
-}
+import {
+  CallbacksReadRepository,
+  type CallbackListQuery,
+  type CallbackListRow,
+  type CallbackDetailRow,
+} from '../../../domain/repositories/console-read/callbacks-read.repository.js';
 
 const LIST_SELECT = {
   id: true,
@@ -58,7 +24,7 @@ const LIST_SELECT = {
 
 /** Read model behind the operator Callbacks pages (stored in `core_webhook_inbox`). */
 @Injectable()
-export class CallbacksReadRepository {
+export class PrismaCallbacksReadRepository implements CallbacksReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first, so the caller can tell whether another page exists. */
@@ -79,8 +45,10 @@ export class CallbacksReadRepository {
     scope: ReadScope,
     id: string,
   ): Promise<CallbackDetailRow | null> {
+    const key = uuidNeedle(id);
+    if (!key) return null;
     const row = await this.prisma.webhookInbox.findUnique({
-      where: { id, ...scopeWhere(scope) },
+      where: { id: key, ...scopeWhere(scope) },
     });
     if (!row) return null;
     // No foreign key on the Attempt Key: a Callback may name an unknown attempt.

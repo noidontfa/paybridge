@@ -3,8 +3,8 @@ import type {
   NewOrganization,
   Organization,
   OrganizationStatus,
-} from '../../domain/organization.js';
-import { OrganizationRepository } from '../../port/organization.repository.js';
+} from '../../domain/entities/organization.js';
+import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
 import type { DbContext } from './db.js';
 
 function toOrganization(row: OrganizationRow): Organization {

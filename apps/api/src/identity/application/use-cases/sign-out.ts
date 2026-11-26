@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
 import { hashRefreshToken } from '../session.js';
 
 /** Revokes the sign-in (token family) a refresh token belongs to. Idempotent. */

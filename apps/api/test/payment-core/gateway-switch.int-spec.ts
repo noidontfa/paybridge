@@ -4,15 +4,18 @@ import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import type { Payment } from '../../src/payment-core/domain/payment.js';
+import type { Payment } from '../../src/payment-core/domain/entities/payment.js';
 import { canTransitionAttempt } from '../../src/payment-core/domain/rules/attempt-transitions.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
-import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
+import { fixedPlugin } from '../../src/payment-core/port/gateway-plugin-factory.js';
+import { GATEWAY_PLUGINS } from '../../src/payment-core/port/gateway-plugins.token.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   GatewayRejectedError,

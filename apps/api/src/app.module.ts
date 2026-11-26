@@ -7,7 +7,7 @@ import { GatewaysModule } from './gateways/gateways.module.js';
 import { HealthModule } from './health/health.module.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { AppLoggerModule } from './logger/app-logger.module.js';
-import { GatewayManagerModule } from './payment-core/gateway-manager/gateway-manager.module.js';
+import { GatewayManagerModule } from './payment-core/gateway-manager.module.js';
 import { PaymentCoreModule } from './payment-core/payment-core.module.js';
 
 @Module({

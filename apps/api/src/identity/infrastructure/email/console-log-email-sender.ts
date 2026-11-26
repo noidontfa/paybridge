@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { type Email, EmailSender } from '../../port/email-sender.js';
+import { type Email, EmailSender } from '../../domain/services/email-sender.js';
 
 /** Development adapter: writes the email to the log so the link can be copied. */
 @Injectable()

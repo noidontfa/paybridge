@@ -1,20 +1,23 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import { isDecimalString } from '../../../domain/value-objects/amount.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   PaymentsReadRepository,
-  type PaymentListFilters,
+  type PaymentListQuery,
   type PaymentListRow,
   type PaymentSortColumn,
-} from '../../../infrastructure/prisma/console-read/payments-read.repository.js';
-import { encodeCursor, toPage, type Page } from './cursor.js';
+} from '../../../domain/repositories/console-read/payments-read.repository.js';
+import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
-export interface ListPaymentsInput {
-  readonly filters: PaymentListFilters;
-  readonly sort: PaymentSortColumn;
-  readonly order: 'asc' | 'desc';
-  readonly limit: number;
-  /** Decoded cursor tail: sort-key value and id. */
-  readonly after?: { readonly value: string; readonly id: string };
+/** The Payments list cursor; it only continues the sort and order it was made for. */
+export function paymentsCursor(sort: PaymentSortColumn, order: 'asc' | 'desc') {
+  return keysetCursor<PaymentListRow>({
+    tag: `${sort}:${order}`,
+    valueOf: (row) =>
+      sort === 'amount' ? row.amount : row.createdAt.toISOString(),
+    isValue: sort === 'amount' ? isDecimalString : isIsoTime,
+    invalidMessage: 'is not valid for this list, sort and order',
+  });
 }
 
 /**
@@ -30,15 +33,9 @@ export class ListPayments {
 
   async execute(
     scope: ReadScope,
-    input: ListPaymentsInput,
+    query: PaymentListQuery,
   ): Promise<Page<PaymentListRow>> {
-    const rows = await this.payments.list(scope, input);
-    return toPage(rows, input.limit, (last) =>
-      encodeCursor([
-        `${input.sort}:${input.order}`,
-        input.sort === 'amount' ? last.amount : last.createdAt.toISOString(),
-        last.id,
-      ]),
-    );
+    const rows = await this.payments.list(scope, query);
+    return paymentsCursor(query.sort, query.order).page(rows, query.limit);
   }
 }

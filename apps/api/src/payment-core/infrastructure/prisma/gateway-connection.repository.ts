@@ -1,21 +1,19 @@
-import type { GatewayConnection } from '../../domain/gateway-connection.js';
+import type { GatewayConnection } from '../../domain/entities/gateway-connection.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { SealedValue } from '../../domain/services/credential-cipher.js';
+import type {
+  GatewayConnectionRepository,
+  NewGatewayConnection,
+} from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
-
-export interface NewGatewayConnection {
-  readonly id: string;
-  readonly gatewayId: string;
-  readonly credentialsCiphertext: string | null;
-  readonly credentialsKeyId: string | null;
-  readonly enabled?: boolean;
-}
+import { rethrowUniqueViolation } from './unique-violation.js';
 
 /** Gateway Connections: one per Organization per gateway. */
-export class PrismaGatewayConnectionRepository {
+export class PrismaGatewayConnectionRepository implements GatewayConnectionRepository {
   constructor(private readonly ctx: DbContext) {}
 
   list(scope: ReadScope): Promise<GatewayConnection[]> {
@@ -49,23 +47,25 @@ export class PrismaGatewayConnectionRepository {
     scope: OrganizationScope,
     connection: NewGatewayConnection,
   ): Promise<GatewayConnection> {
-    return this.ctx.db.gatewayConnection.create({
-      data: {
-        id: connection.id,
-        organizationId: scope.organizationId,
-        gatewayId: connection.gatewayId,
-        credentialsCiphertext: connection.credentialsCiphertext,
-        credentialsKeyId: connection.credentialsKeyId,
-        enabled: connection.enabled ?? true,
-      },
-    });
+    return rethrowUniqueViolation(
+      this.ctx.db.gatewayConnection.create({
+        data: {
+          id: connection.id,
+          organizationId: scope.organizationId,
+          gatewayId: connection.gatewayId,
+          credentialsCiphertext: connection.credentialsCiphertext,
+          credentialsKeyId: connection.credentialsKeyId,
+          enabled: connection.enabled ?? true,
+        },
+      }),
+    );
   }
 
   /** New credentials: bumps the version so cached plugin instances are replaced. */
   replaceCredentials(
     scope: OrganizationScope,
     id: string,
-    sealed: { ciphertext: string; keyId: string },
+    sealed: SealedValue,
   ): Promise<GatewayConnection> {
     return this.ctx.db.gatewayConnection.update({
       where: { id, organizationId: scope.organizationId },
@@ -81,7 +81,7 @@ export class PrismaGatewayConnectionRepository {
   recrypt(
     scope: OrganizationScope,
     id: string,
-    sealed: { ciphertext: string; keyId: string },
+    sealed: SealedValue,
   ): Promise<GatewayConnection> {
     return this.ctx.db.gatewayConnection.update({
       where: { id, organizationId: scope.organizationId },
@@ -110,10 +110,7 @@ export class PrismaGatewayConnectionRepository {
   }
 
   /** True once any PaymentTransaction of the Organization used the gateway. */
-  async isUsed(
-    scope: OrganizationScope,
-    gatewayId: string,
-  ): Promise<boolean> {
+  async isUsed(scope: OrganizationScope, gatewayId: string): Promise<boolean> {
     const count = await this.ctx.db.paymentTransaction.count({
       where: { organizationId: scope.organizationId, gatewayId },
     });

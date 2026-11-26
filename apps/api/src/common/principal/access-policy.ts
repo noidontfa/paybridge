@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import type { Permission } from '../../identity/domain/permissions.js';
+import type { Permission } from '../../identity/port/index.js';
 
 /** Metadata key the access guard reads from an operator route. */
 export const ACCESS_POLICY_KEY = 'access:policy';

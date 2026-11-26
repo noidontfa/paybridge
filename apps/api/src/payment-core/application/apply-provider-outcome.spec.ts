@@ -1,14 +1,14 @@
 import type {
   OrganizationScope,
   ReadScope,
-} from '../domain/organization-scope.js';
-import type { Payment } from '../domain/payment.js';
+} from '../domain/value-objects/organization-scope.js';
+import type { Payment } from '../domain/entities/payment.js';
 import type {
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../domain/payment-transaction.js';
+} from '../domain/entities/payment-transaction.js';
 import type { NewOutboxEvent, NewStatusTransition } from '../domain/records.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { Repositories } from '../domain/repositories/repositories.js';
 import { applyProviderOutcome } from './apply-provider-outcome.js';
 
 // The database forbids two open attempts on one Payment (invariant 6a), so

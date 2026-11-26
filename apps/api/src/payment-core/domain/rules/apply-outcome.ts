@@ -1,7 +1,7 @@
 import type { NormalizedOutcome } from '../../port/index.js';
-import { parseAmount } from '../amount.js';
-import type { Payment } from '../payment.js';
-import type { PaymentTransaction } from '../payment-transaction.js';
+import { parseAmount } from '../value-objects/amount.js';
+import type { Payment } from '../entities/payment.js';
+import type { PaymentTransaction } from '../entities/payment-transaction.js';
 import type { ReviewReason } from '../statuses.js';
 import { isOpenAttempt } from './attempt-transitions.js';
 

@@ -7,14 +7,14 @@ import {
   verify,
   type KeyObject,
 } from 'node:crypto';
-import { ACCESS_TOKEN_TTL_MS } from '../../domain/refresh-token.js';
+import { ACCESS_TOKEN_TTL_MS } from '../../domain/entities/refresh-token.js';
 import { PERMISSIONS, type Permission } from '../../domain/permissions.js';
-import { USER_ROLES, type UserRole } from '../../domain/user.js';
+import { USER_ROLES, type UserRole } from '../../domain/entities/user.js';
 import {
   AccessTokenService,
   type AccessClaims,
   type JsonWebKeySet,
-} from '../../port/access-token.service.js';
+} from '../../domain/services/access-token.service.js';
 
 export const TOKEN_ISSUER = 'paybridge';
 

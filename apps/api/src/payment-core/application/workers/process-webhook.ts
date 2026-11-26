@@ -1,12 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   ALL_ORGANIZATIONS,
   organizationScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
 import type { WebhookInboxEntry } from '../../domain/records.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import type {
   CallbackResult,
   HandledCallback,

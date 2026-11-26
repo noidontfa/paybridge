@@ -7,10 +7,11 @@ import {
   ManageGatewayConnections,
   ReencryptGatewayCredentials,
 } from './application/use-cases/manage-gateway-connections.js';
-import { GatewayConnectionsController } from './http/gateway-connections.controller.js';
-import { CredentialCipher } from './infrastructure/crypto/credential-cipher.js';
+import { GatewayConnectionsController } from './infrastructure/http/gateway-connections.controller.js';
+import { CredentialCipher } from './domain/services/credential-cipher.js';
+import { AesCredentialCipher } from './infrastructure/crypto/credential-cipher.js';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ConsoleReadModule } from './console/console-read.module.js';
+import { ConsoleReadModule } from './console-read.module.js';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
 import { PaymentService } from './application/payment.service.js';
 import { CancelPayment } from './application/use-cases/cancel-payment.js';
@@ -21,47 +22,44 @@ import { StartAttempt } from './application/use-cases/start-attempt.js';
 import { WebhookIntake } from './application/webhook-intake.js';
 import { ExpirePayment } from './application/workers/expire-payment.js';
 import { ProcessWebhook } from './application/workers/process-webhook.js';
-import { Clock, SystemClock } from './domain/clock.js';
+import { Clock, SystemClock } from './domain/services/clock.js';
 import { HandleBrowserReturn } from './application/use-cases/handle-browser-return.js';
 import { RequeryAttempt } from './application/workers/requery-attempt.js';
-import { AttemptInitiateProcessor } from './reliability/processors/attempt-initiate.processor.js';
-import { AttemptStatusQueryProcessor } from './reliability/processors/attempt-status-query.processor.js';
-import { AttemptsController } from './http/attempts.controller.js';
-import { BrowserReturnController } from './http/browser-return.controller.js';
-import { DomainErrorInterceptor } from './http/domain-error.interceptor.js';
-import { PaymentsController } from './http/payments.controller.js';
-import { ReviewResolutionController } from './http/review-resolution.controller.js';
-import { WebhooksController } from './http/webhooks.controller.js';
-import {
-  PrismaTransactionRunner,
-  TransactionRunner,
-} from './infrastructure/prisma/transaction-runner.js';
+import { AttemptInitiateProcessor } from './infrastructure/queue/processors/attempt-initiate.processor.js';
+import { AttemptStatusQueryProcessor } from './infrastructure/queue/processors/attempt-status-query.processor.js';
+import { AttemptsController } from './infrastructure/http/attempts.controller.js';
+import { BrowserReturnController } from './infrastructure/http/browser-return.controller.js';
+import { DomainErrorInterceptor } from './infrastructure/http/domain-error.interceptor.js';
+import { PaymentsController } from './infrastructure/http/payments.controller.js';
+import { ReviewResolutionController } from './infrastructure/http/review-resolution.controller.js';
+import { WebhooksController } from './infrastructure/http/webhooks.controller.js';
+import { TransactionRunner } from './domain/repositories/transaction-runner.js';
+import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
 import { QueueModule } from './infrastructure/queue/queue.module.js';
-import { expirySweepOptionsProvider } from './reliability/expiry-sweep.options.js';
-import { ExpirySweep } from './reliability/expiry-sweep.js';
-import { ExpirySweepScheduler } from './reliability/expiry-sweep.scheduler.js';
-import { ExpirySweepProcessor } from './reliability/processors/expiry-sweep.processor.js';
-import { PaymentExpiryProcessor } from './reliability/processors/payment-expiry.processor.js';
-import { WebhookInboxProcessor } from './reliability/processors/webhook-inbox.processor.js';
-import { ReviewRequeryProcessor } from './reliability/processors/review-requery.processor.js';
-import { ReviewRequerySweepProcessor } from './reliability/processors/review-requery-sweep.processor.js';
-import { ReviewRequerySweep } from './reliability/review-requery-sweep.js';
-import { ReviewRequerySweepScheduler } from './reliability/review-requery-sweep.scheduler.js';
-import { WebhookInboxSweepProcessor } from './reliability/processors/webhook-inbox-sweep.processor.js';
-import { AlertSink, LoggerAlertSink } from './reliability/alert.js';
-import { WebhookInboxSweep } from './reliability/webhook-inbox-sweep.js';
-import { WebhookInboxSweepScheduler } from './reliability/webhook-inbox-sweep.scheduler.js';
-import { RetentionProcessor } from './reliability/processors/retention.processor.js';
-import {
-  ProviderQueryRateLimiter,
-  providerQueryRateLimitProvider,
-} from './reliability/provider-query-rate-limiter.js';
-import { RetentionCleanup } from './reliability/retention.js';
-import { RetentionScheduler } from './reliability/retention.scheduler.js';
+import { expirySweepOptionsProvider } from './infrastructure/config/expiry-sweep.options.js';
+import { ExpirySweep } from './application/sweeps/expiry-sweep.js';
+import { ExpirySweepScheduler } from './infrastructure/queue/schedulers/expiry-sweep.scheduler.js';
+import { ExpirySweepProcessor } from './infrastructure/queue/processors/expiry-sweep.processor.js';
+import { PaymentExpiryProcessor } from './infrastructure/queue/processors/payment-expiry.processor.js';
+import { WebhookInboxProcessor } from './infrastructure/queue/processors/webhook-inbox.processor.js';
+import { ReviewRequeryProcessor } from './infrastructure/queue/processors/review-requery.processor.js';
+import { ReviewRequerySweepProcessor } from './infrastructure/queue/processors/review-requery-sweep.processor.js';
+import { ReviewRequerySweep } from './application/sweeps/review-requery-sweep.js';
+import { ReviewRequerySweepScheduler } from './infrastructure/queue/schedulers/review-requery-sweep.scheduler.js';
+import { WebhookInboxSweepProcessor } from './infrastructure/queue/processors/webhook-inbox-sweep.processor.js';
+import { AlertSink } from './domain/services/alert.js';
+import { LoggerAlertSink } from './infrastructure/alerting/logger-alert-sink.js';
+import { WebhookInboxSweep } from './application/sweeps/webhook-inbox-sweep.js';
+import { WebhookInboxSweepScheduler } from './infrastructure/queue/schedulers/webhook-inbox-sweep.scheduler.js';
+import { RetentionProcessor } from './infrastructure/queue/processors/retention.processor.js';
+import { ProviderQueryRateLimiter } from './application/provider-query-rate-limiter.js';
+import { providerQueryRateLimitProvider } from './infrastructure/config/provider-query-rate-limit.options.js';
+import { RetentionCleanup } from './application/sweeps/retention.js';
+import { RetentionScheduler } from './infrastructure/queue/schedulers/retention.scheduler.js';
 import {
   OutboxRelay,
   outboxRelayOptionsProvider,
-} from './reliability/outbox-relay.js';
+} from './infrastructure/queue/outbox-relay.js';
 
 /**
  * Payment Core. Needs `PrismaModule` (global), the config module and the
@@ -86,7 +84,7 @@ import {
       provide: CredentialCipher,
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) =>
-        CredentialCipher.fromConfig(
+        AesCredentialCipher.fromConfig(
           resolveCredentialKeys({
             GATEWAY_CREDENTIAL_KEYS: config.get('GATEWAY_CREDENTIAL_KEYS', {
               infer: true,

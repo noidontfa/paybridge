@@ -1,11 +1,11 @@
-import { parseAmount } from '../amount.js';
+import { parseAmount } from '../value-objects/amount.js';
 import {
   AttemptNotInReviewError,
   ReviewResolutionNotAllowedError,
   ReviewWindowOpenError,
 } from '../errors.js';
-import type { Payment } from '../payment.js';
-import type { PaymentTransaction } from '../payment-transaction.js';
+import type { Payment } from '../entities/payment.js';
+import type { PaymentTransaction } from '../entities/payment-transaction.js';
 import { REVIEW_REQUERY_WINDOW_MS } from './review-requery.js';
 
 /** The status an operator may set on a review. */
@@ -25,6 +25,14 @@ export type ReviewResolutionDecision =
   | { readonly kind: 'note' }
   | { readonly kind: 'fail' }
   | { readonly kind: 'succeed' };
+
+/**
+ * When an Operator may first set a status on a Review that opened at
+ * `openedAt`: once the automatic re-query window has passed.
+ */
+export function reviewResolvableAt(openedAt: Date): Date {
+  return new Date(openedAt.getTime() + REVIEW_REQUERY_WINDOW_MS);
+}
 
 /**
  * Operator resolution rules (spec: Payment states and rules, review exit).
@@ -66,9 +74,7 @@ export function decideReviewResolution(
   }
 
   const opened = attempt.reviewOpenedAt;
-  const eligibleAt = new Date(
-    (opened?.getTime() ?? now.getTime()) + REVIEW_REQUERY_WINDOW_MS,
-  );
+  const eligibleAt = reviewResolvableAt(opened ?? now);
   if (!opened || now.getTime() < eligibleAt.getTime()) {
     throw new ReviewWindowOpenError(attempt.id, eligibleAt);
   }

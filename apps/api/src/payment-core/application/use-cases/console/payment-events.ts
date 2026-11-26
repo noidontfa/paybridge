@@ -1,13 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   PaymentEventsReadRepository,
   type PaymentEventDetailRow,
   type PaymentEventListQuery,
   type PaymentEventSummaryRow,
-} from '../../../infrastructure/prisma/console-read/payment-events-read.repository.js';
-import { encodeCursor, toPage, type Page } from './cursor.js';
+} from '../../../domain/repositories/console-read/payment-events-read.repository.js';
+import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
+
+/** The Payment Events list cursor: newest first by `createdAt`. */
+export const paymentEventsCursor = keysetCursor<PaymentEventSummaryRow>({
+  tag: 'payment-events',
+  valueOf: (row) => row.createdAt.toISOString(),
+  isValue: isIsoTime,
+});
 
 /** The operator Payment Events list (`GET /internal/payment-events`). Read only (ADR 0005). */
 @Injectable()
@@ -22,9 +28,7 @@ export class ListPaymentEvents {
     query: PaymentEventListQuery,
   ): Promise<Page<PaymentEventSummaryRow>> {
     const rows = await this.events.list(scope, query);
-    return toPage(rows, query.limit, (last) =>
-      encodeCursor(['payment-events', last.createdAt.toISOString(), last.id]),
-    );
+    return paymentEventsCursor.page(rows, query.limit);
   }
 }
 
@@ -36,10 +40,7 @@ export class GetPaymentEvent {
     private readonly events: PaymentEventsReadRepository,
   ) {}
 
-  async execute(
-    scope: ReadScope,
-    id: string,
-  ): Promise<PaymentEventDetailRow | null> {
-    return isUuid(id) ? this.events.findById(scope, id.toLowerCase()) : null;
+  execute(scope: ReadScope, id: string): Promise<PaymentEventDetailRow | null> {
+    return this.events.findById(scope, id);
   }
 }

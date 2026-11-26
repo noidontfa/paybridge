@@ -1,26 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
-
-export const CALLBACK_STATUSES = [
-  'RECEIVED',
-  'PROCESSING',
-  'PROCESSED',
-  'FAILED',
-] as const;
-export type CallbackStatus = (typeof CALLBACK_STATUSES)[number];
-
-export interface GatewayCallbackHealth {
-  /** Callbacks received since the cutoff, by status (every status present). */
-  readonly counts: Record<CallbackStatus, number>;
-  /** Latest `receivedAt` among Callbacks since the cutoff, or null when none. */
-  readonly lastCallbackAt: Date | null;
-}
+import {
+  GatewaysReadRepository,
+  type CallbackStatus,
+  type GatewayCallbackHealth,
+} from '../../../domain/repositories/console-read/gateways-read.repository.js';
 
 /** Read side of the operator Gateways endpoints (ADR 0005). */
 @Injectable()
-export class GatewaysReadRepository {
+export class PrismaGatewaysReadRepository implements GatewaysReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Gateway ids that appear on any PaymentTransaction or stored Callback. */

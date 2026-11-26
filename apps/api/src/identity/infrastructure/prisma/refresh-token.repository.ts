@@ -1,8 +1,8 @@
 import type {
   NewRefreshToken,
   RefreshToken,
-} from '../../domain/refresh-token.js';
-import { RefreshTokenRepository } from '../../port/refresh-token.repository.js';
+} from '../../domain/entities/refresh-token.js';
+import { RefreshTokenRepository } from '../../domain/repositories/refresh-token.repository.js';
 import type { DbContext } from './db.js';
 
 /** Refresh tokens in `iam_refresh_tokens`, by hash only. */

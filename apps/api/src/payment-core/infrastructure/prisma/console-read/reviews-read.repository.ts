@@ -1,79 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
-import {
-  REVIEW_REASONS,
-  type AttemptStatus,
-  type PaymentStatus,
-  type ReviewReason,
-} from '../../../domain/statuses.js';
+import { REVIEW_REASONS, type ReviewReason } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
-
-export type ReviewState = 'open' | 'closed';
-
-export interface ReviewListFilters {
-  readonly reason?: ReviewReason;
-  readonly gatewayId?: string;
-  /** Payment id or Attempt Key (exact, any case) or part of the Upstream Reference. */
-  readonly q?: string;
-  readonly state: ReviewState;
-}
-
-export interface ReviewListQuery {
-  readonly filters: ReviewListFilters;
-  readonly order: 'asc' | 'desc';
-  /** Opening time (ISO) and Attempt Key of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface ReviewRow {
-  /** The Attempt Key. */
-  readonly id: string;
-  readonly reason: ReviewReason;
-  readonly state: ReviewState;
-  readonly gatewayId: string;
-  readonly transactionStatus: AttemptStatus;
-  readonly refundRequired: boolean;
-  readonly reviewOpenedAt: Date;
-  readonly providerReportedAmount: string | null;
-  readonly payment: {
-    readonly id: string;
-    readonly upstreamReference: string;
-    readonly amount: string;
-    readonly currency: string;
-    readonly status: PaymentStatus;
-  };
-}
-
-export interface ReviewCounts {
-  readonly open: number;
-  readonly total: number;
-  readonly byReason: Record<ReviewReason, number>;
-}
-
-/** Makes `%`, `_` and `\` match themselves in a LIKE pattern (Prisma does not). */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, '\\$&');
-}
-
-const DECIMAL = /^\d+(\.\d+)?$/;
-
-/**
- * The amount the provider reported, kept by the seed (and later by Core) in
- * `providerMetadata.providerReportedAmount`. Null when there is none.
- */
-function reportedAmount(metadata: Prisma.JsonValue): string | null {
-  if (metadata === null || typeof metadata !== 'object') return null;
-  if (Array.isArray(metadata)) return null;
-  const value = metadata['providerReportedAmount'];
-  const text =
-    typeof value === 'number' || typeof value === 'string' ? String(value) : '';
-  return DECIMAL.test(text) ? text : null;
-}
+import {
+  escapeLike,
+  providerReportedAmount,
+  uuidNeedle,
+} from './read-helpers.js';
+import {
+  ReviewsReadRepository,
+  type ReviewListQuery,
+  type ReviewRow,
+  type ReviewCounts,
+} from '../../../domain/repositories/console-read/reviews-read.repository.js';
 
 /**
  * Read model behind the operator Reviews (ADR 0005). A Review is a
@@ -81,7 +23,7 @@ function reportedAmount(metadata: Prisma.JsonValue): string | null {
  * `REQUIRES_REVIEW`, closed once it has left that status. Read only.
  */
 @Injectable()
-export class ReviewsReadRepository {
+export class PrismaReviewsReadRepository implements ReviewsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, so the caller can tell whether another page exists. */
@@ -102,7 +44,7 @@ export class ReviewsReadRepository {
       transactionStatus: row.status,
       refundRequired: row.refundRequired,
       reviewOpenedAt: row.reviewOpenedAt as Date,
-      providerReportedAmount: reportedAmount(row.providerMetadata),
+      providerReportedAmount: providerReportedAmount(row.providerMetadata),
       payment: {
         id: row.payment.id,
         upstreamReference: row.payment.merchantOrderId,
@@ -155,14 +97,10 @@ export class ReviewsReadRepository {
     if (filters.gatewayId) and.push({ gatewayId: filters.gatewayId });
     if (filters.q) {
       const needle = filters.q;
+      const id = uuidNeedle(needle);
       and.push({
         OR: [
-          ...(isUuid(needle)
-            ? [
-                { id: needle.toLowerCase() },
-                { paymentId: needle.toLowerCase() },
-              ]
-            : []),
+          ...(id ? [{ id }, { paymentId: id }] : []),
           {
             payment: {
               merchantOrderId: {

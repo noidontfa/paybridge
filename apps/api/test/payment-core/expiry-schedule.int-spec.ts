@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
@@ -6,18 +6,21 @@ import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
 import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
-import { ExpirySweep } from '../../src/payment-core/reliability/expiry-sweep.js';
+import { ExpirySweep } from '../../src/payment-core/application/sweeps/expiry-sweep.js';
 import {
   EXPIRY_SWEEP_EVERY_MS,
   EXPIRY_SWEEP_JOB,
   EXPIRY_SWEEP_SCHEDULER_ID,
-} from '../../src/payment-core/reliability/expiry-sweep.scheduler.js';
+} from '../../src/payment-core/infrastructure/queue/schedulers/expiry-sweep.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

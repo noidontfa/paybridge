@@ -7,16 +7,16 @@ import {
   UnknownGatewayIdError,
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
-import type { GatewayConnection } from '../../domain/gateway-connection.js';
+import type { GatewayConnection } from '../../domain/entities/gateway-connection.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
-import { organizationScope } from '../../domain/organization-scope.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
-import { CredentialCipher } from '../../infrastructure/crypto/credential-cipher.js';
-import { isUniqueViolation } from '../../infrastructure/prisma/unique-violation.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+} from '../../domain/value-objects/organization-scope.js';
+import { organizationScope } from '../../domain/value-objects/organization-scope.js';
+import { UniqueViolationError } from '../../domain/repositories/repositories.js';
+import { GatewayManager } from '../gateway-manager.js';
+import { CredentialCipher } from '../../domain/services/credential-cipher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** What a response may say about a Gateway Connection: never the credentials. */
 export interface GatewayConnectionView {
@@ -66,7 +66,7 @@ export class ManageGatewayConnections {
       );
       return this.view(row);
     } catch (error) {
-      if (isUniqueViolation(error)) {
+      if (error instanceof UniqueViolationError) {
         throw new GatewayConnectionExistsError(input.gatewayId);
       }
       throw error;
@@ -147,7 +147,8 @@ export class ManageGatewayConnections {
       throw new InvalidGatewayCredentialsError(
         gatewayId,
         parsed.error.issues.map(
-          (i) => `${i.path.map(String).join('.') || 'credentials'}: ${i.message}`,
+          (i) =>
+            `${i.path.map(String).join('.') || 'credentials'}: ${i.message}`,
         ),
       );
     }

@@ -8,7 +8,7 @@ import {
   ListApiKeys,
   RevokeApiKey,
 } from './application/use-cases/api-keys.js';
-import { ApiKeysController } from './http/api-keys.controller.js';
+import { ApiKeysController } from './infrastructure/http/api-keys.controller.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
 import { GetSessionUser } from './application/use-cases/get-session-user.js';
 import { ChangePassword } from './application/use-cases/change-password.js';
@@ -25,34 +25,32 @@ import {
   RevokeInvitation,
   SendInvitation,
 } from './application/use-cases/manage-invitations.js';
-import { InvitationsController } from './http/invitations.controller.js';
+import { InvitationsController } from './infrastructure/http/invitations.controller.js';
 import { ManageUsers } from './application/use-cases/manage-users.js';
-import { UsersController } from './http/users.controller.js';
-import { SuperAdminsController } from './http/super-admins.controller.js';
+import { UsersController } from './infrastructure/http/users.controller.js';
+import { SuperAdminsController } from './infrastructure/http/super-admins.controller.js';
 import {
   CreateOrganization,
   SetOrganizationSuspension,
 } from './application/use-cases/manage-organizations.js';
 import { ManageSuperAdmins } from './application/use-cases/manage-super-admins.js';
-import { AccessGuard } from './http/access.guard.js';
-import { AuthController, JwksController } from './http/auth.controller.js';
-import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
-import { OrganizationsController } from './http/organizations.controller.js';
-import { PrincipalGuard } from './http/principal.guard.js';
+import { AccessGuard } from './infrastructure/http/access.guard.js';
+import { AuthController, JwksController } from './infrastructure/http/auth.controller.js';
+import { HttpPrincipalResolver } from './infrastructure/http/http-principal.resolver.js';
+import { OrganizationsController } from './infrastructure/http/organizations.controller.js';
+import { PrincipalGuard } from './infrastructure/http/principal.guard.js';
 import { Argon2PasswordHasher } from './infrastructure/crypto/argon2-password-hasher.js';
 import { Es256AccessTokenService } from './infrastructure/crypto/es256-access-token.service.js';
 import { ConsoleLogEmailSender } from './infrastructure/email/console-log-email-sender.js';
-import {
-  PrismaTransactionRunner,
-  TransactionRunner,
-} from './infrastructure/prisma/transaction-runner.js';
-import { AccessTokenService } from './port/access-token.service.js';
-import { IdentityClock, SystemIdentityClock } from './port/clock.js';
-import { EmailSender } from './port/email-sender.js';
-import { OrganizationRepository } from './port/organization.repository.js';
-import { PasswordHasher } from './port/password-hasher.js';
-import { PrincipalResolver } from './port/principal-resolver.js';
-import { UserRepository } from './port/user.repository.js';
+import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from './domain/repositories/transaction-runner.js';
+import { AccessTokenService } from './domain/services/access-token.service.js';
+import { IdentityClock, SystemIdentityClock } from './domain/services/clock.js';
+import { EmailSender } from './domain/services/email-sender.js';
+import { OrganizationRepository } from './domain/repositories/organization.repository.js';
+import { PasswordHasher } from './domain/services/password-hasher.js';
+import { PrincipalResolver } from './domain/services/principal-resolver.js';
+import { UserRepository } from './domain/repositories/user.repository.js';
 
 /**
  * Identity: Organizations, Users, sign-in and tokens, Invitations, Password

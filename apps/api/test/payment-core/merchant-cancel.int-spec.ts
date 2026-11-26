@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { Logger, Module } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -9,18 +9,21 @@ import { GLOBAL_PREFIX } from '../../src/constants.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import {
   PaymentNotFoundError,
   PaymentNotPendingError,
 } from '../../src/payment-core/domain/errors.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import type { Payment } from '../../src/payment-core/domain/payment.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
-import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import type { Payment } from '../../src/payment-core/domain/entities/payment.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
+import { fixedPlugin } from '../../src/payment-core/port/gateway-plugin-factory.js';
+import { GATEWAY_PLUGINS } from '../../src/payment-core/port/gateway-plugins.token.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   GatewayUnavailableError,
@@ -265,7 +268,7 @@ describe('POST /api/payments/:id/cancel', () => {
     app = ref.createNestApplication({ logger: false });
     app.setGlobalPrefix(GLOBAL_PREFIX);
     await app.init();
-  apiKey = await createApiKey(prisma);
+    apiKey = await createApiKey(prisma);
     fake = app
       .get(GatewayManager, { strict: false })
       .resolve('fake') as FakeGatewayPlugin;
@@ -279,7 +282,8 @@ describe('POST /api/payments/:id/cancel', () => {
 
   async function create(): Promise<string> {
     const res = await request(app.getHttpServer())
-      .post('/api/payments').set(bearer(apiKey))
+      .post('/api/payments')
+      .set(bearer(apiKey))
       .send({
         amount: '150000',
         currency: 'VND',
@@ -293,12 +297,14 @@ describe('POST /api/payments/:id/cancel', () => {
     const id = await create();
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(200);
     expect(res.body).toMatchObject({ id, status: 'CANCELLED' });
 
     await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(200);
   });
 
@@ -310,7 +316,8 @@ describe('POST /api/payments/:id/cancel', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(409);
     expect(res.body.code).toBe('PAYMENT_NOT_PENDING');
   });

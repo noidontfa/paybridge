@@ -1,22 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
+import { reviewResolvableAt } from '../../../domain/rules/review-resolution.js';
 import {
   ReviewsReadRepository,
-  type ReviewListFilters,
+  type ReviewListQuery,
   type ReviewRow,
-} from '../../../infrastructure/prisma/console-read/reviews-read.repository.js';
-import { encodeCursor, toPage, type Page } from './cursor.js';
+} from '../../../domain/repositories/console-read/reviews-read.repository.js';
+import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
-export interface ListReviewsInput {
-  readonly filters: ReviewListFilters;
-  readonly order: 'asc' | 'desc';
-  readonly limit: number;
-  /** Decoded cursor tail: opening time (ISO) and id. */
-  readonly after?: { readonly value: string; readonly id: string };
+/** The Reviews list cursor, by opening time; it only continues its own order. */
+export function reviewsCursor(order: 'asc' | 'desc') {
+  return keysetCursor<ReviewRow>({
+    tag: `reviewOpenedAt:${order}`,
+    valueOf: (row) => row.reviewOpenedAt.toISOString(),
+    isValue: isIsoTime,
+    invalidMessage: 'is not valid for this list and order',
+  });
 }
-
-/** Hours a Review stays open before an Operator may resolve it. */
-export const REVIEW_RESOLVABLE_AFTER_HOURS = 72;
 
 export interface ReviewItem extends ReviewRow {
   readonly resolvableAt: Date;
@@ -35,24 +35,15 @@ export class ListReviews {
 
   async execute(
     scope: ReadScope,
-    input: ListReviewsInput,
+    query: ReviewListQuery,
   ): Promise<Page<ReviewItem>> {
-    const rows = await this.reviews.list(scope, input);
-    const page = toPage(rows, input.limit, (last) =>
-      encodeCursor([
-        `reviewOpenedAt:${input.order}`,
-        last.reviewOpenedAt.toISOString(),
-        last.id,
-      ]),
-    );
+    const rows = await this.reviews.list(scope, query);
+    const page = reviewsCursor(query.order).page(rows, query.limit);
     return {
       nextCursor: page.nextCursor,
       items: page.items.map((row) => ({
         ...row,
-        resolvableAt: new Date(
-          row.reviewOpenedAt.getTime() +
-            REVIEW_RESOLVABLE_AFTER_HOURS * 3_600_000,
-        ),
+        resolvableAt: reviewResolvableAt(row.reviewOpenedAt),
       })),
     };
   }

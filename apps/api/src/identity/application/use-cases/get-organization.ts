@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   OrganizationNotFoundError,
   type Organization,
-} from '../../domain/organization.js';
-import { OrganizationRepository } from '../../port/organization.repository.js';
+} from '../../domain/entities/organization.js';
+import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
 
 /** Looks an Organization up by id; unknown id: `OrganizationNotFoundError`. */
 @Injectable()

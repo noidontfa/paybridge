@@ -1,13 +1,11 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Queue } from 'bullmq';
 import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
-import type { ReadScope } from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+import type { ReadScope } from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { QUEUES, jobIds } from '../../infrastructure/queue/queue.constants.js';
+import { JobDispatcher } from '../../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /** BullMQ job name for one attempt status query (`RequeryAttempt` consumes it). */
 export const QUERY_ATTEMPT_JOB = 'query-attempt';
@@ -50,13 +48,10 @@ export class HandleBrowserReturn {
 
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
-    @InjectQueue(QUEUES.attemptStatusQuery) private readonly queue: Queue,
+    @Inject(JobDispatcher) private readonly dispatcher: JobDispatcher,
   ) {}
 
-  async execute(
-    scope: ReadScope,
-    input: BrowserReturnInput,
-  ): Promise<Payment> {
+  async execute(scope: ReadScope, input: BrowserReturnInput): Promise<Payment> {
     const payment = isUuid(input.paymentId)
       ? await this.runner.repositories.payments.findById(scope, input.paymentId)
       : null;
@@ -69,9 +64,11 @@ export class HandleBrowserReturn {
     if (attempt && isOpenAttempt(attempt.status)) {
       const data: QueryAttemptJobData = { attemptId: attempt.id };
       try {
-        await this.queue.add(QUERY_ATTEMPT_JOB, data, {
-          jobId: jobIds.attempt(attempt.id),
-          ...QUERY_ATTEMPT_JOB_OPTIONS,
+        await this.dispatcher.enqueue('attemptStatusQuery', {
+          name: QUERY_ATTEMPT_JOB,
+          jobId: attempt.id,
+          data,
+          options: QUERY_ATTEMPT_JOB_OPTIONS,
         });
       } catch (error) {
         this.logger.error(

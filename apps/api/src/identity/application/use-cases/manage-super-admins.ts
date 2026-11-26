@@ -3,9 +3,9 @@ import {
   LastSuperAdminError,
   UserNotFoundError,
 } from '../../domain/errors.js';
-import type { User } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
+import type { User } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
 
 /**
  * The platform's own people: list, deactivate, reactivate. The platform keeps

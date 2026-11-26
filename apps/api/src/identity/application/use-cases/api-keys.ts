@@ -4,11 +4,11 @@ import {
   InvalidApiKeyError,
   normaliseApiKeyLabel,
   type ApiKey,
-} from '../../domain/api-key.js';
+} from '../../domain/entities/api-key.js';
 import { newIdentityId } from '../../domain/ids.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
-import { OrganizationRepository } from '../../port/organization.repository.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
 import { generateApiKey, hashApiKey, looksLikeApiKey } from '../api-key-secret.js';
 
 export interface CreatedApiKey {

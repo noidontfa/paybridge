@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -8,7 +8,10 @@ import { GLOBAL_PREFIX } from '../../src/constants.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import { RequeryAttempt } from '../../src/payment-core/application/workers/requery-attempt.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { resetDatabase } from '../setup/reset-db.js';

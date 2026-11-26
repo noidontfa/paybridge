@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { parseAmount } from '../../domain/amount.js';
-import { Clock } from '../../domain/clock.js';
+import { parseAmount } from '../../domain/value-objects/amount.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   IdempotencyKeyReusedError,
   InvalidUpstreamReferenceError,
@@ -9,14 +9,16 @@ import {
   UpstreamReferenceExistsError,
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import { resolvePaymentExpiry } from '../../domain/payment-expiry.js';
 import type { IdempotencyRecord } from '../../domain/records.js';
 import { INITIAL_PAYMENT_STATUS } from '../../domain/rules/payment-transitions.js';
-import type { Repositories } from '../../infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { isUniqueViolation } from '../../infrastructure/prisma/unique-violation.js';
+import {
+  UniqueViolationError,
+  type Repositories,
+} from '../../domain/repositories/repositories.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 export interface CreatePaymentInput {
   /** Decimal string in the currency's major unit (VND: whole dong). */
@@ -160,7 +162,7 @@ export class CreatePayment {
       });
     } catch (error) {
       const lostRace =
-        isUniqueViolation(error) ||
+        error instanceof UniqueViolationError ||
         error instanceof UpstreamReferenceExistsError;
       if (!lostRace) throw error;
       // A concurrent request committed first: answer as if we came second.

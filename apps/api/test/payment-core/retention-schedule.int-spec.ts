@@ -4,9 +4,12 @@ import type { Queue } from 'bullmq';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
 import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
@@ -14,7 +17,7 @@ import {
   RETENTION_EVERY_MS,
   RETENTION_JOB,
   RETENTION_SCHEDULER_ID,
-} from '../../src/payment-core/reliability/retention.scheduler.js';
+} from '../../src/payment-core/infrastructure/queue/schedulers/retention.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

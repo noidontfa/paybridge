@@ -1,4 +1,4 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { Queue } from 'bullmq';
@@ -8,28 +8,31 @@ import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.j
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
 import { ProcessWebhook } from '../../src/payment-core/application/workers/process-webhook.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { GatewayManagerModule } from '../../src/payment-core/gateway-manager.module.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   AlertSink,
   type Alert,
-} from '../../src/payment-core/reliability/alert.js';
-import { WebhookInboxProcessor } from '../../src/payment-core/reliability/processors/webhook-inbox.processor.js';
-import { WebhookInboxSweepProcessor } from '../../src/payment-core/reliability/processors/webhook-inbox-sweep.processor.js';
+} from '../../src/payment-core/domain/services/alert.js';
+import { WebhookInboxProcessor } from '../../src/payment-core/infrastructure/queue/processors/webhook-inbox.processor.js';
+import { WebhookInboxSweepProcessor } from '../../src/payment-core/infrastructure/queue/processors/webhook-inbox-sweep.processor.js';
 import {
   WEBHOOK_INBOX_LOCK_TIMEOUT_MS,
   WEBHOOK_INBOX_MAX_RETRIES,
   WebhookInboxSweep,
-} from '../../src/payment-core/reliability/webhook-inbox-sweep.js';
+} from '../../src/payment-core/application/sweeps/webhook-inbox-sweep.js';
 import {
   WEBHOOK_INBOX_SWEEP_EVERY_MS,
   WEBHOOK_INBOX_SWEEP_JOB,
   WEBHOOK_INBOX_SWEEP_SCHEDULER_ID,
-} from '../../src/payment-core/reliability/webhook-inbox-sweep.scheduler.js';
+} from '../../src/payment-core/infrastructure/queue/schedulers/webhook-inbox-sweep.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

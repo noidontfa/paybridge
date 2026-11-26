@@ -9,7 +9,7 @@ import { FixtureHttpClient } from '../../src/gateways/stripe/fixture-http-client
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { ImportEnvStripeAccount } from '../../src/payment-core/application/use-cases/import-env-stripe-account.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import { CredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
+import { CredentialCipher } from '../../src/payment-core/domain/services/credential-cipher.js';
 import {
   DEFAULT_ORGANIZATION_ID,
   ensureOtherOrganization,
@@ -121,15 +121,27 @@ describe('the per-connection Callback route', () => {
 
   it('refuses an unknown connection id and a mismatched gateway', async () => {
     const a = await connectStripe(DEFAULT_ORGANIZATION_ID, creds('a'));
-    await send(`/api/webhooks/stripe/${newId()}`, stripeEvent(), 'whsec_a').expect(404);
-    await send('/api/webhooks/stripe/not-a-uuid', stripeEvent(), 'whsec_a').expect(404);
-    await send(`/api/webhooks/fake/${a.id}`, stripeEvent(), 'whsec_a').expect(404);
+    await send(
+      `/api/webhooks/stripe/${newId()}`,
+      stripeEvent(),
+      'whsec_a',
+    ).expect(404);
+    await send(
+      '/api/webhooks/stripe/not-a-uuid',
+      stripeEvent(),
+      'whsec_a',
+    ).expect(404);
+    await send(`/api/webhooks/fake/${a.id}`, stripeEvent(), 'whsec_a').expect(
+      404,
+    );
     expect(await inbox()).toHaveLength(0);
   });
 
   it('still processes Callbacks to a disabled connection', async () => {
     const a = await connectStripe(DEFAULT_ORGANIZATION_ID, creds('a'), false);
-    await send(`/api/webhooks/stripe/${a.id}`, stripeEvent(), 'whsec_a').expect(200);
+    await send(`/api/webhooks/stripe/${a.id}`, stripeEvent(), 'whsec_a').expect(
+      200,
+    );
     expect(await inbox()).toHaveLength(1);
   });
 });
@@ -165,6 +177,10 @@ describe('importing the env Stripe account', () => {
 
     expect(await importer.execute(creds('other'))).toBe('exists');
     // The imported connection verifies Callbacks.
-    await send(`/api/webhooks/stripe/${row.id}`, stripeEvent(), 'whsec_env').expect(200);
+    await send(
+      `/api/webhooks/stripe/${row.id}`,
+      stripeEvent(),
+      'whsec_env',
+    ).expect(200);
   });
 });

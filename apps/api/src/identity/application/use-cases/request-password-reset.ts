@@ -3,11 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../../config/env.schema.js';
 import { newIdentityId } from '../../domain/ids.js';
-import { PASSWORD_RESET_TTL_MS } from '../../domain/password-reset.js';
-import { normalizeEmail } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { IdentityClock } from '../../port/clock.js';
-import { EmailSender } from '../../port/email-sender.js';
+import { PASSWORD_RESET_TTL_MS } from '../../domain/entities/password-reset.js';
+import { normalizeEmail } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { EmailSender } from '../../domain/services/email-sender.js';
 
 export function hashResetToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');

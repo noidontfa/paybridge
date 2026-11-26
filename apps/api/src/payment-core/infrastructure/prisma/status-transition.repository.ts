@@ -7,7 +7,8 @@ import type {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { StatusTransitionRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 
@@ -15,7 +16,7 @@ import { scopeWhere } from './scope.js';
  * Append-only audit trail of status changes. Write it with the runner's
  * transaction-bound repositories so it commits or rolls back with the change.
  */
-export class PrismaStatusTransitionRepository {
+export class PrismaStatusTransitionRepository implements StatusTransitionRepository {
   constructor(private readonly ctx: DbContext) {}
 
   async record(

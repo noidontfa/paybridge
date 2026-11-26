@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InvalidCredentialsError } from '../../domain/errors.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import { toSessionUser, type SessionUser } from '../session.js';
 
 /** The signed-in User with their Organization, for the Console to show. */

@@ -97,12 +97,46 @@ describe('Core dependency rule (pnpm lint)', () => {
   it('allows Core to import its own gateway port and Gateway Manager', async () => {
     const result = await lintSample({
       'src/payment-core/port/index.ts': 'export interface PaymentGateway {}\n',
-      'src/payment-core/gateway-manager/gateway-manager.ts':
+      'src/payment-core/application/gateway-manager.ts':
         "import type { PaymentGateway } from '../port/index.js';\n" +
         'export type Plugins = PaymentGateway[];\n',
       'src/payment-core/application/uses-manager.ts':
-        "import type { Plugins } from '../gateway-manager/gateway-manager.js';\n" +
+        "import type { Plugins } from './gateway-manager.js';\n" +
         'export type P = Plugins;\n',
+    });
+
+    expect(result.output).not.toContain('no-restricted-imports');
+    expect(result.exitCode).toBe(0);
+  });
+});
+
+describe('Core reaches identity only through its port (pnpm lint)', () => {
+  const identityFiles = {
+    'src/identity/domain/entities/organization.ts':
+      "export const DEFAULT_ORGANIZATION_ID = 'x';\n",
+    'src/identity/port/index.ts':
+      "export { DEFAULT_ORGANIZATION_ID } from '../domain/entities/organization.js';\n",
+  };
+
+  it('fails when Core imports identity internals', async () => {
+    const result = await lintSample({
+      ...identityFiles,
+      'src/payment-core/application/uses-internal.ts':
+        "import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/entities/organization.js';\n" +
+        'export const id = DEFAULT_ORGANIZATION_ID;\n',
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('no-restricted-imports');
+    expect(result.output).toContain('uses-internal.ts');
+  });
+
+  it('allows Core to import the identity port', async () => {
+    const result = await lintSample({
+      ...identityFiles,
+      'src/payment-core/application/uses-port.ts':
+        "import { DEFAULT_ORGANIZATION_ID } from '../../identity/port/index.js';\n" +
+        'export const id = DEFAULT_ORGANIZATION_ID;\n',
     });
 
     expect(result.output).not.toContain('no-restricted-imports');

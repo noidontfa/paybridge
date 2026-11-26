@@ -1,17 +1,17 @@
-import type { Payment } from '../domain/payment.js';
+import type { Payment } from '../domain/entities/payment.js';
 import type {
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../domain/payment-transaction.js';
+} from '../domain/entities/payment-transaction.js';
 import {
   decideOutcome,
   type OutcomeDecision,
 } from '../domain/rules/apply-outcome.js';
-import { organizationScope } from '../domain/organization-scope.js';
+import { organizationScope } from '../domain/value-objects/organization-scope.js';
 import { isOpenAttempt } from '../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../domain/rules/payment-transitions.js';
 import type { ReviewReason } from '../domain/statuses.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { Repositories } from '../domain/repositories/repositories.js';
 import type { NormalizedOutcome } from '../port/index.js';
 import {
   recordAttemptTransition,

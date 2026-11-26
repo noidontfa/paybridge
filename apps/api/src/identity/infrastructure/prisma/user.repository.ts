@@ -1,8 +1,8 @@
 import { Prisma } from '../../../generated/prisma/client.js';
 import type { User as UserRow } from '../../../generated/prisma/client.js';
 import { EmailTakenError } from '../../domain/errors.js';
-import type { NewUser, User, UserRole } from '../../domain/user.js';
-import { UserRepository } from '../../port/user.repository.js';
+import type { NewUser, User, UserRole } from '../../domain/entities/user.js';
+import { UserRepository } from '../../domain/repositories/user.repository.js';
 import type { DbContext } from './db.js';
 
 function toUser(row: UserRow): User {

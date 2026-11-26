@@ -2,18 +2,19 @@ import type {
   NewPayment,
   Payment,
   PaymentChanges,
-} from '../../domain/payment.js';
+} from '../../domain/entities/payment.js';
 import type {
   NewPaymentTransaction,
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../../domain/payment-transaction.js';
+} from '../../domain/entities/payment-transaction.js';
 import type { ReviewReason } from '../../domain/statuses.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { PaymentRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import {
   definedOnly,
@@ -23,6 +24,7 @@ import {
   toPaymentTransaction,
 } from './mappers.js';
 import { scopeSql, scopeWhere } from './scope.js';
+import { rethrowUniqueViolation } from './unique-violation.js';
 
 const ATTEMPTS_OLDEST_FIRST = {
   orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
@@ -33,7 +35,7 @@ const ATTEMPTS_OLDEST_FIRST = {
  * Every method takes the Organization scope first (ADR 0006): a Payment of
  * another Organization is simply not found.
  */
-export class PrismaPaymentRepository {
+export class PrismaPaymentRepository implements PaymentRepository {
   constructor(private readonly ctx: DbContext) {}
 
   async findById(scope: ReadScope, id: string): Promise<Payment | null> {
@@ -68,17 +70,19 @@ export class PrismaPaymentRepository {
     scope: OrganizationScope,
     payment: NewPayment,
   ): Promise<Payment> {
-    const row = await this.ctx.db.payment.create({
-      data: {
-        id: payment.id,
-        organizationId: scope.organizationId,
-        merchantOrderId: payment.merchantOrderId,
-        amount: toDecimal(payment.amount),
-        currency: payment.currency,
-        status: payment.status,
-        expiresAt: payment.expiresAt,
-      },
-    });
+    const row = await rethrowUniqueViolation(
+      this.ctx.db.payment.create({
+        data: {
+          id: payment.id,
+          organizationId: scope.organizationId,
+          merchantOrderId: payment.merchantOrderId,
+          amount: toDecimal(payment.amount),
+          currency: payment.currency,
+          status: payment.status,
+          expiresAt: payment.expiresAt,
+        },
+      }),
+    );
     return toPayment(row, []);
   }
 
@@ -99,18 +103,20 @@ export class PrismaPaymentRepository {
     scope: OrganizationScope,
     attempt: NewPaymentTransaction,
   ): Promise<PaymentTransaction> {
-    const row = await this.ctx.db.paymentTransaction.create({
-      data: {
-        id: attempt.id,
-        organizationId: scope.organizationId,
-        paymentId: attempt.paymentId,
-        gatewayId: attempt.gatewayId,
-        status: attempt.status,
-        providerRef: attempt.providerRef ?? null,
-        providerMetadata: jsonInput(attempt.providerMetadata),
-        nextAction: jsonInput(attempt.nextAction),
-      },
-    });
+    const row = await rethrowUniqueViolation(
+      this.ctx.db.paymentTransaction.create({
+        data: {
+          id: attempt.id,
+          organizationId: scope.organizationId,
+          paymentId: attempt.paymentId,
+          gatewayId: attempt.gatewayId,
+          status: attempt.status,
+          providerRef: attempt.providerRef ?? null,
+          providerMetadata: jsonInput(attempt.providerMetadata),
+          nextAction: jsonInput(attempt.nextAction),
+        },
+      }),
+    );
     return toPaymentTransaction(row);
   }
 

@@ -3,15 +3,15 @@ import {
   AttemptNotFoundError,
   PaymentNotFoundError,
 } from '../../domain/errors.js';
-import { Clock } from '../../domain/clock.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+import { Clock } from '../../domain/services/clock.js';
+import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import {
   decideReviewResolution,
   type OperatorResolutionStatus,
 } from '../../domain/rules/review-resolution.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   cancelOtherOpenAttempts,
   succeedPayment,
@@ -139,7 +139,10 @@ export class ResolveReview {
   private async canCancel(attempt: CancellableAttempt): Promise<boolean> {
     try {
       return (
-        await this.plugins.forExisting(attempt.organizationId, attempt.gatewayId)
+        await this.plugins.forExisting(
+          attempt.organizationId,
+          attempt.gatewayId,
+        )
       ).capabilities.supportsCancel;
     } catch {
       return false;

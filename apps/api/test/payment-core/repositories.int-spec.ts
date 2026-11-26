@@ -1,9 +1,9 @@
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
-import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/value-objects/organization-scope.js';
 import {
   DEFAULT_ORGANIZATION_ID,
   defaultScope,

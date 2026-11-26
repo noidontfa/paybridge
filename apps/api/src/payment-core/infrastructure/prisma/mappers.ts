@@ -4,8 +4,8 @@ import type {
   PaymentTransaction as PaymentTransactionRow,
 } from '../../../generated/prisma/client.js';
 import type * as DbEnums from '../../../generated/prisma/enums.js';
-import type { Payment } from '../../domain/payment.js';
-import type { PaymentTransaction } from '../../domain/payment-transaction.js';
+import type { Payment } from '../../domain/entities/payment.js';
+import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import type {
   AttemptStatus,
   PaymentStatus,

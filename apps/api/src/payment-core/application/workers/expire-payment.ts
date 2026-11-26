@@ -1,22 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   ALL_ORGANIZATIONS,
   organizationScope,
   type OrganizationScope,
-} from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
-import type { PaymentTransaction } from '../../domain/payment-transaction.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
+import type { PaymentTransaction } from '../../domain/entities/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
 import type { QueryResult } from '../../port/index.js';
-import { ProviderQueryRateLimiter } from '../../reliability/provider-query-rate-limiter.js';
+import { ProviderQueryRateLimiter } from '../provider-query-rate-limiter.js';
 import { applyProviderOutcome } from '../apply-provider-outcome.js';
 import { BestEffortCancel } from '../best-effort-cancel.js';
 import { recordAttemptTransition } from '../record-attempt-transition.js';
-import type { Repositories } from '../../infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import type { Repositories } from '../../domain/repositories/repositories.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 
 /**
  * What one expiry job did:

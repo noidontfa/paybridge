@@ -1,12 +1,10 @@
 import { createHash } from 'node:crypto';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Queue } from 'bullmq';
-import { ALL_ORGANIZATIONS } from '../domain/organization-scope.js';
-import { organizationScope } from '../domain/organization-scope.js';
+import { ALL_ORGANIZATIONS } from '../domain/value-objects/organization-scope.js';
+import { organizationScope } from '../domain/value-objects/organization-scope.js';
 import { ConnectionPlugins } from './connection-plugins.js';
-import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
-import { QUEUES, jobIds } from '../infrastructure/queue/queue.constants.js';
+import { JobDispatcher } from '../domain/services/job-dispatcher.js';
+import { TransactionRunner } from '../domain/repositories/transaction-runner.js';
 import {
   InvalidCallbackError,
   type CallbackAck,
@@ -40,8 +38,7 @@ export interface IncomingCallback extends CallbackInput {
  * (legacy route) the Organization's own for that gateway.
  */
 export type CallbackTarget =
-  | { readonly connectionId: string }
-  | { readonly organizationId: string };
+  { readonly connectionId: string } | { readonly organizationId: string };
 
 /** The URL names no Gateway Connection for that gateway. */
 export class UnknownGatewayConnectionError extends Error {
@@ -69,7 +66,7 @@ export class WebhookIntake {
   constructor(
     @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
-    @InjectQueue(QUEUES.webhookInbox) private readonly queue: Queue,
+    @Inject(JobDispatcher) private readonly dispatcher: JobDispatcher,
   ) {}
 
   async receive(
@@ -120,10 +117,7 @@ export class WebhookIntake {
     return parsed.ack;
   }
 
-  private async resolve(
-    target: CallbackTarget,
-    callback: IncomingCallback,
-  ) {
+  private async resolve(target: CallbackTarget, callback: IncomingCallback) {
     if (!('connectionId' in target)) {
       return {
         organizationId: target.organizationId,
@@ -156,10 +150,12 @@ export class WebhookIntake {
    */
   private dispatch(inboxId: string): void {
     const data: ProcessWebhookJobData = { inboxId };
-    void this.queue
-      .add(PROCESS_WEBHOOK_JOB, data, {
-        jobId: jobIds.webhookInbox(inboxId),
-        ...PROCESS_WEBHOOK_JOB_OPTIONS,
+    void this.dispatcher
+      .enqueue('webhookInbox', {
+        name: PROCESS_WEBHOOK_JOB,
+        jobId: inboxId,
+        data,
+        options: PROCESS_WEBHOOK_JOB_OPTIONS,
       })
       .catch((error: unknown) => {
         this.logger.error(

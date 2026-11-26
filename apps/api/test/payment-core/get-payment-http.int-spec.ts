@@ -3,10 +3,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { GLOBAL_PREFIX } from '../../src/constants.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { bearer, createApiKey } from '../setup/api-keys.js';
@@ -42,14 +45,17 @@ beforeEach(async () => {
 async function createPayment(): Promise<{ id: string; ref: string }> {
   const ref = `order-${newId()}`;
   const res = await request(app.getHttpServer())
-    .post('/api/payments').set(bearer(apiKey))
+    .post('/api/payments')
+    .set(bearer(apiKey))
     .send({ amount: '150000', currency: 'VND', upstreamReference: ref })
     .expect(201);
   return { id: res.body.id as string, ref };
 }
 
 function get(id: string) {
-  return request(app.getHttpServer()).get(`/api/payments/${id}`).set(bearer(apiKey));
+  return request(app.getHttpServer())
+    .get(`/api/payments/${id}`)
+    .set(bearer(apiKey));
 }
 
 describe('GET /api/payments/:id', () => {

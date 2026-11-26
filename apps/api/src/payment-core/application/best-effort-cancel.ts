@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { organizationScope } from '../domain/organization-scope.js';
-import type { PaymentTransaction } from '../domain/payment-transaction.js';
+import { organizationScope } from '../domain/value-objects/organization-scope.js';
+import type { PaymentTransaction } from '../domain/entities/payment-transaction.js';
 import { ConnectionPlugins } from './connection-plugins.js';
-import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../domain/repositories/transaction-runner.js';
 
 /** What a provider cancel needs to know about an attempt. */
 export type CancellableAttempt = Pick<

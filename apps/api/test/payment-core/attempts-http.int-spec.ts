@@ -1,11 +1,14 @@
-import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
+import { GatewayManager } from '../../src/payment-core/application/gateway-manager.js';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { GLOBAL_PREFIX } from '../../src/constants.js';
 import { FakeGatewayPlugin } from '../../src/gateways/fake/fake-gateway.plugin.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { GatewayRejectedError } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
@@ -48,7 +51,8 @@ beforeEach(async () => {
 
 async function createPayment(): Promise<string> {
   const res = await request(app.getHttpServer())
-    .post('/api/payments').set(bearer(apiKey))
+    .post('/api/payments')
+    .set(bearer(apiKey))
     .send({
       amount: '150000',
       currency: 'VND',
@@ -60,7 +64,8 @@ async function createPayment(): Promise<string> {
 
 function startAttempt(paymentId: string, body: object) {
   return request(app.getHttpServer())
-    .post(`/api/payments/${paymentId}/attempts`).set(bearer(apiKey))
+    .post(`/api/payments/${paymentId}/attempts`)
+    .set(bearer(apiKey))
     .send(body);
 }
 
@@ -113,7 +118,8 @@ describe('POST /api/payments/:paymentId/attempts', () => {
     });
     expect(stored?.nextAction).toEqual(nextAction);
     const detail = await request(app.getHttpServer())
-      .get(`/api/payments/${paymentId}`).set(bearer(apiKey))
+      .get(`/api/payments/${paymentId}`)
+      .set(bearer(apiKey))
       .expect(200);
     expect(detail.body.attempts[0].nextAction).toEqual(nextAction);
   });

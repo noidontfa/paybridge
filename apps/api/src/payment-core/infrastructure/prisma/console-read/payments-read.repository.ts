@@ -1,62 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
-import type { PaymentStatus, AttemptStatus } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
-
-export type PaymentSortColumn = 'createdAt' | 'amount';
-
-export interface PaymentListFilters {
-  readonly status?: PaymentStatus;
-  /** Matches a Payment that has a PaymentTransaction on this gateway. */
-  readonly gatewayId?: string;
-  /** Payment id (exact) or part of the Upstream Reference (any case). */
-  readonly q?: string;
-  /** Inclusive bounds on `createdAt`. */
-  readonly createdFrom?: Date;
-  readonly createdTo?: Date;
-}
-
-export interface PaymentListQuery {
-  readonly filters: PaymentListFilters;
-  readonly sort: PaymentSortColumn;
-  readonly order: 'asc' | 'desc';
-  /** Sort-key value and id of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface PaymentListRow {
-  readonly id: string;
-  readonly upstreamReference: string;
-  /** Decimal string in the major unit. */
-  readonly amount: string;
-  readonly currency: string;
-  readonly status: PaymentStatus;
-  readonly expiresAt: Date;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  /** Latest PaymentTransaction: greatest `createdAt`, ties broken by id. */
-  readonly latestTransaction: {
-    readonly gatewayId: string;
-    readonly status: AttemptStatus;
-  } | null;
-}
-
-/** Makes `%`, `_` and `\` match themselves in a LIKE pattern (Prisma does not). */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, '\\$&');
-}
+import { escapeLike, uuidNeedle } from './read-helpers.js';
+import {
+  PaymentsReadRepository,
+  type PaymentListQuery,
+  type PaymentListRow,
+} from '../../../domain/repositories/console-read/payments-read.repository.js';
 
 /**
  * Read model behind the operator Payments list (ADR 0005). Read only: it
  * uses the shared client directly, never a transaction.
  */
 @Injectable()
-export class PaymentsReadRepository {
+export class PrismaPaymentsReadRepository implements PaymentsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, so the caller can tell whether another page exists. */
@@ -102,9 +62,10 @@ export class PaymentsReadRepository {
     }
     if (filters.q) {
       const needle = filters.q;
+      const id = uuidNeedle(needle);
       and.push({
         OR: [
-          ...(isUuid(needle) ? [{ id: needle.toLowerCase() }] : []),
+          ...(id ? [{ id }] : []),
           {
             merchantOrderId: {
               contains: escapeLike(needle),

@@ -5,30 +5,34 @@ import type {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { IdempotencyKeyRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
+import { rethrowUniqueViolation } from './unique-violation.js';
 
 /** Idempotency-Key records for `POST /payments` (kept 24 hours). */
-export class PrismaIdempotencyKeyRepository {
+export class PrismaIdempotencyKeyRepository implements IdempotencyKeyRepository {
   constructor(private readonly ctx: DbContext) {}
 
   async create(
     scope: OrganizationScope,
     record: NewIdempotencyRecord,
   ): Promise<IdempotencyRecord> {
-    return this.ctx.db.idempotencyKey.create({
-      data: {
-        organizationId: scope.organizationId,
-        key: record.key,
-        requestHash: record.requestHash,
-        responseStatus: record.responseStatus,
-        responseBody: record.responseBody as object,
-        paymentId: record.paymentId,
-        expiresAt: record.expiresAt,
-        ...(record.createdAt && { createdAt: record.createdAt }),
-      },
-    });
+    return rethrowUniqueViolation(
+      this.ctx.db.idempotencyKey.create({
+        data: {
+          organizationId: scope.organizationId,
+          key: record.key,
+          requestHash: record.requestHash,
+          responseStatus: record.responseStatus,
+          responseBody: record.responseBody as object,
+          paymentId: record.paymentId,
+          expiresAt: record.expiresAt,
+          ...(record.createdAt && { createdAt: record.createdAt }),
+        },
+      }),
+    );
   }
 
   async find(

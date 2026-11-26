@@ -5,15 +5,18 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { ACCESS_POLICY_KEY } from '../../src/common/principal/access-policy.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
-import { AccessTokenService } from '../../src/identity/port/access-token.service.js';
+import { AccessTokenService } from '../../src/identity/domain/services/access-token.service.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import {
   organizationScope,
   type OrganizationScope,
-} from '../../src/payment-core/domain/organization-scope.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+} from '../../src/payment-core/domain/value-objects/organization-scope.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { apiErrorBodySchema } from '../contract/console/schemas.js';
 import { createOrganization, defaultScope } from '../setup/organizations.js';
 import { resetDatabase } from '../setup/reset-db.js';

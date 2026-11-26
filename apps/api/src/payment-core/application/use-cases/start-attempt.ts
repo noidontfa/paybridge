@@ -1,7 +1,5 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Queue } from 'bullmq';
-import { Clock } from '../../domain/clock.js';
+import { Clock } from '../../domain/services/clock.js';
 import {
   AttemptInReviewError,
   PaymentExpiryPassedError,
@@ -15,24 +13,21 @@ import {
   ALL_ORGANIZATIONS,
   organizationScope,
   type OrganizationScope,
-} from '../../domain/organization-scope.js';
-import type { Payment } from '../../domain/payment.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { Payment } from '../../domain/entities/payment.js';
 import type {
   PaymentTransaction,
   PaymentTransactionChanges,
-} from '../../domain/payment-transaction.js';
+} from '../../domain/entities/payment-transaction.js';
 import {
   INITIAL_ATTEMPT_STATUS,
   isOpenAttempt,
 } from '../../domain/rules/attempt-transitions.js';
-import {
-  GatewayManager,
-  UnknownGatewayError,
-} from '../../gateway-manager/gateway-manager.js';
+import { GatewayManager, UnknownGatewayError } from '../gateway-manager.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import type { Repositories } from '../../infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { QUEUES, jobIds } from '../../infrastructure/queue/queue.constants.js';
+import type { Repositories } from '../../domain/repositories/repositories.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { JobDispatcher } from '../../domain/services/job-dispatcher.js';
 import {
   GatewayRejectedError,
   GatewayUnavailableError,
@@ -138,8 +133,7 @@ export class StartAttempt {
     @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
-    @InjectQueue(QUEUES.attemptInitiate) private readonly initiateQueue: Queue,
-    @InjectQueue(QUEUES.attemptStatusQuery) private readonly queryQueue: Queue,
+    @Inject(JobDispatcher) private readonly dispatcher: JobDispatcher,
   ) {}
 
   async execute(
@@ -243,16 +237,22 @@ export class StartAttempt {
             description: input.description,
           }),
         };
-        await this.initiateQueue.add(INITIATE_ATTEMPT_JOB, data, {
-          jobId: jobIds.attempt(attemptId),
-          ...INITIATE_ATTEMPT_JOB_OPTIONS,
+        await this.dispatcher.enqueue('attemptInitiate', {
+          name: INITIATE_ATTEMPT_JOB,
+          jobId: attemptId,
+          data,
+          options: INITIATE_ATTEMPT_JOB_OPTIONS,
         });
       } else {
         const data: QueryAttemptJobData = { attemptId };
-        await this.queryQueue.add(QUERY_ATTEMPT_JOB, data, {
-          jobId: jobIds.attempt(attemptId),
-          ...QUERY_ATTEMPT_JOB_OPTIONS,
-          delay: UNKNOWN_OUTCOME_QUERY_DELAY_MS,
+        await this.dispatcher.enqueue('attemptStatusQuery', {
+          name: QUERY_ATTEMPT_JOB,
+          jobId: attemptId,
+          data,
+          options: {
+            ...QUERY_ATTEMPT_JOB_OPTIONS,
+            delay: UNKNOWN_OUTCOME_QUERY_DELAY_MS,
+          },
         });
       }
     } catch (error) {

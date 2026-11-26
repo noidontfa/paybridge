@@ -1,6 +1,6 @@
 import { argon2, randomBytes, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { PasswordHasher } from '../../port/password-hasher.js';
+import { PasswordHasher } from '../../domain/services/password-hasher.js';
 
 const argon2Async = promisify(argon2);
 

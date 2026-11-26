@@ -6,12 +6,13 @@ import type {
 import type {
   OrganizationScope,
   ReadScope,
-} from '../../domain/organization-scope.js';
+} from '../../domain/value-objects/organization-scope.js';
+import type { GatewayRawResponseRepository } from '../../domain/repositories/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 
 /** Raw provider payloads, stored for audit and never interpreted. */
-export class PrismaGatewayRawResponseRepository {
+export class PrismaGatewayRawResponseRepository implements GatewayRawResponseRepository {
   constructor(private readonly ctx: DbContext) {}
 
   async record(

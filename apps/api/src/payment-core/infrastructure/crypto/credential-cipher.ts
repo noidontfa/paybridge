@@ -1,4 +1,9 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import {
+  CredentialCipher,
+  UnknownCredentialKeyError,
+  type SealedValue,
+} from '../../domain/services/credential-cipher.js';
 
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
@@ -8,34 +13,22 @@ export class InvalidCredentialKeysError extends Error {
   override readonly name = 'InvalidCredentialKeysError';
 }
 
-/** The row names an encrypting key this process does not hold. */
-export class UnknownCredentialKeyError extends Error {
-  override readonly name = 'UnknownCredentialKeyError';
-
-  constructor(readonly keyId: string) {
-    super(`No credential encryption key "${keyId}" is configured`);
-  }
-}
-
-export interface SealedValue {
-  /** base64 of nonce (12) + auth tag (16) + ciphertext. */
-  readonly ciphertext: string;
-  readonly keyId: string;
-}
-
 /**
  * AES-256-GCM over gateway credentials, with identified keys. The first key
  * of the configuration encrypts; every key can decrypt, so a key can be
- * rotated by prepending a new one and re-encrypting the rows.
+ * rotated by prepending a new one and re-encrypting the rows. A sealed
+ * `ciphertext` is base64 of nonce (12) + auth tag (16) + ciphertext.
  */
-export class CredentialCipher {
+export class AesCredentialCipher extends CredentialCipher {
   private constructor(
     private readonly keys: ReadonlyMap<string, Buffer>,
     readonly primaryKeyId: string,
-  ) {}
+  ) {
+    super();
+  }
 
   /** `id:base64key,id2:base64key2`; each key is 32 bytes; the first is primary. */
-  static fromConfig(config: string): CredentialCipher {
+  static fromConfig(config: string): AesCredentialCipher {
     const keys = new Map<string, Buffer>();
     let primary: string | undefined;
     for (const entry of config.split(',').map((e) => e.trim())) {
@@ -63,7 +56,7 @@ export class CredentialCipher {
     if (!primary) {
       throw new InvalidCredentialKeysError('No credential key is configured');
     }
-    return new CredentialCipher(keys, primary);
+    return new AesCredentialCipher(keys, primary);
   }
 
   encrypt(plaintext: string): SealedValue {
@@ -73,7 +66,10 @@ export class CredentialCipher {
       this.keys.get(this.primaryKeyId)!,
       iv,
     );
-    const body = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const body = Buffer.concat([
+      cipher.update(plaintext, 'utf8'),
+      cipher.final(),
+    ]);
     return {
       ciphertext: Buffer.concat([iv, cipher.getAuthTag(), body]).toString(
         'base64',

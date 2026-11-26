@@ -1,13 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
-import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import {
   CallbacksReadRepository,
   type CallbackDetailRow,
   type CallbackListQuery,
   type CallbackListRow,
-} from '../../../infrastructure/prisma/console-read/callbacks-read.repository.js';
-import { encodeCursor, toPage, type Page } from './cursor.js';
+} from '../../../domain/repositories/console-read/callbacks-read.repository.js';
+import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
+
+/** The Callbacks list cursor: newest first by `receivedAt`. */
+export const callbacksCursor = keysetCursor<CallbackListRow>({
+  tag: 'callbacks',
+  valueOf: (row) => row.receivedAt.toISOString(),
+  isValue: isIsoTime,
+});
 
 /** The operator Callbacks list (`GET /internal/callbacks`). Read only (ADR 0005). */
 @Injectable()
@@ -22,9 +28,7 @@ export class ListCallbacks {
     query: CallbackListQuery,
   ): Promise<Page<CallbackListRow>> {
     const rows = await this.callbacks.list(scope, query);
-    return toPage(rows, query.limit, (last) =>
-      encodeCursor(['callbacks', last.receivedAt.toISOString(), last.id]),
-    );
+    return callbacksCursor.page(rows, query.limit);
   }
 }
 
@@ -36,10 +40,7 @@ export class GetCallback {
     private readonly callbacks: CallbacksReadRepository,
   ) {}
 
-  async execute(
-    scope: ReadScope,
-    id: string,
-  ): Promise<CallbackDetailRow | null> {
-    return isUuid(id) ? this.callbacks.findById(scope, id.toLowerCase()) : null;
+  execute(scope: ReadScope, id: string): Promise<CallbackDetailRow | null> {
+    return this.callbacks.findById(scope, id);
   }
 }

@@ -3,7 +3,7 @@ import { GetOrganization } from '../../src/identity/application/use-cases/get-or
 import {
   DEFAULT_ORGANIZATION_ID,
   OrganizationNotFoundError,
-} from '../../src/identity/domain/organization.js';
+} from '../../src/identity/domain/entities/organization.js';
 import { PrismaTransactionRunner } from '../../src/identity/infrastructure/prisma/transaction-runner.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 

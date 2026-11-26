@@ -1,3 +1,4 @@
+import type { Repositories } from '../../domain/repositories/repositories.js';
 import { PrismaApiKeyRepository } from './api-key.repository.js';
 import type { DbContext } from './db.js';
 import { PrismaInvitationRepository } from './invitation.repository.js';
@@ -6,16 +7,7 @@ import { PrismaPasswordResetRepository } from './password-reset.repository.js';
 import { PrismaRefreshTokenRepository } from './refresh-token.repository.js';
 import { PrismaUserRepository } from './user.repository.js';
 
-/** Every identity repository, bound to one database handle. */
-export interface Repositories {
-  readonly organizations: PrismaOrganizationRepository;
-  readonly users: PrismaUserRepository;
-  readonly refreshTokens: PrismaRefreshTokenRepository;
-  readonly passwordResets: PrismaPasswordResetRepository;
-  readonly invitations: PrismaInvitationRepository;
-  readonly apiKeys: PrismaApiKeyRepository;
-}
-
+/** Every Prisma repository, bound to one database handle. Add new ones here. */
 export function createRepositories(ctx: DbContext): Repositories {
   return {
     organizations: new PrismaOrganizationRepository(ctx),

@@ -16,6 +16,10 @@
               {
                 "group": ["**/gateways", "**/gateways/**"],
                 "message": "Payment Core must not import Gateway Plugin code. Depend on the PaymentGateway port; plugins are registered in the composition root (src/gateways/gateways.module.ts)."
+              },
+              {
+                "group": ["**/identity/**", "!**/identity/port", "!**/identity/port/index.js"],
+                "message": "Payment Core may import identity only through its public surface, src/identity/port/index.ts. Export what you need from there."
               }
             ]
           }

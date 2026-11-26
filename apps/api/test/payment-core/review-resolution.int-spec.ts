@@ -4,10 +4,13 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { PaymentService } from '../../src/payment-core/application/payment.service.js';
-import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
+import {
+  Clock,
+  FakeClock,
+} from '../../src/payment-core/domain/services/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import type { ReviewReason } from '../../src/payment-core/domain/statuses.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/repositories/transaction-runner.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { signedInHttp, type SignedInHttp } from '../setup/users.js';
@@ -82,9 +85,7 @@ async function seedReview(
 }
 
 const resolve = (paymentId: string, body: Record<string, unknown>) =>
-  operator
-    .post(`/internal/payments/${paymentId}/review-resolution`)
-    .send(body);
+  operator.post(`/internal/payments/${paymentId}/review-resolution`).send(body);
 
 const attemptRow = (id: string) =>
   prisma.paymentTransaction.findUniqueOrThrow({ where: { id } });

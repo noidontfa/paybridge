@@ -4,8 +4,13 @@
 
 // --- Status transitions (append-only audit trail) --------------------------
 
+export const STATUS_TRANSITION_ENTITY_TYPES = [
+  'PAYMENT',
+  'PAYMENT_TRANSACTION',
+  'REFUND',
+] as const;
 export type StatusTransitionEntityType =
-  'PAYMENT' | 'PAYMENT_TRANSACTION' | 'REFUND';
+  (typeof STATUS_TRANSITION_ENTITY_TYPES)[number];
 
 export interface NewStatusTransition {
   readonly entityType: StatusTransitionEntityType;
@@ -33,12 +38,14 @@ export interface StatusTransition extends NewStatusTransition {
 
 // --- Outbox -----------------------------------------------------------------
 
-export type OutboxEventType =
-  | 'PaymentCreated'
-  | 'PaymentSucceeded'
-  | 'PaymentCancelled'
-  | 'PaymentExpired'
-  | 'PaymentRequiresReview';
+export const OUTBOX_EVENT_TYPES = [
+  'PaymentCreated',
+  'PaymentSucceeded',
+  'PaymentCancelled',
+  'PaymentExpired',
+  'PaymentRequiresReview',
+] as const;
+export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
 
 export interface NewOutboxEvent {
   /** Generated with `newId()` when omitted. Also the BullMQ job id. */
@@ -60,8 +67,14 @@ export interface OutboxEvent {
 
 // --- Webhook inbox ----------------------------------------------------------
 
-export type WebhookInboxStatus =
-  'RECEIVED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+/** Stored inbox entries are what the Console calls Callbacks. */
+export const WEBHOOK_INBOX_STATUSES = [
+  'RECEIVED',
+  'PROCESSING',
+  'PROCESSED',
+  'FAILED',
+] as const;
+export type WebhookInboxStatus = (typeof WEBHOOK_INBOX_STATUSES)[number];
 
 export interface NewWebhookInboxEntry {
   /** Generated with `newId()` when omitted. */

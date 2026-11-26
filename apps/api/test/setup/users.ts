@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import { Argon2PasswordHasher } from '../../src/identity/infrastructure/crypto/argon2-password-hasher.js';
-import type { UserRole } from '../../src/identity/domain/user.js';
+import type { UserRole } from '../../src/identity/domain/entities/user.js';
 import { DEFAULT_ORGANIZATION_ID } from './organizations.js';
 
 /** The password every test User has (12 characters or more). */

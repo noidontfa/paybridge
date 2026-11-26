@@ -1,4 +1,4 @@
-import type { PaymentTransaction } from '../payment-transaction.js';
+import type { PaymentTransaction } from '../entities/payment-transaction.js';
 import { REQUERIED_REVIEW_REASONS } from './apply-outcome.js';
 
 /** After this long in review without a clear answer, an operator decides. */

@@ -5,12 +5,12 @@ import {
   UserDeactivatedError,
 } from '../../domain/errors.js';
 import { newIdentityId } from '../../domain/ids.js';
-import { REFRESH_TOKEN_MAX_AGE_MS } from '../../domain/refresh-token.js';
-import { normalizeEmail } from '../../domain/user.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
-import { AccessTokenService } from '../../port/access-token.service.js';
-import { IdentityClock } from '../../port/clock.js';
-import { PasswordHasher } from '../../port/password-hasher.js';
+import { REFRESH_TOKEN_MAX_AGE_MS } from '../../domain/entities/refresh-token.js';
+import { normalizeEmail } from '../../domain/entities/user.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { AccessTokenService } from '../../domain/services/access-token.service.js';
+import { IdentityClock } from '../../domain/services/clock.js';
+import { PasswordHasher } from '../../domain/services/password-hasher.js';
 import { issueSession, type Session } from '../session.js';
 
 export interface SignInInput {
