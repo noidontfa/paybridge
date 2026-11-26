@@ -1,4 +1,4 @@
-import type { NewUser, User } from '../domain/user.js';
+import type { NewUser, User, UserRole } from '../domain/user.js';
 
 export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;
@@ -9,4 +9,16 @@ export abstract class UserRepository {
   abstract setPasswordHash(id: string, passwordHash: string): Promise<void>;
   /** Recovery: sets a new password hash and makes the User active again. */
   abstract resetPassword(id: string, passwordHash: string): Promise<void>;
+  /** Every User of the Organization, by name. */
+  abstract listByOrganization(organizationId: string): Promise<User[]>;
+  /** Changes Role and/or the active flag. */
+  abstract update(
+    id: string,
+    changes: { role?: UserRole; active?: boolean },
+  ): Promise<void>;
+  /** Active Organization Admins of the Organization, not counting `exceptUserId`. */
+  abstract countActiveAdmins(
+    organizationId: string,
+    exceptUserId: string,
+  ): Promise<number>;
 }

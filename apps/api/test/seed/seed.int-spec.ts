@@ -282,6 +282,20 @@ describe('seed organizations', () => {
     expect(organizations.map((o) => o.id)).toContain(DEFAULT_ORGANIZATION_ID);
   });
 
+  it('creates Gateway Connections, one of them disabled, with encrypted credentials', async () => {
+    const connections = await prisma.gatewayConnection.findMany();
+    expect(connections.some((c) => !c.enabled)).toBe(true);
+    expect(connections.some((c) => c.enabled)).toBe(true);
+    const withCredentials = connections.filter((c) => c.credentialsCiphertext);
+    expect(withCredentials.length).toBeGreaterThan(0);
+    for (const c of withCredentials) {
+      expect(c.credentialsCiphertext).not.toContain('sk_test');
+      expect(c.credentialsKeyId).toBeTruthy();
+    }
+    await seed();
+    expect(await prisma.gatewayConnection.count()).toBe(connections.length);
+  });
+
   it('keeps every row of a Payment in the Payment own Organization', async () => {
     const payments = await prisma.payment.findMany({
       include: { transactions: true, outboxEvents: true },
@@ -320,7 +334,10 @@ describe('seed API Keys', () => {
     const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
     await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
 
-    const keys = await prisma.apiKey.findMany({ orderBy: { label: 'asc' } });
+    const keys = await prisma.apiKey.findMany({
+      where: { label: { startsWith: 'Seed:' } },
+      orderBy: { label: 'asc' },
+    });
     expect(keys.length).toBe(first.apiKeys.length);
     expect(new Set(keys.map((k) => k.organizationId)).size).toBeGreaterThanOrEqual(2);
     expect(keys.some((k) => k.revokedAt)).toBe(true);
@@ -329,6 +346,21 @@ describe('seed API Keys', () => {
       expect(row.keyHash).toBe(hashApiKey(issued.key));
       expect(issued.key.startsWith(row.prefix)).toBe(true);
     }
+  });
+});
+
+describe('seed users', () => {
+  it('includes a deactivated User next to active ones', async () => {
+    await seed();
+    const former = await prisma.user.findUniqueOrThrow({
+      where: { email: 'former.operator@default.paybridge.dev' },
+    });
+    expect(former).toMatchObject({ active: false, role: 'OPERATOR' });
+    expect(
+      await prisma.user.count({
+        where: { organizationId: former.organizationId, active: true },
+      }),
+    ).toBeGreaterThanOrEqual(2);
   });
 });
 

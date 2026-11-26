@@ -8,6 +8,7 @@
  * `./handlers.ts`. Mutating handlers push to / edit these arrays directly.
  */
 import type { CallbackStatus } from '@/lib/api/callbacks';
+import type { MockUser } from './users';
 import type {
   AttemptStatus,
   NextAction,
@@ -70,9 +71,26 @@ export interface MockGateway {
   callbackUrl: string;
 }
 
+const mockUser = (id: string, name: string, role: 'OPERATOR' | 'ORGANIZATION_ADMIN', active = true): MockUser => ({
+  id,
+  email: `${id}@example.test`,
+  name,
+  role,
+  roleLabel: role === 'OPERATOR' ? 'Operator' : 'Organization Admin',
+  active,
+  createdAt: '2026-01-05T09:00:00.000Z',
+});
+
 export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
   readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+
+  /** The Organization's Users, for the Users page. */
+  readonly users: MockUser[] = [
+    mockUser('dana', 'Dana Admin', 'ORGANIZATION_ADMIN'),
+    mockUser('olu', 'Olu Operator', 'OPERATOR'),
+    mockUser('pat', 'Pat Former', 'OPERATOR', false),
+  ];
 
   /** Only `stripe` and `fake` exist. Tests replace the contents to model other states. */
   readonly gateways: MockGateway[] = [

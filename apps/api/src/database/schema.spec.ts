@@ -53,6 +53,7 @@ describe('schema ownership', () => {
 
   it('declares the Payment Core tables and the identity tables', () => {
     expect(listModelTables(schema).sort()).toEqual([
+      'core_gateway_connections',
       'core_gateway_raw_responses',
       'core_idempotency_keys',
       'core_outbox_events',
@@ -61,6 +62,7 @@ describe('schema ownership', () => {
       'core_refunds',
       'core_status_transitions',
       'core_webhook_inbox',
+      'iam_api_keys',
       'iam_organizations',
       'iam_password_resets',
       'iam_refresh_tokens',

@@ -5,6 +5,10 @@ import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
 import { API_KEY_PREFIX, hashApiKey } from '../src/identity/application/api-key-secret.js';
 import type { UserRole } from '../src/identity/domain/user.js';
+import {
+  DEVELOPMENT_CREDENTIAL_KEYS,
+} from '../src/config/env.schema.js';
+import { CredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import {
   callbackSpecs,
@@ -46,6 +50,7 @@ export interface SeedOptions {
 
 export interface SeedResult {
   organizations: number;
+  gatewayConnections: number;
   users: number;
   /** The development API Keys, in clear text (they are public dev fixtures). */
   apiKeys: readonly SeedApiKey[];
@@ -77,6 +82,8 @@ interface SeedUser {
   readonly name: string;
   readonly role: UserRole;
   readonly organization: OrganizationKey | null;
+  /** Default true. A deactivated User cannot sign in. */
+  readonly active?: boolean;
 }
 
 /** A Super Admin, plus an Organization Admin and an Operator in each Organization. */
@@ -116,6 +123,26 @@ export const SEED_USERS: readonly SeedUser[] = [
     role: 'OPERATOR',
     organization: 'acme',
   },
+  {
+    key: 'former-operator-primary',
+    email: 'former.operator@default.paybridge.dev',
+    name: 'Fran Former (Default)',
+    role: 'OPERATOR',
+    organization: 'primary',
+    active: false,
+  },
+];
+
+/** Each Organization's Gateway Connections; one of them is disabled. */
+const SEED_GATEWAY_CONNECTIONS: readonly {
+  organization: OrganizationKey;
+  gatewayId: string;
+  enabled: boolean;
+}[] = [
+  { organization: 'primary', gatewayId: 'fake', enabled: true },
+  { organization: 'primary', gatewayId: 'stripe', enabled: true },
+  { organization: 'acme', gatewayId: 'fake', enabled: true },
+  { organization: 'acme', gatewayId: 'stripe', enabled: false },
 ];
 
 export interface SeedApiKey {
@@ -199,7 +226,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             organizationId: user.organization
               ? ORGANIZATIONS[user.organization].id
               : null,
-            active: true,
+            active: user.active ?? true,
           };
           await tx.user.upsert({
             where: { id: id(`user:${user.key}`) },
@@ -220,6 +247,43 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
               prefix: k.key.slice(0, API_KEY_PREFIX.length + 8),
               keyHash: hashApiKey(k.key),
               revokedAt: k.revoked ? new Date(now - DAY) : null,
+            },
+          });
+        }
+        // Gateway Connections: kept across re-runs, reset to the seeded state.
+        // The credentials are obvious dummies, encrypted like real ones.
+        const cipher = CredentialCipher.fromConfig(
+          process.env.GATEWAY_CREDENTIAL_KEYS || DEVELOPMENT_CREDENTIAL_KEYS,
+        );
+        for (const connection of SEED_GATEWAY_CONNECTIONS) {
+          const sealed =
+            connection.gatewayId === 'stripe'
+              ? cipher.encrypt(
+                  JSON.stringify({
+                    secretKey: 'sk_test_seed_not_real',
+                    webhookSecret: 'whsec_seed_not_real',
+                    publishableKey: 'pk_test_seed_not_real',
+                  }),
+                )
+              : null;
+          const data = {
+            organizationId: ORGANIZATIONS[connection.organization].id,
+            gatewayId: connection.gatewayId,
+            credentialsCiphertext: sealed?.ciphertext ?? null,
+            credentialsKeyId: sealed?.keyId ?? null,
+            enabled: connection.enabled,
+          };
+          await tx.gatewayConnection.upsert({
+            where: {
+              organizationId_gatewayId: {
+                organizationId: data.organizationId,
+                gatewayId: data.gatewayId,
+              },
+            },
+            update: data,
+            create: {
+              id: id(`gateway-connection:${connection.organization}:${connection.gatewayId}`),
+              ...data,
             },
           });
         }
@@ -246,6 +310,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   }
   return {
     organizations: Object.keys(ORGANIZATIONS).length,
+    gatewayConnections: SEED_GATEWAY_CONNECTIONS.length,
     users: SEED_USERS.length,
     apiKeys: SEED_API_KEYS,
     payments: rows.payments.length,

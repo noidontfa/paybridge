@@ -48,6 +48,16 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
         ) {
           registrations.push(registration(fakeGatewayFactory, undefined));
         }
+        // Gateway Connections supply their own credentials; the test hook
+        // replaces the HTTP layer for those instances too.
+        const stripeFactory: typeof stripeGatewayFactory = {
+          ...stripeGatewayFactory,
+          create: (options) =>
+            stripeGatewayFactory.create({
+              ...options,
+              ...(httpClient ? { httpClient } : {}),
+            }),
+        };
         const stripe = resolveStripeConfig({
           STRIPE_SECRET_KEY: config.get('STRIPE_SECRET_KEY', { infer: true }),
           STRIPE_WEBHOOK_SECRET: config.get('STRIPE_WEBHOOK_SECRET', {
@@ -59,12 +69,16 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
         });
         if (stripe) {
           registrations.push(
-            registration(stripeGatewayFactory, {
+            registration(stripeFactory, {
               secretKey: stripe.secretKey,
               webhookSecret: stripe.webhookSecret,
               publishableKey: stripe.publishableKey,
-              ...(httpClient ? { httpClient } : {}),
             }),
+          );
+        } else {
+          // No env account: the factory still serves Gateway Connections.
+          registrations.push(
+            registration(stripeFactory, undefined as never),
           );
         }
         return registrations;

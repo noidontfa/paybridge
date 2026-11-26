@@ -5,7 +5,9 @@ import { AppModule } from '../../src/app.module.js';
 import { GLOBAL_PREFIX } from '../../src/constants.js';
 import { STRIPE_HTTP_CLIENT } from '../../src/gateways/gateways.module.js';
 import { FixtureHttpClient } from '../../src/gateways/stripe/fixture-http-client.js';
+import { ManageGatewayConnections } from '../../src/payment-core/application/use-cases/manage-gateway-connections.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
+import { defaultScope } from '../setup/organizations.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { bearer, createApiKey } from '../setup/api-keys.js';
@@ -23,6 +25,7 @@ const prisma = createTestPrismaClient();
 let apiKey: string;
 const stripeHttp = new FixtureHttpClient();
 let app: INestApplication;
+let connections: ManageGatewayConnections;
 
 beforeAll(async () => {
   Object.assign(process.env, STRIPE_ENV);
@@ -34,6 +37,7 @@ beforeAll(async () => {
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
   apiKey = await createApiKey(prisma);
+  connections = moduleRef.get(ManageGatewayConnections);
 });
 
 afterAll(async () => {
@@ -44,6 +48,15 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase(prisma);
+  // The Organization's own Stripe account (ADR 0007).
+  await connections.create(defaultScope, {
+    gatewayId: 'stripe',
+    credentials: {
+      secretKey: STRIPE_ENV.STRIPE_SECRET_KEY,
+      webhookSecret: STRIPE_ENV.STRIPE_WEBHOOK_SECRET,
+      publishableKey: STRIPE_ENV.STRIPE_PUBLISHABLE_KEY,
+    },
+  });
 });
 
 describe('POST /api/payments/:paymentId/attempts with gatewayId "stripe"', () => {

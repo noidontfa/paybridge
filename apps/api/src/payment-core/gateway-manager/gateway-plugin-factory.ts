@@ -6,6 +6,18 @@ import type { PaymentGateway } from '../port/index.js';
  */
 export interface GatewayPluginFactory<C = never> {
   readonly gatewayId: string;
+  /**
+   * Validates the credentials a Gateway Connection stores for this gateway
+   * and narrows them to `C`. Absent for a gateway that takes no credentials
+   * (`fake`): its Gateway Connection holds none.
+   */
+  readonly credentialsSchema?: {
+    safeParse(
+      value: unknown,
+    ):
+      | { success: true; data: C }
+      | { success: false; error: { issues: readonly { message: string; path: readonly PropertyKey[] }[] } };
+  };
   create(credentials: C): PaymentGateway;
 }
 

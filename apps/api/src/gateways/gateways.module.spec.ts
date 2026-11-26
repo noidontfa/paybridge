@@ -46,7 +46,9 @@ describe('Gateway composition root', () => {
       ],
     }).compile();
 
-    expect(moduleRef.get(GatewayManager).gatewayIds()).toEqual([]);
+    // Stripe's factory is always registered: Gateway Connections supply the
+    // credentials. The fake plugin is not.
+    expect(moduleRef.get(GatewayManager).gatewayIds()).toEqual(['stripe']);
   });
 
   it('registers the Stripe plugin when Stripe is configured', async () => {
@@ -110,7 +112,7 @@ describe('Gateway composition root', () => {
     );
   });
 
-  it('does not register the Stripe plugin when Stripe is not configured', async () => {
+  it('has no default Stripe instance when no env account is configured', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         configFor('test'),
@@ -118,7 +120,10 @@ describe('Gateway composition root', () => {
       ],
     }).compile();
 
-    expect(moduleRef.get(GatewayManager).gatewayIds()).toEqual(['fake']);
+    const manager = moduleRef.get(GatewayManager);
+    expect(manager.gatewayIds()).toEqual(['fake', 'stripe']);
+    // Only a Gateway Connection can supply Stripe credentials.
+    expect(() => manager.resolve('stripe')).toThrow(/No Gateway Plugin/);
   });
 
   it('registers exactly the Stripe plugin in production when configured', async () => {

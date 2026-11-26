@@ -17,6 +17,8 @@ import { RequestPasswordReset } from './application/use-cases/request-password-r
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
+import { ManageUsers } from './application/use-cases/manage-users.js';
+import { UsersController } from './http/users.controller.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
@@ -49,6 +51,7 @@ import { UserRepository } from './port/user.repository.js';
     JwksController,
     OrganizationsController,
     ApiKeysController,
+    UsersController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
@@ -90,6 +93,7 @@ import { UserRepository } from './port/user.repository.js';
     RequestPasswordReset,
     CompletePasswordReset,
     ChangePassword,
+    ManageUsers,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })

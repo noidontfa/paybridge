@@ -78,6 +78,11 @@ export class GatewayManager {
   resolve(gatewayId: string, key?: PluginInstanceKey): PaymentGateway {
     const entry = this.registrations.get(gatewayId);
     if (!entry) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
+    if (entry.factory.credentialsSchema && entry.credentials === undefined) {
+      // A gateway that needs credentials has no default instance unless the
+      // deployment configured one (the legacy env account).
+      throw new UnknownGatewayError(gatewayId, this.gatewayIds());
+    }
     const cacheKey = pluginCacheKey(gatewayId, key);
     let instance = this.instances.get(cacheKey);
     if (!instance) {
@@ -87,6 +92,62 @@ export class GatewayManager {
       this.instances.set(cacheKey, instance);
     }
     return instance;
+  }
+
+  /**
+   * The instance for one Gateway Connection: built from its decrypted
+   * credentials, cached by connection id and credentials version. A
+   * connection without credentials uses the registered default instance.
+   */
+  resolveForConnection(
+    gatewayId: string,
+    connection: {
+      readonly id: string;
+      readonly credentialsVersion: number;
+      readonly credentials: unknown;
+    },
+  ): PaymentGateway {
+    if (connection.credentials === null || connection.credentials === undefined) {
+      return this.resolve(gatewayId);
+    }
+    const entry = this.registrations.get(gatewayId);
+    if (!entry) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
+    const cacheKey = pluginCacheKey(gatewayId, {
+      connectionId: connection.id,
+      credentialsVersion: connection.credentialsVersion,
+    });
+    let instance = this.instances.get(cacheKey);
+    if (!instance) {
+      instance = (entry.factory as GatewayPluginFactory<unknown>).create(
+        connection.credentials,
+      );
+      this.instances.set(cacheKey, instance);
+    }
+    return instance;
+  }
+
+  /** The factory's credentials schema; undefined when the gateway takes none. */
+  credentialsSchema(gatewayId: string): GatewayPluginFactory['credentialsSchema'] {
+    const entry = this.registrations.get(gatewayId);
+    if (!entry) throw new UnknownGatewayError(gatewayId, this.gatewayIds());
+    return entry.factory.credentialsSchema;
+  }
+
+  /**
+   * Gateways the deployment itself serves (fake, or the legacy env account),
+   * as opposed to those only Gateway Connections can supply credentials for.
+   */
+  deploymentGatewayIds(): string[] {
+    return [...this.registrations.entries()]
+      .filter(
+        ([, entry]) =>
+          !entry.factory.credentialsSchema || entry.credentials !== undefined,
+      )
+      .map(([id]) => id);
+  }
+
+  isRegistered(gatewayId: string): boolean {
+    return this.registrations.has(gatewayId);
   }
 
   gatewayIds(): string[] {

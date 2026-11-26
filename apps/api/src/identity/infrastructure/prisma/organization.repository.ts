@@ -40,4 +40,9 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
     });
     return toOrganization(row);
   }
+
+  async lockForUpdate(id: string): Promise<void> {
+    await this.ctx.db
+      .$queryRaw`SELECT id FROM iam_organizations WHERE id = ${id}::uuid FOR UPDATE`;
+  }
 }

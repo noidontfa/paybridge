@@ -10,7 +10,7 @@ import type { Payment } from '../../domain/payment.js';
 import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { isReviewRequeryEligible } from '../../domain/rules/review-requery.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import {
   GatewayNotFoundError,
@@ -64,7 +64,7 @@ export class RequeryAttempt {
 
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
     @Inject(Clock) private readonly clock: Clock,
   ) {}
@@ -112,7 +112,12 @@ export class RequeryAttempt {
 
     let result: QueryResult;
     try {
-      result = await this.gateways.resolve(attempt.gatewayId).query({
+      result = await (
+        await this.plugins.forExisting(
+          payment.organizationId,
+          attempt.gatewayId,
+        )
+      ).query({
         attemptKey: attempt.id,
         providerMetadata: attempt.providerMetadata ?? {},
       });

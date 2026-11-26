@@ -51,3 +51,19 @@ export class InvalidCurrentPasswordError extends Error {
     this.name = 'InvalidCurrentPasswordError';
   }
 }
+
+/** No User with this id in the Organization (another Organization's User looks the same). */
+export class UserNotFoundError extends Error {
+  constructor() {
+    super('User not found');
+    this.name = 'UserNotFoundError';
+  }
+}
+
+/** An Organization must always keep one active Organization Admin. */
+export class LastOrganizationAdminError extends Error {
+  constructor() {
+    super('The Organization must keep at least one active Organization Admin');
+    this.name = 'LastOrganizationAdminError';
+  }
+}
