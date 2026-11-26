@@ -372,6 +372,27 @@ describe('seed Pricing Plans', () => {
   });
 });
 
+describe('seed Pricing Tables', () => {
+  it('creates a Pricing Table with three Pricing Plans, one recommended, kept across re-runs', async () => {
+    const first = await seed();
+    await seed();
+
+    expect(first.pricingTables).toHaveLength(1);
+    const table = await prisma.pricingTable.findUniqueOrThrow({
+      where: { id: first.pricingTables[0]!.id },
+      include: { plans: { orderBy: { position: 'asc' } } },
+    });
+    expect(table.plans).toHaveLength(3);
+    expect(table.plans.filter((p) => p.recommended)).toHaveLength(1);
+    const plans = await prisma.pricingPlan.findMany({
+      where: { id: { in: table.plans.map((p) => p.pricingPlanId) } },
+    });
+    expect(plans.every((p) => p.organizationId === table.organizationId)).toBe(
+      true,
+    );
+  });
+});
+
 describe('seed Publishable Keys', () => {
   it('creates a key for the default Organization allowing a local origin, kept across re-runs', async () => {
     const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
