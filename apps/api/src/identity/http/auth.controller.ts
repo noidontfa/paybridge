@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -29,7 +30,10 @@ import { SignIn } from '../application/use-cases/sign-in.js';
 import { SignOut } from '../application/use-cases/sign-out.js';
 import type { Session, SessionUser } from '../application/session.js';
 import { WeakPasswordError } from '../domain/user.js';
+import { AcceptInvitation } from '../application/use-cases/accept-invitation.js';
 import {
+  EmailTakenError,
+  InvalidInvitationTokenError,
   InvalidCredentialsError,
   InvalidCurrentPasswordError,
   InvalidResetTokenError,
@@ -61,10 +65,25 @@ const changePasswordSchema = z.object({
   refreshToken: z.string().min(1).max(512).optional(),
 });
 
+const acceptInvitationSchema = z.object({
+  token: z.string().min(1).max(512),
+  name: z.string().trim().min(1).max(200),
+  password: z.string().max(1024),
+});
+
 type SignInBody = z.output<typeof signInSchema>;
 type RefreshTokenBody = z.output<typeof refreshTokenSchema>;
 
 function rethrow(error: unknown): never {
+  if (error instanceof InvalidInvitationTokenError) {
+    throw new BadRequestException({
+      message: error.message,
+      code: 'INVALID_INVITATION_TOKEN',
+    });
+  }
+  if (error instanceof EmailTakenError) {
+    throw new ConflictException({ message: error.message, code: 'EMAIL_TAKEN' });
+  }
   if (error instanceof InvalidResetTokenError) {
     throw new BadRequestException({
       message: error.message,
@@ -129,6 +148,8 @@ export class AuthController {
     private readonly completeReset: CompletePasswordReset,
     @Inject(ChangePassword)
     private readonly changePasswordUseCase: ChangePassword,
+    @Inject(AcceptInvitation)
+    private readonly acceptInvitationUseCase: AcceptInvitation,
   ) {}
 
   @Public()
@@ -193,6 +214,23 @@ export class AuthController {
   ): Promise<void> {
     try {
       await this.completeReset.execute(body.token, body.password);
+    } catch (error) {
+      rethrow(error);
+    }
+  }
+
+  @Public()
+  @Post('invitations/accept')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Accept an Invitation: set a name and password, creating a User',
+  })
+  async acceptInvitation(
+    @Body(new ZodValidationPipe(acceptInvitationSchema))
+    body: z.output<typeof acceptInvitationSchema>,
+  ): Promise<void> {
+    try {
+      await this.acceptInvitationUseCase.execute(body);
     } catch (error) {
       rethrow(error);
     }

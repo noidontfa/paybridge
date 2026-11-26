@@ -51,3 +51,43 @@ export class InvalidCurrentPasswordError extends Error {
     this.name = 'InvalidCurrentPasswordError';
   }
 }
+
+/** Unknown, expired, accepted or revoked Invitation link. */
+export class InvalidInvitationTokenError extends Error {
+  constructor() {
+    super('This invitation link is invalid or has expired');
+    this.name = 'InvalidInvitationTokenError';
+  }
+}
+
+/** The Invitation does not exist for the caller, or is no longer open. */
+export class InvitationNotFoundError extends Error {
+  constructor() {
+    super('Invitation not found');
+    this.name = 'InvitationNotFoundError';
+  }
+}
+
+/** The email already has a pending Invitation. */
+export class InvitationPendingError extends Error {
+  constructor(readonly email: string) {
+    super(`${email} already has a pending Invitation`);
+    this.name = 'InvitationPendingError';
+  }
+}
+
+/** An Organization-scoped action needs one chosen Organization. */
+export class OrganizationRequiredError extends Error {
+  constructor() {
+    super('Choose an Organization first');
+    this.name = 'OrganizationRequiredError';
+  }
+}
+
+/** The caller may not grant or manage this Role. */
+export class InvitationRoleForbiddenError extends Error {
+  constructor() {
+    super('You may not manage Invitations for this Role');
+    this.name = 'InvitationRoleForbiddenError';
+  }
+}

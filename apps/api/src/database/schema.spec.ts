@@ -61,6 +61,7 @@ describe('schema ownership', () => {
       'core_refunds',
       'core_status_transitions',
       'core_webhook_inbox',
+      'iam_invitations',
       'iam_organizations',
       'iam_password_resets',
       'iam_refresh_tokens',

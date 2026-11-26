@@ -13,7 +13,7 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/server/session-cookies';
 
 const SIGN_IN_PATH = '/sign-in';
 /** Pages for someone who may not be signed in. */
-const PUBLIC_PATHS = ['/forgot-password', '/reset-password'];
+const PUBLIC_PATHS = ['/forgot-password', '/reset-password', '/accept-invitation'];
 
 export function proxy(request: NextRequest) {
   if (isMockModeEnabled()) return NextResponse.next();

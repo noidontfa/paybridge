@@ -10,6 +10,15 @@ import { RequestPasswordReset } from './application/use-cases/request-password-r
 import { RefreshSession } from './application/use-cases/refresh-session.js';
 import { SignIn } from './application/use-cases/sign-in.js';
 import { SignOut } from './application/use-cases/sign-out.js';
+import { AcceptInvitation } from './application/use-cases/accept-invitation.js';
+import {
+  InvitationMailer,
+  ListPendingInvitations,
+  ResendInvitation,
+  RevokeInvitation,
+  SendInvitation,
+} from './application/use-cases/manage-invitations.js';
+import { InvitationsController } from './http/invitations.controller.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
@@ -37,7 +46,12 @@ import { UserRepository } from './port/user.repository.js';
  * Needs the global `PrismaModule`.
  */
 @Module({
-  controllers: [AuthController, JwksController, OrganizationsController],
+  controllers: [
+    AuthController,
+    JwksController,
+    OrganizationsController,
+    InvitationsController,
+  ],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
@@ -74,6 +88,12 @@ import { UserRepository } from './port/user.repository.js';
     RequestPasswordReset,
     CompletePasswordReset,
     ChangePassword,
+    InvitationMailer,
+    SendInvitation,
+    ResendInvitation,
+    RevokeInvitation,
+    ListPendingInvitations,
+    AcceptInvitation,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })

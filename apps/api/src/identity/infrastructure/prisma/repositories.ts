@@ -1,4 +1,5 @@
 import type { DbContext } from './db.js';
+import { PrismaInvitationRepository } from './invitation.repository.js';
 import { PrismaOrganizationRepository } from './organization.repository.js';
 import { PrismaPasswordResetRepository } from './password-reset.repository.js';
 import { PrismaRefreshTokenRepository } from './refresh-token.repository.js';
@@ -10,6 +11,7 @@ export interface Repositories {
   readonly users: PrismaUserRepository;
   readonly refreshTokens: PrismaRefreshTokenRepository;
   readonly passwordResets: PrismaPasswordResetRepository;
+  readonly invitations: PrismaInvitationRepository;
 }
 
 export function createRepositories(ctx: DbContext): Repositories {
@@ -18,5 +20,6 @@ export function createRepositories(ctx: DbContext): Repositories {
     users: new PrismaUserRepository(ctx),
     refreshTokens: new PrismaRefreshTokenRepository(ctx),
     passwordResets: new PrismaPasswordResetRepository(ctx),
+    invitations: new PrismaInvitationRepository(ctx),
   };
 }
