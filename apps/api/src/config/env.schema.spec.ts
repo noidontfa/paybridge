@@ -4,6 +4,7 @@ import {
   resolveOutboxRelayEnabled,
   resolveStripeConfig,
   resolveSwaggerEnabled,
+  resolveTrustProxy,
 } from './env.schema.js';
 
 const DATABASE_URL = 'postgresql://u:p@localhost:5432/db';
@@ -271,5 +272,22 @@ describe('Stripe configuration', () => {
         STRIPE_PUBLISHABLE_KEY: 'pk_live_abc',
       }).success,
     ).toBe(true);
+  });
+});
+
+describe('checkout settings', () => {
+  it('defaults the checkout start rate limits', () => {
+    const env = envSchema.parse(required);
+    expect(env.CHECKOUT_START_RATE_LIMIT_PER_KEY).toBe(120);
+    expect(env.CHECKOUT_START_RATE_LIMIT_PER_IP).toBe(20);
+    expect(env.CHECKOUT_START_RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+  });
+
+  it('reads TRUST_PROXY as a hop count, a boolean or a list of addresses', () => {
+    expect(resolveTrustProxy(undefined)).toBeUndefined();
+    expect(resolveTrustProxy(' ')).toBeUndefined();
+    expect(resolveTrustProxy('1')).toBe(1);
+    expect(resolveTrustProxy('true')).toBe(true);
+    expect(resolveTrustProxy('10.0.0.0/8, 127.0.0.1')).toBe('10.0.0.0/8, 127.0.0.1');
   });
 });
