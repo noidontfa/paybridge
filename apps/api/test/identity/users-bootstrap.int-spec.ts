@@ -36,6 +36,13 @@ describe('the seed', () => {
 
     const roles = new Set<string>();
     for (const seeded of SEED_USERS) {
+      if (seeded.active === false) {
+        await signIn(app, {
+          email: seeded.email,
+          password: SEED_PASSWORD,
+        }).expect(403);
+        continue;
+      }
       const res = await signIn(app, {
         email: seeded.email,
         password: SEED_PASSWORD,

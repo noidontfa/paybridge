@@ -4,7 +4,7 @@
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Organization Admins list their Organization's Users with Role and active state
 - [ ] They can change a User's Role between Operator and Organization Admin, deactivate and reactivate a User
