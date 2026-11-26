@@ -68,6 +68,9 @@ describe('schema ownership', () => {
       'iam_password_resets',
       'iam_refresh_tokens',
       'iam_users',
+      'wh_deliveries',
+      'wh_delivery_attempts',
+      'wh_endpoints',
     ]);
   });
 });

@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   'gateway-connections:manage',
   'organizations:manage',
   'super-admins:manage',
+  'webhook-endpoints:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -18,6 +19,7 @@ const ORGANIZATION_ADMIN: readonly Permission[] = [
   'users:manage',
   'api-keys:manage',
   'gateway-connections:manage',
+  'webhook-endpoints:manage',
 ];
 
 /** The fixed Role-to-Permission map. Organization Admin is a superset of Operator. */

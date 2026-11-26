@@ -9,7 +9,7 @@ import { join, relative, sep } from 'node:path';
 //    client, so repositories are the only place that sees Prisma types.
 
 const SRC = join(import.meta.dirname, '..');
-const MODULES = ['payment-core', 'identity'] as const;
+const MODULES = ['payment-core', 'identity', 'webhooks'] as const;
 const RUNNERS: readonly string[] = MODULES.map(
   (module) => `${module}/infrastructure/prisma/transaction-runner.ts`,
 );

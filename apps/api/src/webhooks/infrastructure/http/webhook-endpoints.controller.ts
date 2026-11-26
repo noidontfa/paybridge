@@ -1,0 +1,215 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { z } from 'zod';
+import { RequireSensitivePermission } from '../../../common/principal/access-policy.js';
+import {
+  PRINCIPAL_REQUEST_KEY,
+  type Principal,
+} from '../../../common/principal/principal.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { INTERNAL_PREFIX } from '../../../constants.js';
+import {
+  organizationScope,
+  type OrganizationScope,
+} from '../../../payment-core/port/organization-scope.js';
+import { ManageWebhookEndpoints } from '../../application/use-cases/webhook-endpoints.js';
+import { PAYMENT_EVENT_KINDS } from '../../domain/entities/event-kinds.js';
+import {
+  actorLabel,
+  InvalidWebhookUrlError,
+  WebhookEndpointNotFoundError,
+  type Actor,
+  type WebhookEndpoint,
+} from '../../domain/entities/webhook-endpoint.js';
+
+const url = z.string().trim().min(1).max(2048);
+const eventKinds = z.array(z.enum(PAYMENT_EVENT_KINDS)).min(1).max(20);
+const createSchema = z.object({ url, eventKinds });
+const updateSchema = z
+  .object({ url: url.optional(), eventKinds: eventKinds.optional() })
+  .refine((b) => b.url !== undefined || b.eventKinds !== undefined, {
+    message: 'Change the URL, the event kinds, or both',
+  });
+type CreateBody = z.output<typeof createSchema>;
+type UpdateBody = z.output<typeof updateSchema>;
+
+/** What the Console sees of an endpoint: never the secret, only its prefix. */
+const view = (endpoint: WebhookEndpoint) => ({
+  id: endpoint.id,
+  url: endpoint.url,
+  eventKinds: endpoint.eventKinds,
+  status: endpoint.status,
+  secretPrefix: endpoint.secretPrefix,
+  createdAt: endpoint.createdAt.toISOString(),
+  updatedAt: endpoint.updatedAt.toISOString(),
+  updatedBy: {
+    name: endpoint.updatedBy.name,
+    role: endpoint.updatedBy.role,
+    label: actorLabel(endpoint.updatedBy),
+  },
+});
+
+/** The Organization the caller works in (ADR 0006), and who they are. */
+function callerOf(request: Record<string, unknown>): {
+  scope: OrganizationScope;
+  actor: Actor;
+} {
+  const principal = request[PRINCIPAL_REQUEST_KEY] as Principal | undefined;
+  if (!principal?.user) throw new UnauthorizedException();
+  if (!principal.organizationId) {
+    throw new ForbiddenException({
+      message: 'Choose one Organization to work in',
+      code: 'ORGANIZATION_REQUIRED',
+    });
+  }
+  return {
+    scope: organizationScope(principal.organizationId),
+    actor: {
+      userId: principal.user.id,
+      role: principal.user.role,
+      name: principal.user.name ?? '',
+    },
+  };
+}
+
+function mapError(error: unknown): never {
+  if (error instanceof WebhookEndpointNotFoundError) {
+    throw new NotFoundException({
+      message: error.message,
+      code: 'WEBHOOK_ENDPOINT_NOT_FOUND',
+    });
+  }
+  if (error instanceof InvalidWebhookUrlError) {
+    throw new BadRequestException({
+      message: error.message,
+      code: 'INVALID_WEBHOOK_URL',
+    });
+  }
+  throw error;
+}
+
+/**
+ * Webhook Endpoint management. Every route is a sensitive write or gated like
+ * one: the caller is re-checked in the database (ADR 0008), and an Operator
+ * is refused. Edits are POSTs, as the Console's BFF forwards no PUT or PATCH.
+ */
+@ApiTags('internal')
+@RequireSensitivePermission('webhook-endpoints:manage')
+@Controller(`${INTERNAL_PREFIX}/webhook-endpoints`)
+export class WebhookEndpointsController {
+  constructor(
+    @Inject(ManageWebhookEndpoints)
+    private readonly endpoints: ManageWebhookEndpoints,
+  ) {}
+
+  @Post()
+  @ApiOperation({
+    summary:
+      'Register a Webhook Endpoint; the signing secret is returned only in this response',
+  })
+  async create(
+    @Req() request: Record<string, unknown>,
+    @Body(new ZodValidationPipe(createSchema)) body: CreateBody,
+  ) {
+    const { scope, actor } = callerOf(request);
+    try {
+      const { endpoint, secret } = await this.endpoints.create(
+        scope,
+        body,
+        actor,
+      );
+      return { ...view(endpoint), secret };
+    } catch (error) {
+      mapError(error);
+    }
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: "List the Organization's Webhook Endpoints (never the secret)",
+  })
+  async list(@Req() request: Record<string, unknown>) {
+    const items = await this.endpoints.list(callerOf(request).scope);
+    return { items: items.map(view) };
+  }
+
+  @Post(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change the URL or the event kinds of an endpoint' })
+  async update(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(updateSchema)) body: UpdateBody,
+  ) {
+    const { scope, actor } = callerOf(request);
+    try {
+      return view(await this.endpoints.update(scope, id, body, actor));
+    } catch (error) {
+      mapError(error);
+    }
+  }
+
+  @Post(':id/disable')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Stop delivering to an endpoint' })
+  disable(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.setStatus(request, id, 'DISABLED');
+  }
+
+  @Post(':id/enable')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Deliver to an endpoint again' })
+  enable(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.setStatus(request, id, 'ENABLED');
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an endpoint; it gets no more deliveries' })
+  async remove(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    const { scope, actor } = callerOf(request);
+    try {
+      await this.endpoints.delete(scope, id, actor);
+    } catch (error) {
+      mapError(error);
+    }
+  }
+
+  private async setStatus(
+    request: Record<string, unknown>,
+    id: string,
+    status: 'ENABLED' | 'DISABLED',
+  ) {
+    const { scope, actor } = callerOf(request);
+    try {
+      return view(await this.endpoints.setStatus(scope, id, status, actor));
+    } catch (error) {
+      mapError(error);
+    }
+  }
+}

@@ -104,6 +104,7 @@ describe('Role to Permission map', () => {
         'users:manage',
         'api-keys:manage',
         'gateway-connections:manage',
+        'webhook-endpoints:manage',
       ],
     ],
     [
@@ -114,6 +115,7 @@ describe('Role to Permission map', () => {
         'users:manage',
         'api-keys:manage',
         'gateway-connections:manage',
+        'webhook-endpoints:manage',
         'organizations:manage',
         'super-admins:manage',
       ],
