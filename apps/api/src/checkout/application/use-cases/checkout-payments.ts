@@ -99,7 +99,7 @@ export class CheckoutPaymentFlow {
     const payment = await this.payments.create(scope, {
       amount: plan.amount,
       currency: plan.currency,
-      expiresAt: new Date(now.getTime() + plan.expiryMinutes * MINUTE_MS),
+      expiresAfterMs: plan.expiryMinutes * MINUTE_MS,
       origin: {
         pricingPlanId: plan.id,
         pricingPlanName: plan.name,

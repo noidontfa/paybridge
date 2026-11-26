@@ -38,6 +38,40 @@ describe('Gateway composition root', () => {
     expect(manager.resolve('fake')).toBe(manager.resolve('fake'));
   });
 
+  it('also registers a QR variant of the fake plugin in development', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        configFor('development'),
+        GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+      ],
+    }).compile();
+
+    const qr = moduleRef.get(GatewayManager).resolve('fake-qr');
+    const result = await qr.initiate({
+      attemptKey: 'a-1',
+      amount: '1000',
+      currency: 'VND',
+      expiresAt: new Date('2026-11-26T10:00:00Z'),
+      returnUrl: 'http://localhost:3200/return',
+      description: 'Test',
+    });
+    expect(result.nextAction).toEqual({
+      type: 'QR_CODE',
+      payload: 'fake-qr://pay/a-1',
+    });
+  });
+
+  it('leaves the QR variant out of tests, which script the fake plugin instead', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        configFor('test'),
+        GatewayManagerModule.forRoot({ imports: [GatewaysModule] }),
+      ],
+    }).compile();
+
+    expect(moduleRef.get(GatewayManager).isRegistered('fake-qr')).toBe(false);
+  });
+
   it('does not register the fake plugin in production', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [

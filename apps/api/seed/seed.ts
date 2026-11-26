@@ -172,6 +172,8 @@ const SEED_GATEWAY_CONNECTIONS: readonly {
 }[] = [
   { organization: 'primary', gatewayId: 'fake', enabled: true },
   { organization: 'primary', gatewayId: 'stripe', enabled: true },
+  // Pays by QR in the embedded checkout (ticket 09).
+  { organization: 'primary', gatewayId: 'fake-qr', enabled: true },
   { organization: 'acme', gatewayId: 'fake', enabled: true },
   { organization: 'acme', gatewayId: 'stripe', enabled: false },
 ];

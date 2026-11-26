@@ -16,7 +16,8 @@ interface CorsResponse {
 }
 
 const ALLOWED_METHODS = 'GET, POST';
-const ALLOWED_HEADERS = 'Authorization, Content-Type, Idempotency-Key';
+const ALLOWED_HEADERS =
+  'Authorization, Content-Type, Idempotency-Key, X-PayBridge-Host-Origin';
 
 function pathOf(request: CorsRequest): string {
   const url = request.originalUrl ?? request.url ?? '';

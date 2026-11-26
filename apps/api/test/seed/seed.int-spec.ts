@@ -298,6 +298,13 @@ describe('seed organizations', () => {
     expect(await prisma.gatewayConnection.count()).toBe(connections.length);
   });
 
+  it('lets the default Organization take QR payments with the fake gateway', async () => {
+    const qr = await prisma.gatewayConnection.findFirst({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID, gatewayId: 'fake-qr' },
+    });
+    expect(qr?.enabled).toBe(true);
+  });
+
   it('keeps every row of a Payment in the Payment own Organization', async () => {
     const payments = await prisma.payment.findMany({
       include: { transactions: true, outboxEvents: true },

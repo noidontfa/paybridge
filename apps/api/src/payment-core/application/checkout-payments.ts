@@ -48,7 +48,8 @@ export interface NewCheckoutPayment {
   /** The Pricing Plan's Amount: a decimal string in the major unit. */
   readonly amount: string;
   readonly currency: string;
-  readonly expiresAt: Date;
+  /** The Pricing Plan's Payment Expiry, counted from creation on Core's clock. */
+  readonly expiresAfterMs: number;
   readonly origin: CheckoutOrigin;
 }
 
@@ -83,7 +84,7 @@ export class CheckoutPayments {
       amount: input.amount,
       currency: input.currency,
       upstreamReference: newCheckoutUpstreamReference(),
-      expiresAt: input.expiresAt,
+      expiresAfterMs: input.expiresAfterMs,
       checkoutOrigin: input.origin,
     });
     return toView(payment);
