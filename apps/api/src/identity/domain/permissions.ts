@@ -11,6 +11,7 @@ export const PERMISSIONS = [
   'super-admins:manage',
   'pricing:view',
   'pricing:manage',
+  'publishable-keys:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -25,6 +26,7 @@ const ORGANIZATION_ADMIN: readonly Permission[] = [
   'api-keys:manage',
   'gateway-connections:manage',
   'pricing:manage',
+  'publishable-keys:manage',
 ];
 
 /** The fixed Role-to-Permission map. Organization Admin is a superset of Operator. */

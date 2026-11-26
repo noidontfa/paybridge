@@ -9,6 +9,18 @@ export interface PrincipalUser {
 }
 
 /**
+ * A Customer's browser using a Publishable Key (ADR 0009): accepted only by
+ * checkout endpoints. Set together with `user: null`.
+ */
+export interface CheckoutCredential {
+  readonly publishableKeyId: string;
+  /** The key's allowed origins (scheme, host and port). */
+  readonly allowedOrigins: readonly string[];
+  /** The request's `Origin`, one of `allowedOrigins`. */
+  readonly origin: string;
+}
+
+/**
  * The authenticated caller, as Payment Core sees it (ADR 0006). Core never
  * reads identity tables: it receives this, and takes the Organization scope
  * of every query from it, never from a request body or query parameter.
@@ -23,6 +35,8 @@ export interface Principal {
   readonly allOrganizations?: boolean;
   /** Set on operator requests (a User); null on the public payments API. */
   readonly user: PrincipalUser | null;
+  /** Set only on checkout endpoints, for a Publishable Key. */
+  readonly checkout?: CheckoutCredential;
 }
 
 /** The request property the identity module's guard sets. */

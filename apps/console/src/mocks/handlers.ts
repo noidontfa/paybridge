@@ -19,6 +19,7 @@ import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
 import { platformHandlers } from './platform';
 import { pricingPlansHandlers } from './pricing-plans';
+import { publishableKeysHandlers } from './publishable-keys';
 import { usersHandlers } from './users';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
@@ -81,6 +82,7 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ...platformHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...apiKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...pricingPlansHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...publishableKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...usersHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...invitationsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewayConnectionsHandlers(base, store, (request, init) => apiError(request, init, store.now)),

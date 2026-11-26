@@ -35,6 +35,11 @@ async function main(): Promise<void> {
   for (const k of result.apiKeys) {
     console.log(`API Key (${k.label}${k.revoked ? ', revoked' : ''}): ${k.key}`);
   }
+  for (const k of result.publishableKeys) {
+    console.log(
+      `Publishable Key (${k.label}, ${k.allowedOrigins.join(' ')}): ${k.key}`,
+    );
+  }
 }
 
 main().catch((error: unknown) => {

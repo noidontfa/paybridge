@@ -90,6 +90,9 @@ export class MockStore {
   /** The Organization's Pricing Plans. */
   readonly pricingPlans: import('@/lib/api/pricing-plans').PricingPlan[] = [];
 
+  /** The Organization's Publishable Keys. */
+  readonly publishableKeys: import('@/lib/api/publishable-keys').PublishableKey[] = [];
+
   /** Pending Invitations, for the Invitations page. */
   readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
 

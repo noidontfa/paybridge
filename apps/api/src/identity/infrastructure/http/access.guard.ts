@@ -17,6 +17,7 @@ import {
 import { permissionsOf, type Permission } from '../../domain/permissions.js';
 import { OrganizationRepository } from '../../domain/repositories/organization.repository.js';
 import { UserRepository } from '../../domain/repositories/user.repository.js';
+import { IS_CHECKOUT_ENDPOINT } from './checkout-endpoint.js';
 import { IS_PUBLIC } from './principal.guard.js';
 
 const refuse = (message: string, code: string): never => {
@@ -50,6 +51,26 @@ export class AccessGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Record<string, unknown>>();
     const principal = request[PRINCIPAL_REQUEST_KEY] as Principal | undefined;
+    // A Publishable Key is good for checkout endpoints and nothing else, and
+    // a checkout endpoint takes nothing else (ADR 0009).
+    const checkoutEndpoint =
+      this.reflector.getAllAndOverride<boolean | undefined>(
+        IS_CHECKOUT_ENDPOINT,
+        targets,
+      ) === true;
+    if (principal?.checkout && !checkoutEndpoint) {
+      return refuse(
+        'A Publishable Key works only on checkout endpoints',
+        'CHECKOUT_ONLY',
+      );
+    }
+    if (checkoutEndpoint) {
+      if (principal?.checkout) return true;
+      return refuse(
+        'This endpoint takes only a Publishable Key',
+        'PUBLISHABLE_KEY_REQUIRED',
+      );
+    }
     // The public payments API belongs to an API Key, not a User: no policy applies.
     if (!principal?.user) return true;
 

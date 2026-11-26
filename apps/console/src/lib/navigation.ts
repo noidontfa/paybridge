@@ -4,6 +4,7 @@ import {
   FileClockIcon,
   BuildingIcon,
   GaugeIcon,
+  GlobeIcon,
   ShieldCheckIcon,
   KeyRoundIcon,
   LandmarkIcon,
@@ -83,6 +84,12 @@ export const secondaryNav: NavItem[] = [
   { title: 'Invitations', url: '/settings/invitations', icon: MailPlusIcon, permission: 'users:manage' },
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
   { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon, permission: 'api-keys:manage' },
+  {
+    title: 'Publishable Keys',
+    url: '/settings/publishable-keys',
+    icon: GlobeIcon,
+    permission: 'publishable-keys:manage',
+  },
   {
     title: 'Gateway Connections',
     url: '/settings/gateway-connections',

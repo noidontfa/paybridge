@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An Organization Admin creates a Publishable Key with a label and a list of allowed origins (scheme, host and port).
   - At least one origin is required.
