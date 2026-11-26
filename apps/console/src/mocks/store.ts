@@ -93,6 +93,9 @@ export class MockStore {
   /** The Organization's Pricing Plans. */
   readonly pricingPlans: import('@/lib/api/pricing-plans').PricingPlan[] = [];
 
+  /** The Organization's Pricing Tables. */
+  readonly pricingTables: import('@/lib/api/pricing-tables').PricingTable[] = [];
+
   /** The Organization's Publishable Keys. */
   readonly publishableKeys: import('@/lib/api/publishable-keys').PublishableKey[] = [];
 

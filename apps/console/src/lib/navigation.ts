@@ -15,6 +15,7 @@ import {
   SendIcon,
   SettingsIcon,
   TagIcon,
+  LayoutGridIcon,
   UsersIcon,
   WebhookIcon,
   ZapIcon,
@@ -68,7 +69,10 @@ export const mainNav: NavSection[] = [
   },
   {
     label: 'Checkout',
-    items: [{ title: 'Pricing Plans', url: '/pricing-plans', icon: TagIcon, permission: 'pricing:view' }],
+    items: [
+      { title: 'Pricing Plans', url: '/pricing-plans', icon: TagIcon, permission: 'pricing:view' },
+      { title: 'Pricing Tables', url: '/pricing-tables', icon: LayoutGridIcon, permission: 'pricing:view' },
+    ],
   },
 ];
 

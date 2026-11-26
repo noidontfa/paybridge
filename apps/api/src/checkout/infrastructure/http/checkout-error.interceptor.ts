@@ -17,9 +17,27 @@ import {
   CheckoutRateLimitedError,
   CheckoutUnavailableError,
   InvalidPricingPlanError,
+  InvalidPricingTableError,
+  PricingPlanInPricingTablesError,
   PricingPlanInUseError,
   PricingPlanNotFoundError,
+  PricingTableNotFoundError,
+  UNAVAILABLE_MESSAGE,
 } from '../../domain/errors.js';
+
+/**
+ * The one answer a Customer's browser gets when the checkout cannot serve it:
+ * 422 `CHECKOUT_UNAVAILABLE`, with the reason only in `details.reason`.
+ * `reason` is an `UnavailableReason`, or the code of a guard error that
+ * `CheckoutUnavailableFilter` passes through.
+ */
+export function checkoutUnavailable(reason: string): HttpException {
+  return new UnprocessableEntityException({
+    message: UNAVAILABLE_MESSAGE,
+    code: 'CHECKOUT_UNAVAILABLE',
+    details: { reason },
+  });
+}
 
 /** The HTTP answer to a checkout rule broken by the caller. */
 export function toHttpException(error: CheckoutError): HttpException {
@@ -29,12 +47,15 @@ export function toHttpException(error: CheckoutError): HttpException {
   }
   if (error instanceof PricingPlanNotFoundError) return new NotFoundException(body);
   if (error instanceof PricingPlanInUseError) return new ConflictException(body);
+  if (error instanceof InvalidPricingTableError) {
+    return new BadRequestException({ ...body, details: { field: error.field } });
+  }
+  if (error instanceof PricingTableNotFoundError) return new NotFoundException(body);
+  if (error instanceof PricingPlanInPricingTablesError) {
+    return new ConflictException(body);
+  }
   if (error instanceof CheckoutUnavailableError) {
-    // One generic answer; the reason is for the developer only.
-    return new UnprocessableEntityException({
-      ...body,
-      details: { reason: error.reason },
-    });
+    return checkoutUnavailable(error.reason);
   }
   if (error instanceof CheckoutPaymentNotFoundError) {
     return new NotFoundException(body);

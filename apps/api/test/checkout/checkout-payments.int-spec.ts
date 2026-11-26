@@ -391,6 +391,24 @@ describe('when the checkout cannot sell', () => {
     );
   });
 
+  it('answers "unavailable" for an unknown key or an origin not allowed', async () => {
+    const planId = await createPricingPlan(prisma);
+    const body = { pricingPlanId: planId, sessionToken: SESSION };
+
+    expectUnavailable(
+      await start(body, 'pb_pk_unknown_000000000000000000000000'),
+      'INVALID_PUBLISHABLE_KEY',
+    );
+    expectUnavailable(
+      await request(server())
+        .post(PAYMENTS)
+        .set(bearer(key))
+        .set('Origin', 'https://evil.example')
+        .send(body),
+      'ORIGIN_NOT_ALLOWED',
+    );
+  });
+
   it('creates no Payment for any of them', async () => {
     const archived = await createPricingPlan(prisma, DEFAULT_ORGANIZATION_ID, {
       status: 'ARCHIVED',

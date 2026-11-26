@@ -9,6 +9,7 @@ import {
   type PricingPlanStatus,
 } from '../../domain/entities/pricing-plan.js';
 import {
+  PricingPlanInPricingTablesError,
   PricingPlanInUseError,
   PricingPlanNotFoundError,
 } from '../../domain/errors.js';
@@ -109,6 +110,9 @@ export class ManagePricingPlans {
     }
     if (await this.payments.anyReference(scope, id)) {
       throw new PricingPlanInUseError(id);
+    }
+    if ((await this.tables.including(scope, id)).length > 0) {
+      throw new PricingPlanInPricingTablesError(id);
     }
     if (!(await this.plans.delete(scope, id))) {
       throw new PricingPlanNotFoundError(id);

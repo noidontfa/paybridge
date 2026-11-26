@@ -8,6 +8,7 @@ import {
   Post,
   Req,
   Res,
+  UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -25,6 +26,7 @@ import type {
 } from '../../../payment-core/port/payments.js';
 import { CheckoutPaymentFlow } from '../../application/use-cases/checkout-payments.js';
 import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
+import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 
 // The browser sends no Amount: unknown fields (an `amount` among them) are
 // dropped, and the Amount always comes from the Pricing Plan.
@@ -83,6 +85,7 @@ interface ClientRequest {
  */
 @ApiTags('checkout')
 @CheckoutEndpoint()
+@UseFilters(CheckoutUnavailableFilter)
 @UseInterceptors(CheckoutErrorInterceptor)
 @Controller('checkout/payments')
 export class CheckoutPaymentsController {

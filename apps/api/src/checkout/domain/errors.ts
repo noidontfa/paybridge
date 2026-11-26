@@ -52,6 +52,12 @@ export const UNAVAILABLE_REASONS = [
   'GATEWAY_NOT_ENABLED',
   /** No PaymentGateway is both allowed by the Pricing Plan and enabled. */
   'NO_GATEWAY_AVAILABLE',
+  /** Unknown, deleted or foreign Pricing Table. */
+  'PRICING_TABLE_NOT_FOUND',
+  /** Missing, unknown or revoked Publishable Key (identity's guard). */
+  'INVALID_PUBLISHABLE_KEY',
+  /** The host page's origin is not one of the key's allowed origins. */
+  'ORIGIN_NOT_ALLOWED',
 ] as const;
 export type UnavailableReason = (typeof UNAVAILABLE_REASONS)[number];
 
@@ -88,5 +94,37 @@ export class CheckoutRateLimitedError extends CheckoutError {
     readonly retryAfterSeconds: number,
   ) {
     super('Too many checkout requests; try again later');
+  }
+}
+
+/** A Pricing Table field is missing or breaks a rule. */
+export class InvalidPricingTableError extends CheckoutError {
+  readonly code = 'INVALID_PRICING_TABLE';
+
+  constructor(
+    readonly field: string,
+    message: string,
+  ) {
+    super(`${field}: ${message}`);
+  }
+}
+
+/** No such Pricing Table in the caller's Organization. */
+export class PricingTableNotFoundError extends CheckoutError {
+  readonly code = 'PRICING_TABLE_NOT_FOUND';
+
+  constructor(id: string) {
+    super(`Pricing Table ${id} not found`);
+  }
+}
+
+/** A Pricing Plan shown in Pricing Tables must leave them before it is deleted. */
+export class PricingPlanInPricingTablesError extends CheckoutError {
+  readonly code = 'PRICING_PLAN_IN_PRICING_TABLES';
+
+  constructor(id: string) {
+    super(
+      `Pricing Plan ${id} is shown in Pricing Tables; remove it from them or archive it instead`,
+    );
   }
 }

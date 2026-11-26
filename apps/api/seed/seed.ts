@@ -23,6 +23,7 @@ import {
   type When,
 } from './scenarios.js';
 import { seedPricingPlans } from './pricing-plans.js';
+import { seedPricingTables, type SeededPricingTable } from './pricing-tables.js';
 
 // Database seed (ticket 01). Writes straight to the database, outside Payment
 // Core, so it may use the database client and open its own transaction.
@@ -67,6 +68,7 @@ export interface SeedResult {
   callbacks: number;
   events: number;
   pricingPlans: number;
+  pricingTables: readonly SeededPricingTable[];
   /** The development Webhook Endpoint and its signing secret (a dev fixture). */
   webhookEndpoint: typeof SEED_WEBHOOK_ENDPOINT;
 }
@@ -285,6 +287,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   const rows = buildRows(now, bulk);
   const passwordHash = await new Argon2PasswordHasher().hash(SEED_PASSWORD);
   let pricingPlans = 0;
+  let pricingTables: SeededPricingTable[] = [];
 
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: options.databaseUrl }),
@@ -411,6 +414,12 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             acme: seedEditor('admin-acme'),
           },
         });
+        pricingTables = await seedPricingTables(tx, {
+          id,
+          now,
+          organizationId: ORGANIZATIONS.primary.id,
+          editor: seedEditor('admin-primary'),
+        });
         await insertChunked(rows.payments, (data) =>
           tx.payment.createMany({ data }),
         );
@@ -444,6 +453,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     callbacks: rows.callbacks.length,
     events: rows.events.length,
     pricingPlans,
+    pricingTables,
     webhookEndpoint: SEED_WEBHOOK_ENDPOINT,
   };
 }

@@ -374,6 +374,27 @@ describe('seed Pricing Plans', () => {
   });
 });
 
+describe('seed Pricing Tables', () => {
+  it('creates a Pricing Table with three Pricing Plans, one recommended, kept across re-runs', async () => {
+    const first = await seed();
+    await seed();
+
+    expect(first.pricingTables).toHaveLength(1);
+    const table = await prisma.pricingTable.findUniqueOrThrow({
+      where: { id: first.pricingTables[0]!.id },
+      include: { plans: { orderBy: { position: 'asc' } } },
+    });
+    expect(table.plans).toHaveLength(3);
+    expect(table.plans.filter((p) => p.recommended)).toHaveLength(1);
+    const plans = await prisma.pricingPlan.findMany({
+      where: { id: { in: table.plans.map((p) => p.pricingPlanId) } },
+    });
+    expect(plans.every((p) => p.organizationId === table.organizationId)).toBe(
+      true,
+    );
+  });
+});
+
 describe('seed Webhook Endpoint', () => {
   it('points a Webhook Endpoint of the default Organization at a local receiver, kept across re-runs', async () => {
     const first = await runSeed({

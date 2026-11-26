@@ -192,6 +192,12 @@ describe('Console sidebar', () => {
       expect(within(checkout).getByRole('link', { name: 'Pricing Plans' })).toHaveAttribute('href', '/pricing-plans');
     });
 
+    it('shows Pricing Tables under Checkout with pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'pricing:view'] });
+      const checkout = screen.getByRole('group', { name: 'Checkout' });
+      expect(within(checkout).getByRole('link', { name: 'Pricing Tables' })).toHaveAttribute('href', '/pricing-tables');
+    });
+
     it('hides the Checkout section without pricing:view', () => {
       renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view'] });
       expect(screen.queryByRole('link', { name: 'Pricing Plans' })).not.toBeInTheDocument();
