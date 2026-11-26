@@ -8,7 +8,10 @@ import {
   type DeliveryAttemptResult,
   type WebhookDelivery,
 } from '../../domain/entities/webhook-delivery.js';
-import type { WebhookEndpoint } from '../../domain/entities/webhook-endpoint.js';
+import {
+  validPreviousSecret,
+  type WebhookEndpoint,
+} from '../../domain/entities/webhook-endpoint.js';
 import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import { retryDelayMs } from '../../domain/services/backoff.js';
 import {
@@ -41,11 +44,12 @@ export type DeliverWebhookResult =
 
 /**
  * Makes one attempt of a waiting delivery: claims it (so no other instance
- * sends it at the same time), signs the envelope with the endpoint's secret,
- * POSTs it and records the attempt. A 2xx answer delivers it. Anything else
- * schedules the next attempt on the backoff schedule, or fails the delivery
- * after the last one. PostgreSQL holds the outcome before the next job is
- * queued, so if Redis is down then, the delivery sweep queues it later.
+ * sends it at the same time), signs the envelope with the endpoint's secret
+ * (and the previous one while it is valid), POSTs it and records the attempt.
+ * A 2xx answer delivers it. Anything else schedules the next attempt on the
+ * backoff schedule, or fails the delivery after the last one. PostgreSQL holds
+ * the outcome before the next job is queued, so if Redis is down then, the
+ * delivery sweep queues it later.
  */
 @Injectable()
 export class DeliverWebhook {
@@ -123,16 +127,22 @@ export class DeliverWebhook {
     return 'retrying';
   }
 
+  /** One signed POST; every attempt, first or retry, goes through here. */
   private async post(
     delivery: WebhookDelivery,
     endpoint: WebhookEndpoint,
     attemptedAt: Date,
   ): Promise<DeliveryAttemptResult> {
     const body = JSON.stringify(envelopeOf(delivery));
-    const secret = this.cipher.decrypt({
-      ciphertext: endpoint.secretCiphertext,
-      keyId: endpoint.secretKeyId,
-    });
+    // During a secret rotation, one signature per secret valid at this attempt.
+    const previous = validPreviousSecret(endpoint, attemptedAt);
+    const secrets = [
+      this.cipher.decrypt({
+        ciphertext: endpoint.secretCiphertext,
+        keyId: endpoint.secretKeyId,
+      }),
+      ...(previous ? [this.cipher.decrypt(previous)] : []),
+    ];
     const outcome = await this.sender.post({
       url: endpoint.url,
       body,
@@ -140,7 +150,7 @@ export class DeliverWebhook {
         'content-type': 'application/json',
         'user-agent': 'PayBridge-Webhooks/1.0',
         'paybridge-event-id': delivery.eventId,
-        [SIGNATURE_HEADER]: signatureHeader([secret], attemptedAt, body),
+        [SIGNATURE_HEADER]: signatureHeader(secrets, attemptedAt, body),
       },
     });
     return { attemptedAt, succeeded: outcome.error === null, ...outcome };

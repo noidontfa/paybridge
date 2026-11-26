@@ -290,6 +290,33 @@ describe('retrying a delivery', () => {
     expect(received).toHaveLength(2);
     expect(await prisma.webhookDeliveryAttempt.count()).toBe(2);
   });
+
+  it('signs each retry with the secrets valid at that attempt (ticket 04 rotation)', async () => {
+    const { id } = await registerEndpoint('/hook');
+    answer = (n, p, res) => (n < 2 ? status(500) : ok)(n, p, res);
+    await paymentEvent();
+    await deliveryAfter(1);
+    const http = await signedInHttp(app, prisma, {
+      role: 'ORGANIZATION_ADMIN',
+    });
+    await http
+      .post(`/internal/webhook-endpoints/${id}/roll-secret`)
+      .send({ previousSecretValidFor: '1h' })
+      .expect(200);
+    const signatures = (n: number) =>
+      (received[n]!.headers['paybridge-signature'] as string)
+        .split(',')
+        .filter((p) => p.startsWith('v1=')).length;
+
+    clock.advance(MIN); // inside the overlap
+    await sweep();
+    await deliveryAfter(2);
+    clock.set(new Date(START.getTime() + 2 * HOUR)); // the overlap is over
+    await sweep();
+    await deliveryAfter(3);
+
+    expect([0, 1, 2].map(signatures)).toEqual([1, 2, 1]);
+  });
 });
 
 describe('a Redis outage', () => {

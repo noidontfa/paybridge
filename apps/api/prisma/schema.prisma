@@ -139,6 +139,7 @@ model Organization {
   webhookEndpoints    WebhookEndpoint[]
   webhookDeliveries   WebhookDelivery[]
   webhookAttempts     WebhookDeliveryAttempt[]
+  webhookSecretRolls  WebhookSecretRoll[]
   publishableKeys     PublishableKey[]
 
   @@map("iam_organizations")
@@ -578,6 +579,11 @@ model WebhookEndpoint {
   secretCiphertext String                @map("secret_ciphertext")
   secretKeyId      String                @map("secret_key_id")
   secretPrefix     String                @map("secret_prefix")
+  /// The secret before the last roll (ticket 04): it still signs until
+  /// `previousSecretExpiresAt`.
+  previousSecretCiphertext String?   @map("previous_secret_ciphertext")
+  previousSecretKeyId      String?   @map("previous_secret_key_id")
+  previousSecretExpiresAt  DateTime? @map("previous_secret_expires_at") @db.Timestamptz(3)
   updatedByUserId  String                @map("updated_by_user_id") @db.Uuid
   updatedByRole    String                @map("updated_by_role")
   updatedByName    String                @map("updated_by_name")
@@ -587,6 +593,7 @@ model WebhookEndpoint {
 
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   deliveries   WebhookDelivery[]
+  secretRolls  WebhookSecretRoll[]
 
   @@index([organizationId], map: "wh_endpoints_organization_id_idx")
   @@map("wh_endpoints")
@@ -642,4 +649,23 @@ model WebhookDeliveryAttempt {
 
   @@index([deliveryId, attemptedAt], map: "wh_delivery_attempts_delivery_idx")
   @@map("wh_delivery_attempts")
+}
+
+/// The audit log of signing secret rolls: who rolled an endpoint's secret,
+/// when, and until when the previous secret stayed valid (null: at once).
+model WebhookSecretRoll {
+  id                      String    @id @db.Uuid
+  organizationId          String    @map("organization_id") @db.Uuid
+  endpointId              String    @map("endpoint_id") @db.Uuid
+  rolledAt                DateTime  @map("rolled_at") @db.Timestamptz(3)
+  previousSecretExpiresAt DateTime? @map("previous_secret_expires_at") @db.Timestamptz(3)
+  rolledByUserId          String    @map("rolled_by_user_id") @db.Uuid
+  rolledByRole            String    @map("rolled_by_role")
+  rolledByName            String    @map("rolled_by_name")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  endpoint     WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([endpointId, rolledAt], map: "wh_secret_rolls_endpoint_idx")
+  @@map("wh_secret_rolls")
 }
