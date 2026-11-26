@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { OperatorProvider, type Operator } from '@/lib/operator';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
+import { seedWebhookDeliveries } from '@/mocks/webhook-deliveries';
 import { WebhookEndpointsScreen } from './webhook-endpoints-screen';
 
 const store = new MockStore(new Date('2026-11-25T03:00:00.000Z'));
@@ -14,6 +15,7 @@ beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   server.resetHandlers();
   store.webhookEndpoints.length = 0;
+  store.webhookDeliveries.length = 0;
 });
 afterAll(() => server.close());
 
@@ -116,5 +118,40 @@ describe('WebhookEndpointsScreen', () => {
   it('tells a User without the Permission, and calls nothing', () => {
     renderScreen({ id: 'u', name: 'Una', permissions: ['payments:view'] });
     expect(screen.getByText(/do not have permission/i)).toBeInTheDocument();
+  });
+
+  it('marks an endpoint whose latest deliveries all failed', async () => {
+    store.events.push(
+      ...[1, 2, 3].map((n) => ({
+        id: `event-${n}`,
+        type: 'PaymentCreated' as const,
+        paymentId: `payment-${n}`,
+        payload: {},
+        createdAt: `2026-11-2${n}T03:00:00.000Z`,
+        publishedAt: null,
+      })),
+    );
+    seedWebhookDeliveries(store);
+    store.events.length = 0;
+    renderScreen(admin);
+
+    const crm = (await screen.findByText('https://crm.example.test/hooks/paybridge')).closest('tr')!;
+    const erp = screen.getByText('https://erp.example.test/paybridge/webhooks').closest('tr')!;
+    expect(within(crm).getByText('Failing')).toBeInTheDocument();
+    expect(within(erp).queryByText('Failing')).not.toBeInTheDocument();
+  });
+
+  it('sends a test event and shows what the receiver answered', async () => {
+    const user = userEvent.setup();
+    renderScreen(admin);
+    await screen.findByText('No Webhook Endpoints yet.');
+    await register(user, 'https://erp.example.com/hook');
+
+    await user.click(await screen.findByRole('button', { name: 'Send a test event to https://erp.example.com/hook' }));
+
+    expect(await screen.findByRole('status', { name: 'Test result for https://erp.example.com/hook' })).toHaveTextContent(
+      'Test delivered (HTTP 200)',
+    );
+    expect(store.webhookDeliveries.map((d) => d.eventKind)).toEqual(['webhook.test']);
   });
 });

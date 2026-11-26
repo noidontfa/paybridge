@@ -15,6 +15,7 @@ import {
   type WebhookEventKind,
 } from '@/lib/api/webhook-endpoints';
 import { useCan } from '@/lib/operator';
+import { useSendTestWebhook } from '@/lib/queries/webhook-deliveries';
 import {
   useCreateWebhookEndpoint,
   useDeleteWebhookEndpoint,
@@ -24,6 +25,37 @@ import {
 } from '@/lib/queries/webhook-endpoints';
 
 const when = (iso: string) => new Date(iso).toLocaleString();
+
+/** Sends a `webhook.test` event to one endpoint and says what the receiver answered. */
+function TestSend({ endpoint }: { endpoint: WebhookEndpoint }) {
+  const send = useSendTestWebhook();
+  const attempt = send.data?.history[0];
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={send.isPending}
+        aria-label={`Send a test event to ${endpoint.url}`}
+        onClick={() => send.mutate(endpoint.id)}
+      >
+        {send.isPending ? 'Sending…' : 'Send test'}
+      </Button>
+      {send.error && (
+        <p role="alert" className="text-xs text-destructive">
+          {send.error.message}
+        </p>
+      )}
+      {attempt && !send.isPending && (
+        <p role="status" aria-label={`Test result for ${endpoint.url}`} className="text-xs">
+          {attempt.succeeded
+            ? `Test delivered (HTTP ${attempt.httpStatus ?? '?'})`
+            : `Test failed: ${attempt.error ?? 'no answer'}`}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** A Super Admin's change is shown as made by the platform. */
 const writer = (endpoint: WebhookEndpoint) => endpoint.updatedBy.label ?? endpoint.updatedBy.name;
@@ -202,14 +234,22 @@ export function WebhookEndpointsScreen() {
                 <td className="font-mono">{endpoint.eventKinds.join(', ')}</td>
                 <td className="font-mono">{endpoint.secretPrefix}…</td>
                 <td>
-                  <Badge variant={endpoint.status === 'ENABLED' ? 'default' : 'secondary'}>
-                    {endpoint.status === 'ENABLED' ? 'Enabled' : 'Disabled'}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant={endpoint.status === 'ENABLED' ? 'default' : 'secondary'}>
+                      {endpoint.status === 'ENABLED' ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                    {endpoint.failing && (
+                      <Badge variant="destructive" title="Its latest deliveries all failed. Check the receiver.">
+                        Failing
+                      </Badge>
+                    )}
+                  </div>
                 </td>
                 <td>
                   {when(endpoint.updatedAt)} by {writer(endpoint)}
                 </td>
                 <td className="flex justify-end gap-1 py-2">
+                  <TestSend endpoint={endpoint} />
                   <Button
                     variant="outline"
                     size="sm"
