@@ -4,7 +4,7 @@
 
 **Blocked by:** 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Payment Core's create Payment accepts an optional checkout origin:
   - the Pricing Plan id;
