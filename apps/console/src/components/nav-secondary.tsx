@@ -10,17 +10,19 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { isActivePath, type NavItem } from '@/lib/navigation';
+import { useCanFn } from '@/lib/operator';
 
 export function NavSecondary({
   items,
   ...props
 }: { items: NavItem[] } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   const pathname = usePathname();
+  const can = useCanFn();
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>
         <SidebarMenu>
-          {items.map((item) => {
+          {items.filter((item) => !item.permission || can(item.permission)).map((item) => {
             const Icon = item.icon;
             const active = !!item.url && isActivePath(pathname, item.url);
             return (

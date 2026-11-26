@@ -11,7 +11,9 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { apiKeysHandlers } from './api-keys';
 import { eventsAuditHandlers } from './events-audit';
 import { callbacksHandlers } from './callbacks';
+import { gatewayConnectionsHandlers } from './gateway-connections';
 import { gatewaysHandlers } from './gateways';
+import { invitationsHandlers } from './invitations';
 import { paymentsListHandlers } from './payments-list';
 import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
@@ -78,6 +80,8 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ...platformHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...apiKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...usersHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...invitationsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...gatewayConnectionsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewaysHandlers(base, store, (request, message) =>
       apiError(request, { status: 404, error: 'Not Found', code: 'GATEWAY_NOT_FOUND', message }, store.now),
     ),

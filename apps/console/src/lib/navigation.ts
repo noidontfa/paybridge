@@ -7,6 +7,8 @@ import {
   ShieldCheckIcon,
   KeyRoundIcon,
   LandmarkIcon,
+  MailPlusIcon,
+  PlugIcon,
   OctagonAlertIcon,
   ReceiptIcon,
   SettingsIcon,
@@ -24,6 +26,8 @@ export interface NavItem {
   badge?: string;
   /** A count the sidebar fetches and shows beside the item. */
   liveBadge?: 'openReviews';
+  /** The Permission needed to see the item; absent means everyone. */
+  permission?: string;
 }
 
 export interface NavSection {
@@ -70,9 +74,16 @@ export const platformNav: NavSection = {
 };
 
 export const secondaryNav: NavItem[] = [
-  { title: 'Users', url: '/settings/users', icon: UsersIcon },
+  { title: 'Users', url: '/settings/users', icon: UsersIcon, permission: 'users:manage' },
+  { title: 'Invitations', url: '/settings/invitations', icon: MailPlusIcon, permission: 'users:manage' },
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
-  { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon },
+  { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon, permission: 'api-keys:manage' },
+  {
+    title: 'Gateway Connections',
+    url: '/settings/gateway-connections',
+    icon: PlugIcon,
+    permission: 'gateway-connections:manage',
+  },
   { title: 'Docs', url: '/docs', icon: BookOpenIcon },
 ];
 

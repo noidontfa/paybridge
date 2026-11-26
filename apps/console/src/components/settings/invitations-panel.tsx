@@ -14,7 +14,7 @@ import {
   sendInvitation,
   type InvitableRole,
 } from '@/lib/api/invitations';
-import { useCan, useCurrentOperator } from '@/lib/operator';
+import { useCan } from '@/lib/operator';
 
 const KEY = ['invitations'] as const;
 
@@ -46,11 +46,11 @@ const formatDate = (iso: string) => new Date(iso).toLocaleString();
 /** Pending Invitations of the Organization, with send, re-send and revoke. */
 export function InvitationsPanel() {
   const allowed = useCan('users:manage');
-  const operator = useCurrentOperator();
   const client = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<InvitableRole>('OPERATOR');
   const canInviteSuperAdmin = useCan('super-admins:manage');
+  const choosesOrganization = useCan('organizations:manage');
 
   const list = useQuery({ queryKey: KEY, queryFn: ({ signal }) => listInvitations(signal), enabled: allowed });
   const onSettled = () => client.invalidateQueries({ queryKey: KEY });
@@ -70,7 +70,7 @@ export function InvitationsPanel() {
           <CardTitle>Invite someone</CardTitle>
           <CardDescription>
             They get an email with a link to set their own password. It works once and expires in 7 days.
-            {operator.role === 'SUPER_ADMIN' && ' Choose an Organization in the switcher first, unless you invite a Super Admin.'}
+            {choosesOrganization && ' Choose an Organization in the switcher first, unless you invite a Super Admin.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

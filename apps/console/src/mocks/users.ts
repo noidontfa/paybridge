@@ -1,15 +1,10 @@
 /** The mocked Users endpoints, with the API's last-admin rule. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import type { ManagedUser } from '@/lib/api/users';
+import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
 import type { MockStore } from './store';
 
 export type MockUser = ManagedUser;
-
-const LABELS = {
-  OPERATOR: 'Operator',
-  ORGANIZATION_ADMIN: 'Organization Admin',
-  SUPER_ADMIN: 'Super Admin',
-} as const;
 
 export function usersHandlers(
   base: string,
@@ -52,10 +47,10 @@ export function usersHandlers(
         const user = find(params.id);
         if (!user) return notFound(request);
         const { role } = (await request.json()) as {
-          role: 'OPERATOR' | 'ORGANIZATION_ADMIN';
+          role: ManagedRole;
         };
         if (role !== user.role && lastAdmin(user)) return refuseLast(request);
-        Object.assign(user, { role, roleLabel: LABELS[role] });
+        Object.assign(user, { role, roleLabel: ROLE_LABELS[role] });
         return HttpResponse.json({});
       },
     ),
