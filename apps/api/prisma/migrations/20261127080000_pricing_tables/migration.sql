@@ -51,8 +51,9 @@ ALTER TABLE "chk_pricing_table_plans" ADD CONSTRAINT "chk_pricing_table_plans_pr
 ALTER TABLE "chk_pricing_table_plans" ADD CONSTRAINT "chk_pricing_table_plans_organization_id_fkey"
   FOREIGN KEY ("organization_id") REFERENCES "iam_organizations"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
--- Prisma cannot declare these: the main colour is `#rrggbb` in lower case,
--- a table shows at most three Pricing Plans, and at most one is recommended.
+-- At most one Pricing Plan per table is recommended (declared in the schema
+-- as a partial unique index). Prisma cannot declare the CHECKs: the main
+-- colour is `#rrggbb` in lower case, and a table shows at most three plans.
 ALTER TABLE "chk_pricing_tables" ADD CONSTRAINT "chk_pricing_tables_main_color_hex" CHECK ("main_color" ~ '^#[0-9a-f]{6}$');
 ALTER TABLE "chk_pricing_table_plans" ADD CONSTRAINT "chk_pricing_table_plans_position_range" CHECK ("position" BETWEEN 0 AND 2);
-CREATE UNIQUE INDEX "chk_pricing_table_plans_one_recommended_key" ON "chk_pricing_table_plans"("pricing_table_id") WHERE "recommended";
+CREATE UNIQUE INDEX "chk_pricing_table_plans_one_recommended_key" ON "chk_pricing_table_plans"("pricing_table_id") WHERE ("recommended" = true);

@@ -593,7 +593,7 @@ model PricingTable {
 }
 
 /// A Pricing Plan's place in a Pricing Table. At most one per table is
-/// recommended (partial unique index in the migration). A Pricing Plan may sit
+/// recommended (partial unique index). A Pricing Plan may sit
 /// in several Pricing Tables, and cannot be deleted while it does.
 model PricingTablePlan {
   pricingTableId String  @map("pricing_table_id") @db.Uuid
@@ -609,6 +609,7 @@ model PricingTablePlan {
 
   @@id([pricingTableId, pricingPlanId], map: "chk_pricing_table_plans_pkey")
   @@unique([pricingTableId, position], map: "chk_pricing_table_plans_table_position_key")
+  @@unique([pricingTableId], map: "chk_pricing_table_plans_one_recommended_key", where: { recommended: true })
   @@index([organizationId, pricingPlanId], map: "chk_pricing_table_plans_org_plan_idx")
   @@map("chk_pricing_table_plans")
 }

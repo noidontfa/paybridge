@@ -17,7 +17,7 @@ test('builds a Pricing Table, previews it and copies its snippet', async ({ page
     data: { label: `Website ${suffix}`, allowedOrigins: ['https://shop.example'] },
   });
   expect(key.ok()).toBe(true);
-  const { key: publishableKey } = (await key.json()) as { key: string };
+  const { id: keyId, key: publishableKey } = (await key.json()) as { id: string; key: string };
 
   await page.goto('/pricing-tables');
   await page.getByRole('link', { name: 'New Pricing Table' }).click();
@@ -51,7 +51,9 @@ test('builds a Pricing Table, previews it and copies its snippet', async ({ page
   await expect(page.getByRole('list', { name: 'Card order' }).getByRole('listitem')).toHaveText([/Basic/, /Pro/]);
 
   const embed = page.getByRole('region', { name: 'Embed' });
-  await embed.getByLabel('Publishable Key').selectOption({ label: `Website ${suffix} (https://shop.example)` });
+  const picker = embed.getByRole('combobox', { name: 'Publishable Key' });
+  await picker.selectOption(keyId);
+  await expect(picker).toHaveValue(keyId);
   const snippet = embed.getByLabel('Snippet', { exact: true });
   await expect(snippet).toContainText(`data-key="${publishableKey}"`);
   await expect(snippet).toContainText(`data-table="${tableId}"`);
