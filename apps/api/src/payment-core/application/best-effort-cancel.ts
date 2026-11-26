@@ -1,12 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { organizationScope } from '../domain/organization-scope.js';
 import type { PaymentTransaction } from '../domain/payment-transaction.js';
-import { GatewayManager } from '../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from './connection-plugins.js';
 import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
 
 /** What a provider cancel needs to know about an attempt. */
 export type CancellableAttempt = Pick<
   PaymentTransaction,
-  'id' | 'gatewayId' | 'providerMetadata'
+  'id' | 'organizationId' | 'gatewayId' | 'providerMetadata'
 >;
 
 /**
@@ -25,7 +26,7 @@ export class BestEffortCancel {
   private readonly logger = new Logger(BestEffortCancel.name);
 
   constructor(
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
   ) {}
 
@@ -35,7 +36,10 @@ export class BestEffortCancel {
 
   private async cancelOne(attempt: CancellableAttempt): Promise<void> {
     try {
-      const plugin = this.gateways.resolve(attempt.gatewayId);
+      const plugin = await this.plugins.forExisting(
+        attempt.organizationId,
+        attempt.gatewayId,
+      );
       if (!plugin.capabilities.supportsCancel || !plugin.cancel) {
         this.logger.error(
           `Skipped provider cancel: gateway ${attempt.gatewayId} does not ` +
@@ -47,11 +51,14 @@ export class BestEffortCancel {
         attemptKey: attempt.id,
         providerMetadata: attempt.providerMetadata ?? {},
       });
-      await this.runner.repositories.gatewayRawResponses.record({
-        attemptId: attempt.id,
-        operation: 'cancel',
-        payload: result.rawPayload,
-      });
+      await this.runner.repositories.gatewayRawResponses.record(
+        organizationScope(attempt.organizationId),
+        {
+          attemptId: attempt.id,
+          operation: 'cancel',
+          payload: result.rawPayload,
+        },
+      );
     } catch (error) {
       this.logger.warn(
         `Provider cancel failed for attempt ${attempt.id} on gateway ` +

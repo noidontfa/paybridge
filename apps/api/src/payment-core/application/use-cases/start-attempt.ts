@@ -11,6 +11,11 @@ import {
   UnsupportedCurrencyError,
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
+import {
+  ALL_ORGANIZATIONS,
+  organizationScope,
+  type OrganizationScope,
+} from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import type {
   PaymentTransaction,
@@ -24,6 +29,7 @@ import {
   GatewayManager,
   UnknownGatewayError,
 } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import type { Repositories } from '../../infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import { QUEUES, jobIds } from '../../infrastructure/queue/queue.constants.js';
@@ -129,15 +135,22 @@ export class StartAttempt {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
     @InjectQueue(QUEUES.attemptInitiate) private readonly initiateQueue: Queue,
     @InjectQueue(QUEUES.attemptStatusQuery) private readonly queryQueue: Queue,
   ) {}
 
-  async execute(input: StartAttemptInput): Promise<StartAttemptResult> {
-    const plugin = this.resolveGateway(input.gatewayId);
-    const { payment, attempt, switchedFrom } = await this.openAttempt(input);
+  async execute(
+    scope: OrganizationScope,
+    input: StartAttemptInput,
+  ): Promise<StartAttemptResult> {
+    const plugin = await this.resolveGateway(scope, input.gatewayId, true);
+    const { payment, attempt, switchedFrom } = await this.openAttempt(
+      scope,
+      input,
+    );
     // After commit; never throws, so it cannot undo the local cancel.
     const providerCancel = this.cancels.cancel(switchedFrom);
     try {
@@ -145,9 +158,9 @@ export class StartAttempt {
       if (outcome.kind === 'unavailable' || outcome.kind === 'unknown') {
         // The attempt stays CREATED (ticket 22): never a failure.
         await this.scheduleFollowUp(outcome.kind, attempt.id, input);
-        return await this.unchanged(payment.id, attempt.id);
+        return await this.unchanged(scope, payment.id, attempt.id);
       }
-      return await this.recordOutcome(payment.id, attempt.id, outcome);
+      return await this.recordOutcome(scope, payment.id, attempt.id, outcome);
     } finally {
       await providerCancel;
     }
@@ -164,10 +177,15 @@ export class StartAttempt {
     data: InitiateAttemptJobData,
   ): Promise<'recorded' | 'skipped' | 'query-scheduled'> {
     const repos = this.runner.repositories;
+    // A queued job acts on an attempt it already holds, so it looks across
+    // Organizations, then works inside the Payment's own Organization.
     const paymentId = await repos.payments.findPaymentIdByAttemptId(
+      ALL_ORGANIZATIONS,
       data.attemptId,
     );
-    const payment = paymentId ? await repos.payments.findById(paymentId) : null;
+    const payment = paymentId
+      ? await repos.payments.findById(ALL_ORGANIZATIONS, paymentId)
+      : null;
     const attempt = payment?.attempts.find((a) => a.id === data.attemptId);
     if (
       !payment ||
@@ -184,7 +202,11 @@ export class StartAttempt {
       ...(data.description !== undefined && { description: data.description }),
     };
     const outcome = await this.initiate(
-      this.resolveGateway(attempt.gatewayId),
+      await this.resolveGateway(
+        organizationScope(payment.organizationId),
+        attempt.gatewayId,
+        false,
+      ),
       payment,
       attempt,
       input,
@@ -194,7 +216,12 @@ export class StartAttempt {
       await this.scheduleFollowUp('unknown', attempt.id, input);
       return 'query-scheduled';
     }
-    await this.recordOutcome(payment.id, attempt.id, outcome);
+    await this.recordOutcome(
+      organizationScope(payment.organizationId),
+      payment.id,
+      attempt.id,
+      outcome,
+    );
     return 'recorded';
   }
 
@@ -237,10 +264,14 @@ export class StartAttempt {
 
   /** The Payment and the attempt as stored, nothing changed. */
   private async unchanged(
+    scope: OrganizationScope,
     paymentId: string,
     attemptId: string,
   ): Promise<StartAttemptResult> {
-    const payment = await this.runner.repositories.payments.findById(paymentId);
+    const payment = await this.runner.repositories.payments.findById(
+      scope,
+      paymentId,
+    );
     const attempt = payment?.attempts.find((a) => a.id === attemptId);
     if (!payment || !attempt) {
       throw new Error(`Attempt ${attemptId} vanished from ${paymentId}`);
@@ -248,9 +279,22 @@ export class StartAttempt {
     return { payment, attempt };
   }
 
-  private resolveGateway(gatewayId: string): PaymentGateway {
+  /**
+   * A new attempt needs an enabled Gateway Connection of the Organization;
+   * a retry of an attempt already started works on a disabled one too.
+   */
+  private async resolveGateway(
+    scope: OrganizationScope,
+    gatewayId: string,
+    isNewAttempt: boolean,
+  ): Promise<PaymentGateway> {
+    if (!this.gateways.isRegistered(gatewayId)) {
+      throw new UnknownGatewayIdError(gatewayId);
+    }
     try {
-      return this.gateways.resolve(gatewayId);
+      return isNewAttempt
+        ? await this.plugins.forStart(scope.organizationId, gatewayId)
+        : await this.plugins.forExisting(scope.organizationId, gatewayId);
     } catch (error) {
       if (error instanceof UnknownGatewayError) {
         throw new UnknownGatewayIdError(gatewayId);
@@ -260,14 +304,20 @@ export class StartAttempt {
   }
 
   /** Step 1: one short transaction under the Payment lock. */
-  private openAttempt(input: StartAttemptInput): Promise<{
+  private openAttempt(
+    scope: OrganizationScope,
+    input: StartAttemptInput,
+  ): Promise<{
     payment: Payment;
     attempt: PaymentTransaction;
     /** Open attempts cancelled by this gateway switch (at most one). */
     switchedFrom: CancellableAttempt[];
   }> {
     return this.runner.run(async (repos) => {
-      const payment = await repos.payments.findForUpdate(input.paymentId);
+      const payment = await repos.payments.findForUpdate(
+        scope,
+        input.paymentId,
+      );
       if (!payment) throw new PaymentNotFoundError(input.paymentId);
       this.assertAcceptsAttempt(payment);
 
@@ -283,13 +333,13 @@ export class StartAttempt {
         );
       }
 
-      const attempt = await repos.payments.createAttempt({
+      const attempt = await repos.payments.createAttempt(scope, {
         id: newId(),
         paymentId: payment.id,
         gatewayId: input.gatewayId,
         status: INITIAL_ATTEMPT_STATUS,
       });
-      await repos.statusTransitions.record({
+      await repos.statusTransitions.record(scope, {
         entityType: 'PAYMENT_TRANSACTION',
         entityId: attempt.id,
         fromStatus: null,
@@ -350,12 +400,13 @@ export class StartAttempt {
 
   /** Step 3: one short transaction that re-checks state before writing. */
   private recordOutcome(
+    scope: OrganizationScope,
     paymentId: string,
     attemptId: string,
     outcome: RecordableOutcome,
   ): Promise<StartAttemptResult> {
     return this.runner.run(async (repos) => {
-      const payment = await repos.payments.findForUpdate(paymentId);
+      const payment = await repos.payments.findForUpdate(scope, paymentId);
       if (!payment) throw new PaymentNotFoundError(paymentId);
       const attempt = payment.attempts.find((a) => a.id === attemptId);
       if (!attempt) {
@@ -380,7 +431,7 @@ export class StartAttempt {
         });
       }
 
-      const after = await repos.payments.findById(paymentId);
+      const after = await repos.payments.findById(scope, paymentId);
       if (!after) throw new PaymentNotFoundError(paymentId);
       const recorded = after.attempts.find((a) => a.id === attemptId);
       if (!recorded) {
@@ -402,7 +453,8 @@ async function recordAccepted(
   result: InitiateResult,
   current: boolean,
 ): Promise<void> {
-  await repos.gatewayRawResponses.record({
+  const scope = organizationScope(attempt.organizationId);
+  await repos.gatewayRawResponses.record(scope, {
     attemptId: attempt.id,
     operation: 'initiate',
     payload: result.rawPayload,
@@ -422,7 +474,7 @@ async function recordAccepted(
       { ...providerData, nextAction: result.nextAction },
     );
   } else {
-    await repos.payments.updateAttempt(attempt.id, providerData);
+    await repos.payments.updateAttempt(scope, attempt.id, providerData);
   }
 }
 

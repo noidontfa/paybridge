@@ -17,6 +17,7 @@ import {
 } from '../../src/payment-core/reliability/retention.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 27 end to end: one retention schedule across instances, and the
 // scheduled run deleting due rows through the worker on the compose Redis.
@@ -80,7 +81,7 @@ describe('retention schedule', () => {
 
   it('deletes due rows from the scheduled run alone', async () => {
     const key = `key-${newId()}`;
-    await runner.repositories.idempotencyKeys.create({
+    await runner.repositories.idempotencyKeys.create(defaultScope, {
       key,
       requestHash: 'hash',
       responseStatus: 201,
@@ -94,7 +95,9 @@ describe('retention schedule', () => {
 
     await vi.waitFor(
       async () =>
-        expect(await runner.repositories.idempotencyKeys.find(key)).toBeNull(),
+        expect(
+          await runner.repositories.idempotencyKeys.find(defaultScope, key),
+        ).toBeNull(),
       { timeout: 10_000, interval: 50 },
     );
   });

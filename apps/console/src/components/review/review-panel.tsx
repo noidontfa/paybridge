@@ -1,6 +1,9 @@
+'use client';
+
 import { StatusBadge } from '@/components/status-badge';
 import type { OperatorAttempt, OperatorPayment } from '@/lib/api/schemas';
 import { reviewActions } from '@/lib/review-resolution-rules';
+import { useCan } from '@/lib/operator';
 import { ResolutionForm } from './resolution-form';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
 import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/lib/format';
@@ -27,6 +30,7 @@ export function ReviewPanel({
   attempt: OperatorAttempt;
   payment: Pick<OperatorPayment, 'id' | 'status' | 'amount' | 'currency'>;
 }) {
+  const canResolve = useCan('reviews:resolve');
   if (!attempt.reviewReason) return null;
   const open = attempt.status === 'REQUIRES_REVIEW';
   const resolvable = open && attempt.reviewOpenedAt ? resolvableFrom(attempt.reviewOpenedAt) : null;
@@ -48,7 +52,10 @@ export function ReviewPanel({
           re-query runs first.
         </p>
       )}
-      {open && <ResolutionForm attempt={attempt} payment={payment} actions={actions} />}
+      {open && canResolve && <ResolutionForm attempt={attempt} payment={payment} actions={actions} />}
+      {open && !canResolve && (
+        <p className="text-muted-foreground">You do not have permission to resolve Reviews.</p>
+      )}
     </div>
   );
 }

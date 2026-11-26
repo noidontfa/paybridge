@@ -8,6 +8,8 @@ import type {
   ReviewReason,
 } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export interface TransitionRow {
   readonly id: string;
@@ -82,10 +84,10 @@ export class PaymentDetailReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** The Payment with attempts, transitions and events; null if none (or not a UUID). */
-  async find(id: string): Promise<PaymentDetailRow | null> {
+  async find(scope: ReadScope, id: string): Promise<PaymentDetailRow | null> {
     if (!isUuid(id)) return null;
     const payment = await this.prisma.payment.findUnique({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       include: {
         transactions: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
         outboxEvents: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
@@ -95,6 +97,7 @@ export class PaymentDetailReadRepository {
 
     const transitions = await this.prisma.statusTransition.findMany({
       where: {
+        ...scopeWhere(scope),
         entityType: 'PAYMENT_TRANSACTION',
         entityId: { in: payment.transactions.map((t) => t.id) },
       },

@@ -2,11 +2,17 @@ import {
   BookOpenIcon,
   CreditCardIcon,
   FileClockIcon,
+  BuildingIcon,
   GaugeIcon,
+  ShieldCheckIcon,
+  KeyRoundIcon,
   LandmarkIcon,
+  MailPlusIcon,
+  PlugIcon,
   OctagonAlertIcon,
   ReceiptIcon,
   SettingsIcon,
+  UsersIcon,
   WebhookIcon,
   ZapIcon,
   type LucideIcon,
@@ -20,6 +26,8 @@ export interface NavItem {
   badge?: string;
   /** A count the sidebar fetches and shows beside the item. */
   liveBadge?: 'openReviews';
+  /** The Permission needed to see the item; absent means everyone. */
+  permission?: string;
 }
 
 export interface NavSection {
@@ -56,8 +64,26 @@ export const mainNav: NavSection[] = [
   },
 ];
 
+/** The Super Admin's Platform area; shown only with the Permission to manage Organizations. */
+export const platformNav: NavSection = {
+  label: 'Platform',
+  items: [
+    { title: 'Organizations', url: '/platform/organizations', icon: BuildingIcon },
+    { title: 'Super Admins', url: '/platform/super-admins', icon: ShieldCheckIcon },
+  ],
+};
+
 export const secondaryNav: NavItem[] = [
+  { title: 'Users', url: '/settings/users', icon: UsersIcon, permission: 'users:manage' },
+  { title: 'Invitations', url: '/settings/invitations', icon: MailPlusIcon, permission: 'users:manage' },
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
+  { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon, permission: 'api-keys:manage' },
+  {
+    title: 'Gateway Connections',
+    url: '/settings/gateway-connections',
+    icon: PlugIcon,
+    permission: 'gateway-connections:manage',
+  },
   { title: 'Docs', url: '/docs', icon: BookOpenIcon },
 ];
 
@@ -68,9 +94,10 @@ export function isActivePath(pathname: string, url: string): boolean {
 
 /** Breadcrumb trail for a pathname, derived from the navigation. */
 export function breadcrumbFor(pathname: string, current?: string): { title: string; url?: string }[] {
-  const all = [...mainNav.flatMap((s) => s.items), ...secondaryNav];
+  const sections = [...mainNav, platformNav];
+  const all = [...sections.flatMap((s) => s.items), ...secondaryNav];
   const match = all.find((i) => i.url && i.url !== '/' && isActivePath(pathname, i.url));
-  const section = mainNav.find((s) => s.items.some((i) => i === match))?.label;
+  const section = sections.find((s) => s.items.some((i) => i === match))?.label;
   const trail: { title: string; url?: string }[] = [{ title: 'PayBridge Console', url: '/' }];
   if (!match) {
     if (pathname === '/') return [{ title: 'Overview' }];

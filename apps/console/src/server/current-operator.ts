@@ -1,13 +1,8 @@
 /**
- * The auth seam (spec, "Auth seam"). There is no authentication in v1: the
- * Console is reached on the internal network only, so the current Operator is
- * a configured identity (`CONSOLE_OPERATOR_ID`, `CONSOLE_OPERATOR_NAME`).
- *
- * Real authentication replaces only this module (reading the session instead
- * of the environment) and adds a middleware check; its two consumers do not
- * change: the BFF proxy sets `actor` from it on write calls, and the root
- * layout hands it to the UI (`OperatorProvider`, `useCurrentOperator()`) for
- * the sidebar footer. Server-side only; the browser never supplies it.
+ * The identity shown in mock mode only. Mock mode has no API and so no
+ * sign-in: the Console shows this configured identity (`CONSOLE_OPERATOR_ID`,
+ * `CONSOLE_OPERATOR_NAME`). With a real API the signed-in User comes from the
+ * session (`./session-user.ts`). Server-side only.
  */
 import type { Operator } from '@/lib/operator';
 

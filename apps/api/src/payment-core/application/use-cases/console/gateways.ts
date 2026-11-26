@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import type { GatewayMode } from '../../../port/payment-gateway.port.js';
 import { GatewayManager } from '../../../gateway-manager/gateway-manager.js';
 import {
@@ -42,23 +43,27 @@ export class GatewaysOverview {
     @Inject(PUBLIC_BASE_URL) private readonly baseUrl: string,
   ) {}
 
-  async list(): Promise<GatewaySummary[]> {
-    const ids = await this.knownIds();
-    return [...ids].sort().map((id) => this.summary(id));
+  async list(scope: ReadScope): Promise<GatewaySummary[]> {
+    const ids = await this.knownIds(scope);
+    const connections = await this.repo.connectionIds(scope);
+    return [...ids].sort().map((id) => this.summary(id, connections.get(id)));
   }
 
   /** Undefined when the id is neither registered nor holds data. */
   async detail(
+    scope: ReadScope,
     id: string,
     now = new Date(),
   ): Promise<GatewayDetail | undefined> {
-    if (!(await this.knownIds()).has(id)) return undefined;
+    if (!(await this.knownIds(scope)).has(id)) return undefined;
     const health = await this.repo.callbackHealth(
+      scope,
       id,
       new Date(now.getTime() - DAY_MS),
     );
+    const connections = await this.repo.connectionIds(scope);
     return {
-      ...this.summary(id),
+      ...this.summary(id, connections.get(id)),
       callbackCounts: health.counts,
       lastCallbackAt: health.lastCallbackAt?.toISOString() ?? null,
       // Gateway errors are not persisted yet.
@@ -66,21 +71,45 @@ export class GatewaysOverview {
     };
   }
 
-  private async knownIds(): Promise<Set<string>> {
+  private async knownIds(scope: ReadScope): Promise<Set<string>> {
     return new Set([
-      ...this.manager.gatewayIds(),
-      ...(await this.repo.gatewayIdsWithData()),
+      ...this.manager.deploymentGatewayIds(),
+      ...(await this.repo.gatewayIdsWithData(scope)),
     ]);
   }
 
-  private summary(id: string): GatewaySummary {
-    const registered = this.manager.gatewayIds().includes(id);
+  /** A gateway whose credentials come only from Gateway Connections has no default instance. */
+  private modeOf(id: string): GatewayMode {
+    try {
+      return this.manager.resolve(id).mode ?? 'test';
+    } catch {
+      return 'test';
+    }
+  }
+
+  /**
+   * The Callback URL names the Gateway Connection. Where the view spans
+   * Organizations (or none is connected) there is no single connection, so it
+   * shows the URL without one.
+   */
+  private callbackUrl(id: string, connectionIds: readonly string[] = []): string {
+    const base = `${this.baseUrl}/api/webhooks/${encodeURIComponent(id)}`;
+    return connectionIds.length === 1
+      ? `${base}/${encodeURIComponent(connectionIds[0]!)}`
+      : base;
+  }
+
+  private summary(
+    id: string,
+    connectionIds?: readonly string[],
+  ): GatewaySummary {
+    const registered = this.manager.deploymentGatewayIds().includes(id);
     return {
       id,
       registered,
       configured: registered,
-      mode: registered ? (this.manager.resolve(id).mode ?? 'test') : 'test',
-      callbackUrl: `${this.baseUrl}/api/webhooks/${encodeURIComponent(id)}`,
+      mode: registered ? this.modeOf(id) : 'test',
+      callbackUrl: this.callbackUrl(id, connectionIds),
     };
   }
 }

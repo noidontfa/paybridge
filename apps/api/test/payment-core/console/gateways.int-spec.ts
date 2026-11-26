@@ -15,6 +15,7 @@ import {
 import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 06: GET /internal/gateways and /internal/gateways/:id over HTTP on
 // real PostgreSQL. Responses are parsed with the Console's copied schemas.
@@ -32,6 +33,7 @@ async function insertCallback(
   await prisma.webhookInbox.create({
     data: {
       id: newId(),
+      organizationId: DEFAULT_ORGANIZATION_ID,
       gatewayId,
       dedupeKey: newId(),
       rawBody: Buffer.from('{}'),
@@ -50,6 +52,7 @@ async function insertPaymentOn(...gatewayIds: string[]): Promise<void> {
   await prisma.payment.create({
     data: {
       id: paymentId,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: `GW-${paymentId}`,
       amount: new Prisma.Decimal('1000'),
       currency: 'VND',
@@ -61,6 +64,7 @@ async function insertPaymentOn(...gatewayIds: string[]): Promise<void> {
     await prisma.paymentTransaction.create({
       data: {
         id: newId(),
+        organizationId: DEFAULT_ORGANIZATION_ID,
         paymentId,
         gatewayId,
         status: i === gatewayIds.length - 1 ? 'CREATED' : 'CANCELLED',
@@ -68,6 +72,14 @@ async function insertPaymentOn(...gatewayIds: string[]): Promise<void> {
       },
     });
   }
+}
+
+/** The per-connection Callback URL names the default Organization's connection. */
+async function fakeConnectionId(): Promise<string> {
+  const row = await prisma.gatewayConnection.findFirstOrThrow({
+    where: { organizationId: DEFAULT_ORGANIZATION_ID, gatewayId: 'fake' },
+  });
+  return row.id;
 }
 
 const STRIPE_ENV = {
@@ -94,7 +106,7 @@ describe('gateways without Stripe configured', () => {
         registered: true,
         configured: true,
         mode: 'test',
-        callbackUrl: 'https://pay.example.com/api/webhooks/fake',
+        callbackUrl: `https://pay.example.com/api/webhooks/fake/${await fakeConnectionId()}`,
       },
     ]);
   });
@@ -218,7 +230,7 @@ describe('gateways with Stripe configured', () => {
         registered: true,
         configured: true,
         mode: 'test',
-        callbackUrl: 'https://pay.example.com/api/webhooks/fake',
+        callbackUrl: `https://pay.example.com/api/webhooks/fake/${await fakeConnectionId()}`,
       },
       {
         id: 'stripe',

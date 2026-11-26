@@ -14,6 +14,7 @@ import {
   type QueryInput,
   type QueryResult,
 } from '../../payment-core/port/index.js';
+import type { GatewayPluginFactory } from '../../payment-core/gateway-manager/gateway-plugin-factory.js';
 
 export const FAKE_GATEWAY_ID = 'fake';
 
@@ -243,3 +244,11 @@ async function run<I, O>(
   }
   return step;
 }
+
+/** Registers the fake plugin: it needs no credentials, only optional behaviour. */
+export const fakeGatewayFactory: GatewayPluginFactory<
+  FakeGatewayOptions | undefined
+> = {
+  gatewayId: FAKE_GATEWAY_ID,
+  create: (options) => new FakeGatewayPlugin(options),
+};

@@ -10,6 +10,10 @@ import type {
 } from '../../domain/payment-transaction.js';
 import type { ReviewReason } from '../../domain/statuses.js';
 import { Prisma } from '../../../generated/prisma/client.js';
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../../domain/organization-scope.js';
 import type { DbContext } from './db.js';
 import {
   definedOnly,
@@ -18,18 +22,23 @@ import {
   toPayment,
   toPaymentTransaction,
 } from './mappers.js';
+import { scopeSql, scopeWhere } from './scope.js';
 
 const ATTEMPTS_OLDEST_FIRST = {
   orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
 };
 
-/** The Payment aggregate: a Payment plus its attempts. No Refunds in Phase 1. */
+/**
+ * The Payment aggregate: a Payment plus its attempts. No Refunds in Phase 1.
+ * Every method takes the Organization scope first (ADR 0006): a Payment of
+ * another Organization is simply not found.
+ */
 export class PrismaPaymentRepository {
   constructor(private readonly ctx: DbContext) {}
 
-  async findById(id: string): Promise<Payment | null> {
+  async findById(scope: ReadScope, id: string): Promise<Payment | null> {
     const row = await this.ctx.db.payment.findUnique({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       include: { transactions: ATTEMPTS_OLDEST_FIRST },
     });
     return row ? toPayment(row, row.transactions) : null;
@@ -41,22 +50,28 @@ export class PrismaPaymentRepository {
    * Payment or its attempts calls this first. Only valid inside
    * `TransactionRunner.run`.
    */
-  async findForUpdate(id: string): Promise<Payment | null> {
+  async findForUpdate(scope: ReadScope, id: string): Promise<Payment | null> {
     if (!this.ctx.inTransaction) {
       throw new Error(
         'findForUpdate must run inside TransactionRunner.run: a lock outside a transaction is released at once',
       );
     }
     const locked = await this.ctx.db.$queryRaw<{ id: string }[]>`
-      SELECT id FROM core_payments WHERE id = ${id}::uuid FOR UPDATE`;
+      SELECT id FROM core_payments
+      WHERE id = ${id}::uuid AND ${scopeSql(scope, 'organization_id')}
+      FOR UPDATE`;
     if (locked.length === 0) return null;
-    return this.findById(id);
+    return this.findById(scope, id);
   }
 
-  async create(payment: NewPayment): Promise<Payment> {
+  async create(
+    scope: OrganizationScope,
+    payment: NewPayment,
+  ): Promise<Payment> {
     const row = await this.ctx.db.payment.create({
       data: {
         id: payment.id,
+        organizationId: scope.organizationId,
         merchantOrderId: payment.merchantOrderId,
         amount: toDecimal(payment.amount),
         currency: payment.currency,
@@ -67,9 +82,13 @@ export class PrismaPaymentRepository {
     return toPayment(row, []);
   }
 
-  async update(id: string, changes: PaymentChanges): Promise<Payment> {
+  async update(
+    scope: ReadScope,
+    id: string,
+    changes: PaymentChanges,
+  ): Promise<Payment> {
     const row = await this.ctx.db.payment.update({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       data: definedOnly(changes),
       include: { transactions: ATTEMPTS_OLDEST_FIRST },
     });
@@ -77,11 +96,13 @@ export class PrismaPaymentRepository {
   }
 
   async createAttempt(
+    scope: OrganizationScope,
     attempt: NewPaymentTransaction,
   ): Promise<PaymentTransaction> {
     const row = await this.ctx.db.paymentTransaction.create({
       data: {
         id: attempt.id,
+        organizationId: scope.organizationId,
         paymentId: attempt.paymentId,
         gatewayId: attempt.gatewayId,
         status: attempt.status,
@@ -94,12 +115,13 @@ export class PrismaPaymentRepository {
   }
 
   async updateAttempt(
+    scope: ReadScope,
     id: string,
     changes: PaymentTransactionChanges,
   ): Promise<PaymentTransaction> {
     const { providerMetadata, nextAction, ...plain } = changes;
     const row = await this.ctx.db.paymentTransaction.update({
-      where: { id },
+      where: { id, ...scopeWhere(scope) },
       data: {
         ...definedOnly(plain),
         ...(providerMetadata !== undefined && {
@@ -115,9 +137,13 @@ export class PrismaPaymentRepository {
    * Ids of `PENDING` Payments whose deadline is at or before `now`, earliest
    * deadline first, at most `limit`. Served by the partial expiry index.
    */
-  async findExpiredPendingIds(now: Date, limit: number): Promise<string[]> {
+  async findExpiredPendingIds(
+    scope: ReadScope,
+    now: Date,
+    limit: number,
+  ): Promise<string[]> {
     const rows = await this.ctx.db.$queryRaw<{ id: string }[]>(
-      expiredPendingPaymentsQuery(now, limit),
+      expiredPendingPaymentsQuery(scope, now, limit),
     );
     return rows.map((row) => row.id);
   }
@@ -127,12 +153,14 @@ export class PrismaPaymentRepository {
    * opened after `openedAfter`, oldest review first.
    */
   async findReviewRequeryAttemptIds(
+    scope: ReadScope,
     reasons: readonly ReviewReason[],
     openedAfter: Date,
     limit: number,
   ): Promise<string[]> {
     const rows = await this.ctx.db.paymentTransaction.findMany({
       where: {
+        ...scopeWhere(scope),
         status: 'REQUIRES_REVIEW',
         reviewReason: { in: [...reasons] },
         reviewOpenedAt: { gt: openedAfter },
@@ -145,20 +173,29 @@ export class PrismaPaymentRepository {
   }
 
   /** The id of the Payment an attempt belongs to, if the attempt exists. */
-  async findPaymentIdByAttemptId(attemptId: string): Promise<string | null> {
+  async findPaymentIdByAttemptId(
+    scope: ReadScope,
+    attemptId: string,
+  ): Promise<string | null> {
     const row = await this.ctx.db.paymentTransaction.findUnique({
-      where: { id: attemptId },
+      where: { id: attemptId, ...scopeWhere(scope) },
       select: { paymentId: true },
     });
     return row?.paymentId ?? null;
   }
 
-  /** The id of the Payment with this Upstream Reference, if any. */
+  /** The id of the Organization's Payment with this Upstream Reference, if any. */
   async findIdByUpstreamReference(
+    scope: OrganizationScope,
     merchantOrderId: string,
   ): Promise<string | null> {
     const row = await this.ctx.db.payment.findUnique({
-      where: { merchantOrderId },
+      where: {
+        organizationId_merchantOrderId: {
+          organizationId: scope.organizationId,
+          merchantOrderId,
+        },
+      },
       select: { id: true },
     });
     return row?.id ?? null;
@@ -176,12 +213,14 @@ export class PrismaPaymentRepository {
  * are found again once the review resolves.
  */
 export function expiredPendingPaymentsQuery(
+  scope: ReadScope,
   now: Date,
   limit: number,
 ): Prisma.Sql {
   return Prisma.sql`
     SELECT id FROM core_payments
     WHERE status = 'PENDING' AND expires_at <= ${now}
+      AND ${scopeSql(scope, 'organization_id')}
       AND NOT EXISTS (
         SELECT 1 FROM core_payment_transactions t
         WHERE t.payment_id = core_payments.id AND t.status = 'REQUIRES_REVIEW')

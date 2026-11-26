@@ -6,6 +6,8 @@ import {
   type PaymentStatus,
 } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeSql, scopeWhere } from '../scope.js';
 
 export interface OverviewWindow {
   readonly from: Date;
@@ -63,9 +65,13 @@ const CURRENCY = 'VND';
 export class OverviewReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async overview(window: OverviewWindow): Promise<OverviewData> {
+  async overview(
+    scope: ReadScope,
+    window: OverviewWindow,
+  ): Promise<OverviewData> {
     const { from, to, bucketMs, bucketCount } = window;
     const inRange: Prisma.PaymentWhereInput = {
+      ...scopeWhere(scope),
       createdAt: { gte: from, lte: to },
     };
     const fromMs = from.getTime();
@@ -90,6 +96,7 @@ export class OverviewReadRepository {
                  SUM(amount)::text AS volume
           FROM core_payments
           WHERE status = 'SUCCEEDED' AND created_at >= ${from} AND created_at <= ${to}
+            AND ${scopeSql(scope, 'organization_id')}
           GROUP BY idx`,
         // A Payment belongs to the gateway of its latest PaymentTransaction.
         this.prisma.$queryRaw<
@@ -110,9 +117,10 @@ export class OverviewReadRepository {
             LIMIT 1
           ) t ON TRUE
           WHERE p.created_at >= ${from} AND p.created_at <= ${to}
+            AND ${scopeSql(scope, 'p.organization_id')}
           GROUP BY t.gateway_id, p.status`,
         this.prisma.paymentTransaction.count({
-          where: { status: 'REQUIRES_REVIEW' },
+          where: { ...scopeWhere(scope), status: 'REQUIRES_REVIEW' },
         }),
         this.prisma.payment.findMany({
           where: inRange,

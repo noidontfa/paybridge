@@ -1,4 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../domain/organization-scope.js';
 import type { Payment } from '../domain/payment.js';
 import {
   CreatePayment,
@@ -42,33 +46,43 @@ export class PaymentService {
   ) {}
 
   /** Operator: resolve a review open 72h+, or add a note (internal route). */
-  resolveReview(input: ResolveReviewInput): Promise<Payment> {
-    return this.resolveReviewUseCase.execute(input);
+  resolveReview(
+    scope: OrganizationScope,
+    input: ResolveReviewInput,
+  ): Promise<Payment> {
+    return this.resolveReviewUseCase.execute(scope, input);
   }
 
   /** Customer came back from the gateway: no writes, queues a status query. */
-  handleBrowserReturn(input: BrowserReturnInput): Promise<Payment> {
-    return this.handleBrowserReturnUseCase.execute(input);
+  handleBrowserReturn(
+    scope: ReadScope,
+    input: BrowserReturnInput,
+  ): Promise<Payment> {
+    return this.handleBrowserReturnUseCase.execute(scope, input);
   }
 
   /** Merchant cancel. No-op on CANCELLED; SUCCEEDED/EXPIRED: `PaymentNotPendingError`. */
-  cancelPayment(paymentId: string): Promise<Payment> {
-    return this.cancelPaymentUseCase.execute(paymentId);
+  cancelPayment(scope: OrganizationScope, paymentId: string): Promise<Payment> {
+    return this.cancelPaymentUseCase.execute(scope, paymentId);
   }
 
   createPayment(
+    scope: OrganizationScope,
     input: CreatePaymentInput,
     options?: CreatePaymentOptions,
   ): Promise<CreatePaymentResult> {
-    return this.createPaymentUseCase.execute(input, options);
+    return this.createPaymentUseCase.execute(scope, input, options);
   }
 
   /** Read only: no writes, no row lock. Unknown id: `PaymentNotFoundError`. */
-  getPayment(paymentId: string): Promise<Payment> {
-    return this.getPaymentUseCase.execute(paymentId);
+  getPayment(scope: OrganizationScope, paymentId: string): Promise<Payment> {
+    return this.getPaymentUseCase.execute(scope, paymentId);
   }
 
-  startAttempt(input: StartAttemptInput): Promise<StartAttemptResult> {
-    return this.startAttemptUseCase.execute(input);
+  startAttempt(
+    scope: OrganizationScope,
+    input: StartAttemptInput,
+  ): Promise<StartAttemptResult> {
+    return this.startAttemptUseCase.execute(scope, input);
   }
 }

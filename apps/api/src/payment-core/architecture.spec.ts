@@ -1,14 +1,21 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
-// Build-time checks of Core's boundaries (run by `pnpm test`):
+// Build-time checks of the module boundaries (run by `pnpm test`), for Payment
+// Core and for the identity module, which is laid out the same way:
 // 1. The transaction runner is the only code that opens a database transaction.
-// 2. Outside `infrastructure/prisma`, Core never imports the database client,
-//    so repositories are the only place that sees Prisma types.
+// 2. Outside `infrastructure/prisma`, a module never imports the database
+//    client, so repositories are the only place that sees Prisma types.
 
 const SRC = join(import.meta.dirname, '..');
-const RUNNER = 'payment-core/infrastructure/prisma/transaction-runner.ts';
-const PRISMA_ADAPTER_DIR = 'payment-core/infrastructure/prisma/';
+const MODULES = ['payment-core', 'identity'] as const;
+const RUNNERS: readonly string[] = MODULES.map(
+  (module) => `${module}/infrastructure/prisma/transaction-runner.ts`,
+);
+const RUNNER = RUNNERS[0] as string;
+const PRISMA_ADAPTER_DIRS: readonly string[] = MODULES.map(
+  (module) => `${module}/infrastructure/prisma/`,
+);
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -32,11 +39,11 @@ export function transactionOpeners(
   sources: readonly { path: string; text: string }[],
 ): string[] {
   return sources
-    .filter((f) => f.path !== RUNNER && /\$transaction\b/.test(f.text))
+    .filter((f) => !RUNNERS.includes(f.path) && /\$transaction\b/.test(f.text))
     .map((f) => f.path);
 }
 
-/** Core files outside the Prisma adapter that import the database client. */
+/** Module files outside their Prisma adapter that import the database client. */
 export function databaseClientImporters(
   sources: readonly { path: string; text: string }[],
 ): string[] {
@@ -45,8 +52,8 @@ export function databaseClientImporters(
   return sources
     .filter(
       (f) =>
-        f.path.startsWith('payment-core/') &&
-        !f.path.startsWith(PRISMA_ADAPTER_DIR) &&
+        MODULES.some((module) => f.path.startsWith(`${module}/`)) &&
+        !PRISMA_ADAPTER_DIRS.some((dir) => f.path.startsWith(dir)) &&
         importsClient.test(f.text),
     )
     .map((f) => f.path);
@@ -71,13 +78,41 @@ describe('transaction boundary', () => {
   });
 
   it('is actually scanning the source tree', () => {
-    expect(files.map((f) => f.path)).toContain(RUNNER);
+    for (const runner of RUNNERS) {
+      expect(files.map((f) => f.path)).toContain(runner);
+    }
+  });
+
+  it('flags a transaction opened outside the identity runner', () => {
+    expect(
+      transactionOpeners([
+        {
+          path: 'identity/application/use-cases/x.ts',
+          text: 'await prisma.$transaction(async (tx) => {})',
+        },
+      ]),
+    ).toEqual(['identity/application/use-cases/x.ts']);
   });
 });
 
 describe('repositories hide the database client', () => {
   it('no Core module outside infrastructure/prisma imports Prisma', () => {
     expect(databaseClientImporters(files)).toEqual([]);
+  });
+
+  it('flags an identity module that imports Prisma outside its adapter', () => {
+    expect(
+      databaseClientImporters([
+        {
+          path: 'identity/application/use-cases/x.ts',
+          text: "import { PrismaService } from '../../../database/prisma.service.js';",
+        },
+        {
+          path: 'identity/infrastructure/prisma/organization.repository.ts',
+          text: "import type { Organization } from '../../../generated/prisma/client.js';",
+        },
+      ]),
+    ).toEqual(['identity/application/use-cases/x.ts']);
   });
 
   it('flags a Core module that imports Prisma', () => {

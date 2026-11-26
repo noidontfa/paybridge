@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { hashApiKey } from '../../src/identity/application/api-key-secret.js';
 import { runSeed, SeedRefusedError } from '../../seed/seed.js';
 import { testDatabaseUrl } from '../setup/test-database.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../setup/organizations.js';
 
 // Ticket 01: the seed command. Its observable behaviour is what it leaves in
 // the database (the operator endpoints arrive in later tickets) and when it
@@ -74,9 +76,12 @@ function distinct<T>(values: T[]): T[] {
 describe('seed contents', () => {
   beforeEach(() => seed());
 
-  it('creates about 22 Payments, all with the SEED- Upstream Reference prefix', async () => {
+  it('creates 25 Payments (22 in the default Organization, 3 in a second one), all with the SEED- Upstream Reference prefix', async () => {
     const payments = await prisma.payment.findMany();
-    expect(payments.length).toBe(22);
+    expect(payments.length).toBe(25);
+    expect(
+      payments.filter((p) => p.organizationId === DEFAULT_ORGANIZATION_ID),
+    ).toHaveLength(22);
     expect(payments.every((p) => p.merchantOrderId.startsWith('SEED-'))).toBe(
       true,
     );
@@ -195,7 +200,9 @@ describe('seed contents', () => {
   });
 
   it('has six Callbacks covering every status, a missing event id and an unknown Attempt Key', async () => {
-    const callbacks = await prisma.webhookInbox.findMany();
+    const callbacks = await prisma.webhookInbox.findMany({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+    });
     expect(callbacks).toHaveLength(6);
     expect(distinct(callbacks.map((c) => c.status))).toEqual([
       'FAILED',
@@ -216,7 +223,9 @@ describe('seed contents', () => {
   });
 
   it('has six Payment Events of all five types, at least one unpublished', async () => {
-    const events = await prisma.outboxEvent.findMany();
+    const events = await prisma.outboxEvent.findMany({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+    });
     expect(events).toHaveLength(6);
     expect(distinct(events.map((e) => e.eventType))).toEqual([
       'PaymentCancelled',
@@ -262,6 +271,109 @@ describe('seed contents', () => {
   });
 });
 
+describe('seed organizations', () => {
+  beforeEach(() => seed());
+
+  it('creates its scenarios inside at least two Organizations', async () => {
+    const organizations = await prisma.organization.findMany({
+      where: { payments: { some: {} } },
+    });
+    expect(organizations.length).toBeGreaterThanOrEqual(2);
+    expect(organizations.map((o) => o.id)).toContain(DEFAULT_ORGANIZATION_ID);
+  });
+
+  it('creates Gateway Connections, one of them disabled, with encrypted credentials', async () => {
+    const connections = await prisma.gatewayConnection.findMany();
+    expect(connections.some((c) => !c.enabled)).toBe(true);
+    expect(connections.some((c) => c.enabled)).toBe(true);
+    const withCredentials = connections.filter((c) => c.credentialsCiphertext);
+    expect(withCredentials.length).toBeGreaterThan(0);
+    for (const c of withCredentials) {
+      expect(c.credentialsCiphertext).not.toContain('sk_test');
+      expect(c.credentialsKeyId).toBeTruthy();
+    }
+    await seed();
+    expect(await prisma.gatewayConnection.count()).toBe(connections.length);
+  });
+
+  it('keeps every row of a Payment in the Payment own Organization', async () => {
+    const payments = await prisma.payment.findMany({
+      include: { transactions: true, outboxEvents: true },
+    });
+    for (const payment of payments) {
+      for (const attempt of payment.transactions) {
+        expect(attempt.organizationId, attempt.id).toBe(payment.organizationId);
+      }
+      for (const event of payment.outboxEvents) {
+        expect(event.organizationId, event.id).toBe(payment.organizationId);
+      }
+    }
+    const transitions = await prisma.$queryRaw<{ n: bigint }[]>`
+      SELECT count(*) AS n FROM core_status_transitions st
+      WHERE st.entity_type = 'PAYMENT' AND st.organization_id <>
+        (SELECT p.organization_id FROM core_payments p WHERE p.id = st.entity_id)`;
+    expect(Number(transitions[0]?.n)).toBe(0);
+  });
+
+  it('uses one Upstream Reference in two Organizations', async () => {
+    const same = await prisma.payment.findMany({
+      where: { merchantOrderId: 'SEED-P01' },
+    });
+    expect(new Set(same.map((p) => p.organizationId)).size).toBe(2);
+  });
+
+  it('includes a suspended Organization whose admin cannot sign in', async () => {
+    const suspended = await prisma.organization.findMany({
+      where: { name: 'Dormant Goods' },
+      include: { users: true },
+    });
+    expect(suspended).toHaveLength(1);
+    expect(suspended[0]!.status).toBe('SUSPENDED');
+    expect(suspended[0]!.users.length).toBeGreaterThan(0);
+  });
+
+  it('leaves the Organizations in place on a re-run', async () => {
+    const before = await prisma.organization.count();
+    await seed();
+    expect(await prisma.organization.count()).toBe(before);
+  });
+});
+
+describe('seed API Keys', () => {
+  it('creates working, revoked and per-Organization keys, kept across re-runs', async () => {
+    const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    const keys = await prisma.apiKey.findMany({
+      where: { label: { startsWith: 'Seed:' } },
+      orderBy: { label: 'asc' },
+    });
+    expect(keys.length).toBe(first.apiKeys.length);
+    expect(new Set(keys.map((k) => k.organizationId)).size).toBeGreaterThanOrEqual(2);
+    expect(keys.some((k) => k.revokedAt)).toBe(true);
+    for (const issued of first.apiKeys) {
+      const row = keys.find((k) => k.label === issued.label)!;
+      expect(row.keyHash).toBe(hashApiKey(issued.key));
+      expect(issued.key.startsWith(row.prefix)).toBe(true);
+    }
+  });
+});
+
+describe('seed users', () => {
+  it('includes a deactivated User next to active ones', async () => {
+    await seed();
+    const former = await prisma.user.findUniqueOrThrow({
+      where: { email: 'former.operator@default.paybridge.dev' },
+    });
+    expect(former).toMatchObject({ active: false, role: 'OPERATOR' });
+    expect(
+      await prisma.user.count({
+        where: { organizationId: former.organizationId, active: true },
+      }),
+    ).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('seed timestamps and ids', () => {
   it('uses fixed offsets from the run time and deterministic ids', async () => {
     await seed();
@@ -283,6 +395,7 @@ describe('seed re-runs', () => {
     const other = await prisma.payment.create({
       data: {
         id: '00000000-0000-7000-8000-00000000abcd',
+        organizationId: DEFAULT_ORGANIZATION_ID,
         merchantOrderId: 'REAL-1',
         amount: '5000',
         currency: 'VND',
@@ -291,6 +404,7 @@ describe('seed re-runs', () => {
         transactions: {
           create: {
             id: '00000000-0000-7000-8000-00000000abce',
+            organizationId: DEFAULT_ORGANIZATION_ID,
             gatewayId: 'stripe',
             status: 'CREATED',
           },
@@ -298,6 +412,7 @@ describe('seed re-runs', () => {
         outboxEvents: {
           create: {
             id: '00000000-0000-7000-8000-00000000abcf',
+            organizationId: DEFAULT_ORGANIZATION_ID,
             eventType: 'PaymentCreated',
             payload: {},
           },
@@ -341,18 +456,18 @@ describe('seed command line', () => {
   it('seeds the database and honours --bulk', async () => {
     const result = run(['--bulk', '3'], { NODE_ENV: 'test' });
     expect(result.status).toBe(0);
-    expect(await prisma.payment.count()).toBe(25);
+    expect(await prisma.payment.count()).toBe(28);
   });
 });
 
 describe('seed bulk flag', () => {
   it('adds no bulk Payments by default and N more with the flag, replaced on re-run', async () => {
     await seed();
-    expect(await prisma.payment.count()).toBe(22);
+    expect(await prisma.payment.count()).toBe(25);
     await seed({ bulk: 150 });
-    expect(await prisma.payment.count()).toBe(172);
+    expect(await prisma.payment.count()).toBe(175);
     await seed();
-    expect(await prisma.payment.count()).toBe(22);
+    expect(await prisma.payment.count()).toBe(25);
   });
 
   it('keeps bulk Payments within 30 days', async () => {

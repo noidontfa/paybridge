@@ -15,6 +15,9 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
+import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetCallback,
@@ -31,6 +34,7 @@ import {
  * `callbackDetailSchema`. A Callback is a stored inbound gateway notification.
  */
 @ApiTags('internal')
+@RequirePermission('payments:view')
 @Controller(`${INTERNAL_PREFIX}/callbacks`)
 export class CallbacksController {
   constructor(
@@ -50,10 +54,11 @@ export class CallbacksController {
   })
   @ApiBadRequestResponse({ type: ErrorResponseDto })
   async list(
+    @CurrentReadScope() scope: ReadScope,
     @Query(new ZodValidationPipe(callbacksListQuerySchema))
     query: CallbacksListQuery,
   ) {
-    const page = await this.listCallbacks.execute(query);
+    const page = await this.listCallbacks.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -76,8 +81,8 @@ export class CallbacksController {
   })
   @ApiOkResponse({ description: 'The Callback' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
-  async get(@Param('id') id: string) {
-    const row = await this.getCallback.execute(id);
+  async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
+    const row = await this.getCallback.execute(scope, id);
     if (!row) throw new NotFoundException(`Callback ${id} not found`);
     return {
       id: row.id,

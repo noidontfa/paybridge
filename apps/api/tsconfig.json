@@ -5,6 +5,6 @@
     "rootDir": ".",
     "types": ["vitest/globals", "node"]
   },
-  "include": ["src", "test", "seed", "prisma.config.ts", "vitest.config*.ts"],
+  "include": ["src", "test", "seed", "cli", "prisma.config.ts", "vitest.config*.ts"],
   "exclude": ["node_modules", "dist"]
 }

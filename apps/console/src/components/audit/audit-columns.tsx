@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { StatusTransitionEntityType } from '@/lib/api/schemas';
 import type { AuditEntry } from '@/lib/api/status-transitions';
+import { actorText } from '@/lib/actor';
 
 export const ENTITY_TYPE_LABELS: Record<StatusTransitionEntityType, string> = {
   PAYMENT: 'Payment',
@@ -67,7 +68,7 @@ export const auditColumns: DataTableColumns<AuditEntry> = column.columns([
     id: 'actor',
     header: 'Actor',
     enableSorting: false,
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.actor}</span>,
+    cell: ({ row }) => <span className="font-mono text-xs">{actorText(row.original)}</span>,
   }),
   column.accessor('reason', {
     id: 'note',

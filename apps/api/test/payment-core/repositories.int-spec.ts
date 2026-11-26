@@ -3,6 +3,13 @@ import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/p
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
+import {
+  DEFAULT_ORGANIZATION_ID,
+  defaultScope,
+  ensureOtherOrganization,
+  otherScope,
+} from '../setup/organizations.js';
 
 // The per-table repositories, through the transaction runner.
 
@@ -20,7 +27,7 @@ beforeEach(async () => {
 
 async function givenPayment() {
   return runner.run((r) =>
-    r.payments.create({
+    r.payments.create(defaultScope, {
       id: newId(),
       merchantOrderId: `order-${newId()}`,
       amount: '50000',
@@ -33,7 +40,7 @@ async function givenPayment() {
 
 async function givenAttempt(paymentId: string) {
   return runner.run((r) =>
-    r.payments.createAttempt({
+    r.payments.createAttempt(defaultScope, {
       id: newId(),
       paymentId,
       gatewayId: 'fake',
@@ -58,8 +65,10 @@ describe('StatusTransitionRepository', () => {
     const payment = await givenPayment();
 
     await runner.run(async (r) => {
-      await r.payments.update(payment.id, { status: 'CANCELLED' });
-      await r.statusTransitions.record({
+      await r.payments.update(defaultScope, payment.id, {
+        status: 'CANCELLED',
+      });
+      await r.statusTransitions.record(defaultScope, {
         entityType: 'PAYMENT',
         entityId: payment.id,
         fromStatus: 'PENDING',
@@ -71,18 +80,22 @@ describe('StatusTransitionRepository', () => {
     });
 
     const trail = await repos.statusTransitions.listForEntity(
+      defaultScope,
       'PAYMENT',
       payment.id,
     );
     expect(trail).toEqual([
       {
         id: expect.any(String),
+        organizationId: DEFAULT_ORGANIZATION_ID,
         entityType: 'PAYMENT',
         entityId: payment.id,
         fromStatus: 'PENDING',
         toStatus: 'CANCELLED',
         trigger: 'merchant_cancel',
         actor: 'merchant',
+        actorRole: null,
+        actorName: null,
         reason: 'customer changed their mind',
         createdAt: expect.any(Date),
       },
@@ -92,7 +105,7 @@ describe('StatusTransitionRepository', () => {
   it('records a creation with no from-status and no reason', async () => {
     const payment = await givenPayment();
     await runner.run((r) =>
-      r.statusTransitions.record({
+      r.statusTransitions.record(defaultScope, {
         entityType: 'PAYMENT',
         entityId: payment.id,
         fromStatus: null,
@@ -102,6 +115,7 @@ describe('StatusTransitionRepository', () => {
       }),
     );
     const [entry] = await repos.statusTransitions.listForEntity(
+      defaultScope,
       'PAYMENT',
       payment.id,
     );
@@ -112,8 +126,10 @@ describe('StatusTransitionRepository', () => {
     const payment = await givenPayment();
 
     await runAndRollBack(async (r) => {
-      await r.payments.update(payment.id, { status: 'CANCELLED' });
-      await r.statusTransitions.record({
+      await r.payments.update(defaultScope, payment.id, {
+        status: 'CANCELLED',
+      });
+      await r.statusTransitions.record(defaultScope, {
         entityType: 'PAYMENT',
         entityId: payment.id,
         fromStatus: 'PENDING',
@@ -123,9 +139,15 @@ describe('StatusTransitionRepository', () => {
       });
     });
 
-    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
     expect(
-      await repos.statusTransitions.listForEntity('PAYMENT', payment.id),
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
+    expect(
+      await repos.statusTransitions.listForEntity(
+        defaultScope,
+        'PAYMENT',
+        payment.id,
+      ),
     ).toEqual([]);
   });
 });
@@ -135,8 +157,10 @@ describe('OutboxRepository', () => {
     const payment = await givenPayment();
 
     const event = await runner.run(async (r) => {
-      await r.payments.update(payment.id, { status: 'CANCELLED' });
-      return r.outbox.add({
+      await r.payments.update(defaultScope, payment.id, {
+        status: 'CANCELLED',
+      });
+      return r.outbox.add(defaultScope, {
         eventType: 'PaymentCancelled',
         paymentId: payment.id,
         payload: { paymentId: payment.id, status: 'CANCELLED' },
@@ -144,32 +168,41 @@ describe('OutboxRepository', () => {
     });
 
     expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7/);
-    expect(await repos.outbox.listForPayment(payment.id)).toEqual([
-      {
-        id: event.id,
-        eventType: 'PaymentCancelled',
-        paymentId: payment.id,
-        payload: { paymentId: payment.id, status: 'CANCELLED' },
-        createdAt: expect.any(Date),
-        publishedAt: null,
-      },
-    ]);
+    expect(await repos.outbox.listForPayment(defaultScope, payment.id)).toEqual(
+      [
+        {
+          id: event.id,
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          eventType: 'PaymentCancelled',
+          paymentId: payment.id,
+          payload: { paymentId: payment.id, status: 'CANCELLED' },
+          createdAt: expect.any(Date),
+          publishedAt: null,
+        },
+      ],
+    );
   });
 
   it('leaves no outbox row when the state change rolls back', async () => {
     const payment = await givenPayment();
 
     await runAndRollBack(async (r) => {
-      await r.payments.update(payment.id, { status: 'CANCELLED' });
-      await r.outbox.add({
+      await r.payments.update(defaultScope, payment.id, {
+        status: 'CANCELLED',
+      });
+      await r.outbox.add(defaultScope, {
         eventType: 'PaymentCancelled',
         paymentId: payment.id,
         payload: {},
       });
     });
 
-    expect(await repos.outbox.listForPayment(payment.id)).toEqual([]);
-    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
+    expect(await repos.outbox.listForPayment(defaultScope, payment.id)).toEqual(
+      [],
+    );
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
   });
 });
 
@@ -186,11 +219,12 @@ describe('WebhookInboxRepository', () => {
 
   it('stores a callback as RECEIVED and finds it by id', async () => {
     const { entry, duplicate } = await repos.webhookInbox.record(
+      defaultScope,
       callback('evt-1'),
     );
 
     expect(duplicate).toBe(false);
-    const found = await repos.webhookInbox.findById(entry.id);
+    const found = await repos.webhookInbox.findById(defaultScope, entry.id);
     expect(found).toMatchObject({
       gatewayId: 'fake',
       dedupeKey: 'evt-1',
@@ -207,9 +241,12 @@ describe('WebhookInboxRepository', () => {
   });
 
   it('reports a duplicate (same gateway and dedupe key) and keeps the first row', async () => {
-    const first = await repos.webhookInbox.record(callback('evt-2'));
+    const first = await repos.webhookInbox.record(
+      defaultScope,
+      callback('evt-2'),
+    );
     const second = await runner.run((r) =>
-      r.webhookInbox.record(callback('evt-2')),
+      r.webhookInbox.record(defaultScope, callback('evt-2')),
     );
 
     expect(second.duplicate).toBe(true);
@@ -223,7 +260,7 @@ describe('IdempotencyKeyRepository', () => {
     const expiresAt = new Date('2030-01-02T00:00:00.000Z');
 
     await runner.run((r) =>
-      r.idempotencyKeys.create({
+      r.idempotencyKeys.create(defaultScope, {
         key: 'idem-1',
         requestHash: 'sha256:abc',
         responseStatus: 201,
@@ -233,7 +270,8 @@ describe('IdempotencyKeyRepository', () => {
       }),
     );
 
-    expect(await repos.idempotencyKeys.find('idem-1')).toEqual({
+    expect(await repos.idempotencyKeys.find(defaultScope, 'idem-1')).toEqual({
+      organizationId: DEFAULT_ORGANIZATION_ID,
       key: 'idem-1',
       requestHash: 'sha256:abc',
       responseStatus: 201,
@@ -242,7 +280,9 @@ describe('IdempotencyKeyRepository', () => {
       createdAt: expect.any(Date),
       expiresAt,
     });
-    expect(await repos.idempotencyKeys.find('unknown')).toBeNull();
+    expect(
+      await repos.idempotencyKeys.find(defaultScope, 'unknown'),
+    ).toBeNull();
   });
 });
 
@@ -252,22 +292,162 @@ describe('GatewayRawResponseRepository', () => {
     const attempt = await givenAttempt(payment.id);
 
     await runner.run(async (r) => {
-      await r.gatewayRawResponses.record({
+      await r.gatewayRawResponses.record(defaultScope, {
         attemptId: attempt.id,
         operation: 'initiate',
         payload: { code: '00', url: 'https://pay.example' },
       });
-      await r.gatewayRawResponses.record({
+      await r.gatewayRawResponses.record(defaultScope, {
         attemptId: attempt.id,
         operation: 'query',
         payload: ['anything', 1],
       });
     });
 
-    const stored = await repos.gatewayRawResponses.listForAttempt(attempt.id);
+    const stored = await repos.gatewayRawResponses.listForAttempt(
+      defaultScope,
+      attempt.id,
+    );
     expect(stored.map((s) => [s.operation, s.payload])).toEqual([
       ['initiate', { code: '00', url: 'https://pay.example' }],
       ['query', ['anything', 1]],
     ]);
+  });
+});
+
+describe('Organization scope', () => {
+  beforeEach(() => ensureOtherOrganization(prisma));
+
+  it('finds a Payment only inside its own Organization, or across all of them when asked', async () => {
+    const payment = await givenPayment();
+
+    expect(
+      await repos.payments.findById(defaultScope, payment.id),
+    ).toMatchObject({
+      id: payment.id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
+    });
+    expect(await repos.payments.findById(otherScope, payment.id)).toBeNull();
+    expect(
+      await repos.payments.findById(ALL_ORGANIZATIONS, payment.id),
+    ).toMatchObject({ id: payment.id });
+  });
+
+  it('locks nothing and loads nothing for another Organization', async () => {
+    const payment = await givenPayment();
+
+    const found = await runner.run((r) =>
+      r.payments.findForUpdate(otherScope, payment.id),
+    );
+
+    expect(found).toBeNull();
+  });
+
+  it('refuses to update a Payment of another Organization', async () => {
+    const payment = await givenPayment();
+
+    await expect(
+      repos.payments.update(otherScope, payment.id, { status: 'CANCELLED' }),
+    ).rejects.toThrow();
+
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
+  });
+
+  it('keeps the Upstream Reference per Organization', async () => {
+    const payment = await givenPayment();
+    const reference = payment.merchantOrderId;
+
+    expect(
+      await repos.payments.findIdByUpstreamReference(defaultScope, reference),
+    ).toBe(payment.id);
+    expect(
+      await repos.payments.findIdByUpstreamReference(otherScope, reference),
+    ).toBeNull();
+  });
+
+  it('stamps every row it writes with the scope Organization', async () => {
+    const payment = await givenPayment();
+    const attempt = await givenAttempt(payment.id);
+    await runner.run(async (r) => {
+      await r.statusTransitions.record(defaultScope, {
+        entityType: 'PAYMENT',
+        entityId: payment.id,
+        fromStatus: null,
+        toStatus: 'PENDING',
+        trigger: 'create_payment',
+        actor: 'merchant',
+      });
+      await r.outbox.add(defaultScope, {
+        eventType: 'PaymentCreated',
+        paymentId: payment.id,
+        payload: {},
+      });
+      await r.gatewayRawResponses.record(defaultScope, {
+        attemptId: attempt.id,
+        operation: 'initiate',
+        payload: {},
+      });
+    });
+
+    expect(attempt.organizationId).toBe(DEFAULT_ORGANIZATION_ID);
+    const trail = await repos.statusTransitions.listForEntity(
+      defaultScope,
+      'PAYMENT',
+      payment.id,
+    );
+    expect(trail[0]?.organizationId).toBe(DEFAULT_ORGANIZATION_ID);
+    expect(
+      await repos.statusTransitions.listForEntity(
+        otherScope,
+        'PAYMENT',
+        payment.id,
+      ),
+    ).toEqual([]);
+    expect(await repos.outbox.listForPayment(otherScope, payment.id)).toEqual(
+      [],
+    );
+    expect(
+      await repos.gatewayRawResponses.listForAttempt(otherScope, attempt.id),
+    ).toEqual([]);
+  });
+
+  it('keeps an Idempotency-Key and a callback inside their Organization', async () => {
+    const payment = await givenPayment();
+    await runner.run(async (r) => {
+      await r.idempotencyKeys.create(defaultScope, {
+        key: 'k',
+        requestHash: 'h',
+        responseStatus: 201,
+        responseBody: {},
+        paymentId: payment.id,
+        expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      });
+    });
+    const { entry } = await repos.webhookInbox.record(defaultScope, {
+      gatewayId: 'fake',
+      dedupeKey: 'd',
+      rawBody: new Uint8Array([1]),
+      headers: {},
+      query: {},
+    });
+
+    expect(await repos.idempotencyKeys.find(defaultScope, 'k')).not.toBeNull();
+    expect(await repos.idempotencyKeys.find(otherScope, 'k')).toBeNull();
+    expect(await repos.webhookInbox.findById(otherScope, entry.id)).toBeNull();
+    expect(
+      await repos.webhookInbox.claim(otherScope, entry.id, new Date()),
+    ).toBeNull();
+    // The same callback body is a separate row in another Organization.
+    const other = await repos.webhookInbox.record(otherScope, {
+      gatewayId: 'fake',
+      dedupeKey: 'd',
+      rawBody: new Uint8Array([1]),
+      headers: {},
+      query: {},
+    });
+    expect(other.duplicate).toBe(false);
+    expect(other.entry.id).not.toBe(entry.id);
   });
 });

@@ -1,9 +1,7 @@
 import { runSeed } from '../../../seed/seed.js';
 import { Prisma } from '../../../src/generated/prisma/client.js';
 import { newId } from '../../../src/payment-core/domain/ids.js';
-import {
-  paymentEventListSchema,
-} from '../../contract/console/payment-events.js';
+import { paymentEventListSchema } from '../../contract/console/payment-events.js';
 import {
   PAYMENT_EVENT_TYPES,
   paymentEventSchema,
@@ -12,6 +10,7 @@ import { createConsoleApp, type ConsoleApp } from '../../setup/console-app.js';
 import { resetDatabase } from '../../setup/reset-db.js';
 import { testDatabaseUrl } from '../../setup/test-database.js';
 import { createTestPrismaClient } from '../../setup/test-prisma.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../setup/organizations.js';
 
 // Ticket 07: GET /internal/payment-events[/:id] over HTTP on real PostgreSQL.
 
@@ -35,6 +34,7 @@ async function insertPayment(ref: string): Promise<string> {
   await prisma.payment.create({
     data: {
       id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       merchantOrderId: ref,
       amount: new Prisma.Decimal('1000'),
       currency: 'VND',
@@ -61,6 +61,7 @@ async function insertEvent(input: EventInput): Promise<string> {
   await prisma.outboxEvent.create({
     data: {
       id,
+      organizationId: DEFAULT_ORGANIZATION_ID,
       eventType: input.type ?? 'PaymentCreated',
       paymentId: input.paymentId,
       payload: input.payload ?? {},
@@ -102,7 +103,11 @@ describe('seeded data', () => {
 describe('list', () => {
   it('omits the payload and returns newest first', async () => {
     const paymentId = await insertPayment('A');
-    await insertEvent({ paymentId, createdAt: new Date(T0 - MIN), payload: { n: 1 } });
+    await insertEvent({
+      paymentId,
+      createdAt: new Date(T0 - MIN),
+      payload: { n: 1 },
+    });
     const newer = await insertEvent({
       paymentId,
       type: 'PaymentSucceeded',
@@ -111,7 +116,10 @@ describe('list', () => {
     });
     const { items, nextCursor } = await list();
     expect(nextCursor).toBeNull();
-    expect(items.map((e) => e.type)).toEqual(['PaymentSucceeded', 'PaymentCreated']);
+    expect(items.map((e) => e.type)).toEqual([
+      'PaymentSucceeded',
+      'PaymentCreated',
+    ]);
     expect(items[0]).toEqual({
       id: newer,
       type: 'PaymentSucceeded',
@@ -131,32 +139,48 @@ describe('list', () => {
     beforeEach(async () => {
       paymentId = await insertPayment('INV-Alpha');
       const other = await insertPayment('ORD_100%');
-      await insertEvent({ paymentId, type: 'PaymentCreated', createdAt: new Date(T0 - 3 * MIN) });
+      await insertEvent({
+        paymentId,
+        type: 'PaymentCreated',
+        createdAt: new Date(T0 - 3 * MIN),
+      });
       await insertEvent({
         paymentId,
         type: 'PaymentSucceeded',
         createdAt: new Date(T0 - 2 * MIN),
         publishedAt: new Date(T0),
       });
-      await insertEvent({ paymentId: other, type: 'PaymentCreated', createdAt: new Date(T0 - 1 * MIN) });
+      await insertEvent({
+        paymentId: other,
+        type: 'PaymentCreated',
+        createdAt: new Date(T0 - 1 * MIN),
+      });
     });
     const types = async (query: string) =>
       (await list(query)).items.map((e) => e.type);
 
     it('filters by type', async () => {
-      expect(await types('?type=PaymentCreated')).toEqual(['PaymentCreated', 'PaymentCreated']);
+      expect(await types('?type=PaymentCreated')).toEqual([
+        'PaymentCreated',
+        'PaymentCreated',
+      ]);
       expect(await types('?type=PaymentExpired')).toEqual([]);
     });
 
     it('filters by published or unpublished', async () => {
       expect(await types('?published=true')).toEqual(['PaymentSucceeded']);
-      expect(await types('?published=false')).toEqual(['PaymentCreated', 'PaymentCreated']);
+      expect(await types('?published=false')).toEqual([
+        'PaymentCreated',
+        'PaymentCreated',
+      ]);
       expect(await types('?published=')).toHaveLength(3);
     });
 
     it('combines type and published', async () => {
       expect(await types('?type=PaymentCreated&published=true')).toEqual([]);
-      expect(await types('?type=PaymentSucceeded&published=true')).toEqual(['PaymentSucceeded']);
+      expect(await types('?type=PaymentSucceeded&published=true')).toEqual([
+        'PaymentSucceeded',
+      ]);
     });
 
     it('searches event id, Payment id and Upstream Reference', async () => {
@@ -175,7 +199,10 @@ describe('list', () => {
     it('pages through every row once, with ties on the created time', async () => {
       const paymentId = await insertPayment('A');
       for (let i = 0; i < 11; i++) {
-        await insertEvent({ paymentId, createdAt: new Date(T0 - (i % 3) * MIN) });
+        await insertEvent({
+          paymentId,
+          createdAt: new Date(T0 - (i % 3) * MIN),
+        });
       }
       const all = (await list('?limit=100')).items.map((e) => e.id);
       const seen: string[] = [];
@@ -197,7 +224,10 @@ describe('list', () => {
 
   it.each([
     ['a malformed cursor', '?cursor=%25%25'],
-    ['a cursor that is not ours', `?cursor=${Buffer.from('12').toString('base64url')}`],
+    [
+      'a cursor that is not ours',
+      `?cursor=${Buffer.from('12').toString('base64url')}`,
+    ],
     ['an unknown type', '?type=PaymentRefunded'],
     ['an unknown published value', '?published=maybe'],
     ['limit 0', '?limit=0'],

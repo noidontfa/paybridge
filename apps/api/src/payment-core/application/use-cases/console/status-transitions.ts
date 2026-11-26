@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   StatusTransitionsReadRepository,
   type StatusTransitionListQuery,
@@ -15,9 +16,10 @@ export class ListStatusTransitions {
   ) {}
 
   async execute(
+    scope: ReadScope,
     query: StatusTransitionListQuery,
   ): Promise<Page<StatusTransitionRow>> {
-    const rows = await this.transitions.list(query);
+    const rows = await this.transitions.list(scope, query);
     return toPage(rows, query.limit, (last) =>
       encodeCursor([
         'status-transitions',

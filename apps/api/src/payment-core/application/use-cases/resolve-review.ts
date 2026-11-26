@@ -4,12 +4,13 @@ import {
   PaymentNotFoundError,
 } from '../../domain/errors.js';
 import { Clock } from '../../domain/clock.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import {
   decideReviewResolution,
   type OperatorResolutionStatus,
 } from '../../domain/rules/review-resolution.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import {
   cancelOtherOpenAttempts,
@@ -24,8 +25,12 @@ import { recordAttemptTransition } from '../record-attempt-transition.js';
 export interface ResolveReviewInput {
   readonly paymentId: string;
   readonly attemptId: string;
-  /** Who decided. Trusted: the route is internal and Phase 1 has no auth. */
+  /** The id of the User who decided, from their access token. */
   readonly actor: string;
+  /** The Role that User held. */
+  readonly actorRole: string;
+  /** That User's name. */
+  readonly actorName: string;
   readonly note: string;
   /** Absent: add a note without changing the status. */
   readonly status?: OperatorResolutionStatus;
@@ -49,13 +54,16 @@ export class ResolveReview {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(Clock) private readonly clock: Clock,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
-  async execute(input: ResolveReviewInput): Promise<Payment> {
+  async execute(
+    scope: OrganizationScope,
+    input: ResolveReviewInput,
+  ): Promise<Payment> {
     const { payment, cancelled } = await this.runner.run(async (repos) => {
-      const locked = await repos.payments.findForUpdate(input.paymentId);
+      const locked = await repos.payments.findForUpdate(scope, input.paymentId);
       if (!locked) throw new PaymentNotFoundError(input.paymentId);
       const attempt = locked.attempts.find((a) => a.id === input.attemptId);
       if (!attempt) {
@@ -72,19 +80,23 @@ export class ResolveReview {
       const cause = {
         trigger: 'operator_resolution',
         actor: input.actor,
+        actorRole: input.actorRole,
+        actorName: input.actorName,
         reason: input.note,
       };
       let cancelled: CancellableAttempt[] = [];
 
       switch (decision.kind) {
         case 'note':
-          await repos.statusTransitions.record({
+          await repos.statusTransitions.record(scope, {
             entityType: 'PAYMENT_TRANSACTION',
             entityId: attempt.id,
             fromStatus: attempt.status,
             toStatus: attempt.status,
             trigger: 'operator_note',
             actor: input.actor,
+            actorRole: input.actorRole,
+            actorName: input.actorName,
             reason: input.note,
           });
           break;
@@ -113,19 +125,22 @@ export class ResolveReview {
         }
       }
 
-      const reloaded = await repos.payments.findById(locked.id);
+      const reloaded = await repos.payments.findById(scope, locked.id);
       return { payment: reloaded ?? locked, cancelled };
     });
 
     // After commit; never throws. Only plugins that declare supportsCancel.
-    await this.cancels.cancel(cancelled.filter((a) => this.canCancel(a)));
+    const cancellable: CancellableAttempt[] = [];
+    for (const a of cancelled) if (await this.canCancel(a)) cancellable.push(a);
+    await this.cancels.cancel(cancellable);
     return payment;
   }
 
-  private canCancel(attempt: CancellableAttempt): boolean {
+  private async canCancel(attempt: CancellableAttempt): Promise<boolean> {
     try {
-      return this.gateways.resolve(attempt.gatewayId).capabilities
-        .supportsCancel;
+      return (
+        await this.plugins.forExisting(attempt.organizationId, attempt.gatewayId)
+      ).capabilities.supportsCancel;
     } catch {
       return false;
     }

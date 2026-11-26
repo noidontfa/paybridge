@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { Logger, Module } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -16,6 +17,7 @@ import {
 import { newId } from '../../src/payment-core/domain/ids.js';
 import type { Payment } from '../../src/payment-core/domain/payment.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
+import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
 import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
@@ -26,6 +28,8 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Merchant cancel (ticket 17): one transaction cancels the Payment and its
 // open attempts and writes `PaymentCancelled`; providers are asked after
@@ -41,12 +45,18 @@ const beta = new FakeGatewayPlugin({
 });
 
 @Module({
-  providers: [{ provide: GATEWAY_PLUGINS, useValue: [alpha, beta] }],
+  providers: [
+    {
+      provide: GATEWAY_PLUGINS,
+      useValue: [fixedPlugin(alpha), fixedPlugin(beta)],
+    },
+  ],
   exports: [GATEWAY_PLUGINS],
 })
 class TwoGatewaysModule {}
 
 const prisma = createTestPrismaClient();
+let apiKey: string;
 const clock = new FakeClock(NOW);
 let moduleRef: TestingModule;
 let service: PaymentService;
@@ -83,7 +93,7 @@ beforeEach(async () => {
 });
 
 async function createPayment(): Promise<Payment> {
-  const { payment } = await service.createPayment({
+  const { payment } = await service.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -92,7 +102,7 @@ async function createPayment(): Promise<Payment> {
 }
 
 function start(payment: Payment, gatewayId: string) {
-  return service.startAttempt({
+  return service.startAttempt(defaultScope, {
     paymentId: payment.id,
     gatewayId,
     returnUrl: RETURN_URL,
@@ -103,12 +113,12 @@ describe('cancelPayment', () => {
   it('cancels a PENDING Payment with no attempt and writes PaymentCancelled', async () => {
     const payment = await createPayment();
 
-    const result = await service.cancelPayment(payment.id);
+    const result = await service.cancelPayment(defaultScope, payment.id);
 
     expect(result.status).toBe('CANCELLED');
-    const stored = await repos.payments.findById(payment.id);
+    const stored = await repos.payments.findById(defaultScope, payment.id);
     expect(stored?.status).toBe('CANCELLED');
-    const events = await repos.outbox.listForPayment(payment.id);
+    const events = await repos.outbox.listForPayment(defaultScope, payment.id);
     expect(events.map((e) => e.eventType)).toEqual([
       'PaymentCreated',
       'PaymentCancelled',
@@ -118,6 +128,7 @@ describe('cancelPayment', () => {
       status: 'CANCELLED',
     });
     const trail = await repos.statusTransitions.listForEntity(
+      defaultScope,
       'PAYMENT',
       payment.id,
     );
@@ -132,10 +143,11 @@ describe('cancelPayment', () => {
     const payment = await createPayment();
     const { attempt } = await start(payment, 'alpha');
 
-    const result = await service.cancelPayment(payment.id);
+    const result = await service.cancelPayment(defaultScope, payment.id);
 
     expect(result.attempts.map((a) => a.status)).toEqual(['CANCELLED']);
     const trail = await repos.statusTransitions.listForEntity(
+      defaultScope,
       'PAYMENT_TRANSACTION',
       attempt.id,
     );
@@ -154,7 +166,7 @@ describe('cancelPayment', () => {
     alpha.scriptInitiate(new OutcomeUnknownError('timeout'));
     await start(payment, 'alpha');
 
-    const result = await service.cancelPayment(payment.id);
+    const result = await service.cancelPayment(defaultScope, payment.id);
 
     expect(result.attempts.map((a) => a.status)).toEqual(['CANCELLED']);
   });
@@ -170,7 +182,7 @@ describe('cancelPayment', () => {
       return { rawPayload: {} };
     });
 
-    await service.cancelPayment(payment.id);
+    await service.cancelPayment(defaultScope, payment.id);
 
     expect(seen).toBe('CANCELLED');
   });
@@ -179,7 +191,7 @@ describe('cancelPayment', () => {
     const payment = await createPayment();
     await start(payment, 'beta');
 
-    const result = await service.cancelPayment(payment.id);
+    const result = await service.cancelPayment(defaultScope, payment.id);
 
     expect(result.status).toBe('CANCELLED');
     expect(beta.calls.cancel).toHaveLength(0);
@@ -191,7 +203,7 @@ describe('cancelPayment', () => {
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     alpha.scriptCancel(new GatewayUnavailableError('down'));
 
-    const result = await service.cancelPayment(payment.id);
+    const result = await service.cancelPayment(defaultScope, payment.id);
 
     expect(result.status).toBe('CANCELLED');
     expect(result.attempts.map((a) => a.status)).toEqual(['CANCELLED']);
@@ -199,12 +211,12 @@ describe('cancelPayment', () => {
 
   it('is a no-op on an already CANCELLED Payment', async () => {
     const payment = await createPayment();
-    await service.cancelPayment(payment.id);
+    await service.cancelPayment(defaultScope, payment.id);
 
-    const again = await service.cancelPayment(payment.id);
+    const again = await service.cancelPayment(defaultScope, payment.id);
 
     expect(again.status).toBe('CANCELLED');
-    const events = await repos.outbox.listForPayment(payment.id);
+    const events = await repos.outbox.listForPayment(defaultScope, payment.id);
     expect(
       events.filter((e) => e.eventType === 'PaymentCancelled'),
     ).toHaveLength(1);
@@ -214,24 +226,26 @@ describe('cancelPayment', () => {
     'rejects a %s Payment with PaymentNotPendingError',
     async (status) => {
       const payment = await createPayment();
-      await repos.payments.update(payment.id, { status });
+      await repos.payments.update(defaultScope, payment.id, { status });
 
-      await expect(service.cancelPayment(payment.id)).rejects.toBeInstanceOf(
-        PaymentNotPendingError,
-      );
-      expect((await repos.payments.findById(payment.id))?.status).toBe(status);
+      await expect(
+        service.cancelPayment(defaultScope, payment.id),
+      ).rejects.toBeInstanceOf(PaymentNotPendingError);
+      expect(
+        (await repos.payments.findById(defaultScope, payment.id))?.status,
+      ).toBe(status);
     },
   );
 
   it('rejects an unknown Payment', async () => {
-    await expect(service.cancelPayment(newId())).rejects.toBeInstanceOf(
-      PaymentNotFoundError,
-    );
+    await expect(
+      service.cancelPayment(defaultScope, newId()),
+    ).rejects.toBeInstanceOf(PaymentNotFoundError);
   });
 
   it('blocks a new attempt after the cancel', async () => {
     const payment = await createPayment();
-    await service.cancelPayment(payment.id);
+    await service.cancelPayment(defaultScope, payment.id);
 
     await expect(start(payment, 'alpha')).rejects.toBeInstanceOf(
       PaymentNotPendingError,
@@ -251,7 +265,10 @@ describe('POST /api/payments/:id/cancel', () => {
     app = ref.createNestApplication({ logger: false });
     app.setGlobalPrefix(GLOBAL_PREFIX);
     await app.init();
-    fake = app.get(FakeGatewayPlugin, { strict: false });
+  apiKey = await createApiKey(prisma);
+    fake = app
+      .get(GatewayManager, { strict: false })
+      .resolve('fake') as FakeGatewayPlugin;
   });
 
   afterAll(async () => {
@@ -262,7 +279,7 @@ describe('POST /api/payments/:id/cancel', () => {
 
   async function create(): Promise<string> {
     const res = await request(app.getHttpServer())
-      .post('/api/payments')
+      .post('/api/payments').set(bearer(apiKey))
       .send({
         amount: '150000',
         currency: 'VND',
@@ -276,12 +293,12 @@ describe('POST /api/payments/:id/cancel', () => {
     const id = await create();
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(200);
     expect(res.body).toMatchObject({ id, status: 'CANCELLED' });
 
     await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(200);
   });
 
@@ -293,7 +310,7 @@ describe('POST /api/payments/:id/cancel', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(409);
     expect(res.body.code).toBe('PAYMENT_NOT_PENDING');
   });
@@ -301,9 +318,11 @@ describe('POST /api/payments/:id/cancel', () => {
   it('404 for an unknown Payment and 400 for a malformed id', async () => {
     await request(app.getHttpServer())
       .post(`/api/payments/${newId()}/cancel`)
+      .set(bearer(apiKey))
       .expect(404);
     await request(app.getHttpServer())
       .post('/api/payments/not-a-uuid/cancel')
+      .set(bearer(apiKey))
       .expect(400);
   });
 });

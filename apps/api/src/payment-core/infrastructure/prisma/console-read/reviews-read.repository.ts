@@ -9,6 +9,8 @@ import {
   type ReviewReason,
 } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
+import type { ReadScope } from '../../../domain/organization-scope.js';
+import { scopeWhere } from '../scope.js';
 
 export type ReviewState = 'open' | 'closed';
 
@@ -83,9 +85,9 @@ export class ReviewsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, so the caller can tell whether another page exists. */
-  async list(query: ReviewListQuery): Promise<ReviewRow[]> {
+  async list(scope: ReadScope, query: ReviewListQuery): Promise<ReviewRow[]> {
     const rows = await this.prisma.paymentTransaction.findMany({
-      where: this.where(query),
+      where: this.where(scope, query),
       // The id breaks ties so a page boundary never repeats or skips a row.
       orderBy: [{ reviewOpenedAt: query.order }, { id: query.order }],
       take: query.limit + 1,
@@ -112,14 +114,18 @@ export class ReviewsReadRepository {
   }
 
   /** Open and total Reviews, and open ones by reason (every reason present). */
-  async counts(): Promise<ReviewCounts> {
+  async counts(scope: ReadScope): Promise<ReviewCounts> {
     const [total, openByReason] = await Promise.all([
       this.prisma.paymentTransaction.count({
-        where: { reviewReason: { not: null } },
+        where: { ...scopeWhere(scope), reviewReason: { not: null } },
       }),
       this.prisma.paymentTransaction.groupBy({
         by: ['reviewReason'],
-        where: { status: 'REQUIRES_REVIEW', reviewReason: { not: null } },
+        where: {
+          ...scopeWhere(scope),
+          status: 'REQUIRES_REVIEW',
+          reviewReason: { not: null },
+        },
         _count: { _all: true },
       }),
     ]);
@@ -133,9 +139,13 @@ export class ReviewsReadRepository {
     return { open, total, byReason };
   }
 
-  private where(query: ReviewListQuery): Prisma.PaymentTransactionWhereInput {
+  private where(
+    scope: ReadScope,
+    query: ReviewListQuery,
+  ): Prisma.PaymentTransactionWhereInput {
     const { filters, after } = query;
     const and: Prisma.PaymentTransactionWhereInput[] = [
+      scopeWhere(scope),
       { reviewReason: { not: null }, reviewOpenedAt: { not: null } },
       filters.state === 'open'
         ? { status: 'REQUIRES_REVIEW' }

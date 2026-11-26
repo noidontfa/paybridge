@@ -9,6 +9,7 @@ import {
   UpstreamReferenceExistsError,
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
+import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import { resolvePaymentExpiry } from '../../domain/payment-expiry.js';
 import type { IdempotencyRecord } from '../../domain/records.js';
@@ -22,7 +23,7 @@ export interface CreatePaymentInput {
   readonly amount: string;
   /** ISO 4217 code. Only VND in Phase 1. */
   readonly currency: string;
-  /** The caller's Upstream Reference. Unique across PayBridge, immutable. */
+  /** The caller's Upstream Reference. Unique within its Organization, immutable. */
   readonly upstreamReference: string;
   /** Payment Expiry. Default 30 minutes after creation. */
   readonly expiresAt?: Date;
@@ -87,6 +88,7 @@ export class CreatePayment {
   ) {}
 
   async execute(
+    scope: OrganizationScope,
     input: CreatePaymentInput,
     options: CreatePaymentOptions = {},
   ): Promise<CreatePaymentResult> {
@@ -103,18 +105,18 @@ export class CreatePayment {
     const requestHash = hashRequest(input);
 
     if (key !== undefined) {
-      const replay = await this.replayStored(key, requestHash, now);
+      const replay = await this.replayStored(scope, key, requestHash, now);
       if (replay) return replay;
     }
 
     try {
       return await this.runner.run(async (repos) => {
         if (key !== undefined) {
-          await repos.idempotencyKeys.deleteIfExpired(key, now);
+          await repos.idempotencyKeys.deleteIfExpired(scope, key, now);
         }
-        await assertUpstreamReferenceFree(repos, upstreamReference);
+        await assertUpstreamReferenceFree(repos, scope, upstreamReference);
 
-        const payment = await repos.payments.create({
+        const payment = await repos.payments.create(scope, {
           id: newId(),
           merchantOrderId: upstreamReference,
           amount: amount.value,
@@ -122,7 +124,7 @@ export class CreatePayment {
           status: INITIAL_PAYMENT_STATUS,
           expiresAt,
         });
-        await repos.statusTransitions.record({
+        await repos.statusTransitions.record(scope, {
           entityType: 'PAYMENT',
           entityId: payment.id,
           fromStatus: null,
@@ -130,7 +132,7 @@ export class CreatePayment {
           trigger: 'create_payment',
           actor: 'merchant',
         });
-        await repos.outbox.add({
+        await repos.outbox.add(scope, {
           eventType: 'PaymentCreated',
           paymentId: payment.id,
           payload: {
@@ -144,7 +146,7 @@ export class CreatePayment {
         });
         const snapshot = toSnapshot(payment);
         if (key !== undefined) {
-          await repos.idempotencyKeys.create({
+          await repos.idempotencyKeys.create(scope, {
             key,
             requestHash,
             responseStatus: CREATED,
@@ -163,11 +165,12 @@ export class CreatePayment {
       if (!lostRace) throw error;
       // A concurrent request committed first: answer as if we came second.
       if (key !== undefined) {
-        const replay = await this.replayStored(key, requestHash, now);
+        const replay = await this.replayStored(scope, key, requestHash, now);
         if (replay) return replay;
       }
       await assertUpstreamReferenceFree(
         this.runner.repositories,
+        scope,
         upstreamReference,
       );
       throw error;
@@ -176,18 +179,21 @@ export class CreatePayment {
 
   /** The stored response for a live record of `key`, or null if none. */
   private async replayStored(
+    scope: OrganizationScope,
     key: string,
     requestHash: string,
     now: Date,
   ): Promise<CreatePaymentResult | null> {
     const repos = this.runner.repositories;
-    const record = await repos.idempotencyKeys.find(key);
+    const record = await repos.idempotencyKeys.find(scope, key);
     if (!record || !isLive(record, now)) return null;
     if (record.requestHash !== requestHash) {
       throw new IdempotencyKeyReusedError(key);
     }
     const paymentId = record.paymentId;
-    const payment = paymentId ? await repos.payments.findById(paymentId) : null;
+    const payment = paymentId
+      ? await repos.payments.findById(scope, paymentId)
+      : null;
     if (!payment) throw new PaymentNotFoundError(paymentId ?? '(none)');
     return {
       payment,
@@ -216,10 +222,13 @@ function isLive(record: IdempotencyRecord, now: Date): boolean {
 
 async function assertUpstreamReferenceFree(
   repos: Repositories,
+  scope: OrganizationScope,
   upstreamReference: string,
 ): Promise<void> {
-  const existingId =
-    await repos.payments.findIdByUpstreamReference(upstreamReference);
+  const existingId = await repos.payments.findIdByUpstreamReference(
+    scope,
+    upstreamReference,
+  );
   if (existingId !== null) throw new UpstreamReferenceExistsError(existingId);
 }
 

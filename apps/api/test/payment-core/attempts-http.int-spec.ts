@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -9,6 +10,7 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import { GatewayRejectedError } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 
 // POST /api/payments/:paymentId/attempts over HTTP: validation, the response
 // shape and the mapping of domain errors. Rules are covered in depth by
@@ -16,6 +18,7 @@ import { createTestPrismaClient } from '../setup/test-prisma.js';
 
 const NOW = new Date('2026-05-01T10:00:00.000Z');
 const prisma = createTestPrismaClient();
+let apiKey: string;
 let app: INestApplication;
 let fake: FakeGatewayPlugin;
 
@@ -27,7 +30,10 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
-  fake = app.get(FakeGatewayPlugin, { strict: false });
+  apiKey = await createApiKey(prisma);
+  fake = app
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -42,7 +48,7 @@ beforeEach(async () => {
 
 async function createPayment(): Promise<string> {
   const res = await request(app.getHttpServer())
-    .post('/api/payments')
+    .post('/api/payments').set(bearer(apiKey))
     .send({
       amount: '150000',
       currency: 'VND',
@@ -54,7 +60,7 @@ async function createPayment(): Promise<string> {
 
 function startAttempt(paymentId: string, body: object) {
   return request(app.getHttpServer())
-    .post(`/api/payments/${paymentId}/attempts`)
+    .post(`/api/payments/${paymentId}/attempts`).set(bearer(apiKey))
     .send(body);
 }
 
@@ -107,7 +113,7 @@ describe('POST /api/payments/:paymentId/attempts', () => {
     });
     expect(stored?.nextAction).toEqual(nextAction);
     const detail = await request(app.getHttpServer())
-      .get(`/api/payments/${paymentId}`)
+      .get(`/api/payments/${paymentId}`).set(bearer(apiKey))
       .expect(200);
     expect(detail.body.attempts[0].nextAction).toEqual(nextAction);
   });

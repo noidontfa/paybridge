@@ -1,3 +1,4 @@
+import { GatewayManager } from '../../src/payment-core/gateway-manager/gateway-manager.js';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
 import { PrismaModule } from '../../src/database/prisma.module.js';
@@ -20,6 +21,7 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { defaultScope } from '../setup/organizations.js';
 
 // Ticket 23: the expiry worker closes a PENDING Payment that has no attempt at
 // its deadline, without asking any provider. Payments with attempts are left
@@ -51,7 +53,9 @@ beforeAll(async () => {
   expirePayment = moduleRef.get(ExpirePayment);
   payments = moduleRef.get(PaymentService);
   repos = moduleRef.get(TransactionRunner).repositories;
-  fake = moduleRef.get(FakeGatewayPlugin);
+  fake = moduleRef
+    .get(GatewayManager, { strict: false })
+    .resolve('fake') as FakeGatewayPlugin;
 });
 
 afterAll(async () => {
@@ -66,7 +70,7 @@ beforeEach(async () => {
 });
 
 async function createPayment(): Promise<Payment> {
-  const { payment } = await payments.createPayment({
+  const { payment } = await payments.createPayment(defaultScope, {
     amount: '150000',
     currency: 'VND',
     upstreamReference: `order-${newId()}`,
@@ -85,7 +89,9 @@ describe('ExpirePayment', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('expired');
 
-    expect((await repos.payments.findById(payment.id))?.status).toBe('EXPIRED');
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('EXPIRED');
     expect(providerCalls()).toBe(0);
   });
 
@@ -96,7 +102,11 @@ describe('ExpirePayment', () => {
     await expirePayment.execute(payment.id);
 
     expect(
-      await repos.statusTransitions.listForEntity('PAYMENT', payment.id),
+      await repos.statusTransitions.listForEntity(
+        defaultScope,
+        'PAYMENT',
+        payment.id,
+      ),
     ).toMatchObject([
       { fromStatus: null, toStatus: 'PENDING' },
       {
@@ -106,7 +116,7 @@ describe('ExpirePayment', () => {
         actor: 'system',
       },
     ]);
-    const events = await repos.outbox.listForPayment(payment.id);
+    const events = await repos.outbox.listForPayment(defaultScope, payment.id);
     expect(events.map((e) => e.eventType)).toEqual([
       'PaymentCreated',
       'PaymentExpired',
@@ -127,8 +137,12 @@ describe('ExpirePayment', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('not-due');
 
-    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
-    expect(await repos.outbox.listForPayment(payment.id)).toHaveLength(1);
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
+    expect(
+      await repos.outbox.listForPayment(defaultScope, payment.id),
+    ).toHaveLength(1);
   });
 
   it('does nothing for a Payment that is no longer PENDING', async () => {
@@ -140,9 +154,15 @@ describe('ExpirePayment', () => {
       'not-pending',
     );
 
-    expect(await repos.outbox.listForPayment(payment.id)).toHaveLength(2);
     expect(
-      await repos.statusTransitions.listForEntity('PAYMENT', payment.id),
+      await repos.outbox.listForPayment(defaultScope, payment.id),
+    ).toHaveLength(2);
+    expect(
+      await repos.statusTransitions.listForEntity(
+        defaultScope,
+        'PAYMENT',
+        payment.id,
+      ),
     ).toHaveLength(2);
   });
 
@@ -167,7 +187,7 @@ async function addAttempt(
 ): Promise<string> {
   const id = newId();
   await moduleRef.get(TransactionRunner).run((tx) =>
-    tx.payments.createAttempt({
+    tx.payments.createAttempt(defaultScope, {
       id,
       paymentId,
       gatewayId: 'fake',
@@ -189,11 +209,12 @@ describe('ExpirePayment with open attempts', () => {
 
     expect(fake.calls.query.map((c) => c.attemptKey)).toEqual([attemptId]);
     expect(fake.calls.cancel.map((c) => c.attemptKey)).toEqual([attemptId]);
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('EXPIRED');
     expect(after?.attempts[0]?.status).toBe('EXPIRED');
     expect(
       await repos.statusTransitions.listForEntity(
+        defaultScope,
         'PAYMENT_TRANSACTION',
         attemptId,
       ),
@@ -206,10 +227,12 @@ describe('ExpirePayment with open attempts', () => {
       },
     ]);
     expect(
-      (await repos.outbox.listForPayment(payment.id)).map((e) => e.eventType),
+      (await repos.outbox.listForPayment(defaultScope, payment.id)).map(
+        (e) => e.eventType,
+      ),
     ).toEqual(['PaymentCreated', 'PaymentExpired']);
     expect(
-      await repos.gatewayRawResponses.listForAttempt(attemptId),
+      await repos.gatewayRawResponses.listForAttempt(defaultScope, attemptId),
     ).toMatchObject([{ operation: 'query' }, { operation: 'cancel' }]);
   });
 
@@ -220,11 +243,12 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('expired');
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('EXPIRED');
     expect(after?.attempts[0]?.status).toBe('CANCELLED');
     expect(
       await repos.statusTransitions.listForEntity(
+        defaultScope,
         'PAYMENT_TRANSACTION',
         attemptId,
       ),
@@ -245,13 +269,15 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('succeeded');
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('SUCCEEDED');
     expect(after?.attempts.find((a) => a.id === attemptId)?.status).toBe(
       'SUCCEEDED',
     );
     expect(
-      (await repos.outbox.listForPayment(payment.id)).map((e) => e.eventType),
+      (await repos.outbox.listForPayment(defaultScope, payment.id)).map(
+        (e) => e.eventType,
+      ),
     ).toEqual(['PaymentCreated', 'PaymentSucceeded']);
   });
 
@@ -263,7 +289,7 @@ describe('ExpirePayment with open attempts', () => {
 
     await expirePayment.execute(payment.id);
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('PENDING');
     expect(after?.attempts[0]?.status).toBe('REQUIRES_REVIEW');
   });
@@ -276,7 +302,7 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('expired');
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('EXPIRED');
     expect(after?.attempts[0]?.status).toBe('FAILED');
   });
@@ -293,10 +319,12 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('unclear');
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('PENDING');
     expect(after?.attempts[0]?.status).toBe('PENDING');
-    expect(await repos.outbox.listForPayment(payment.id)).toHaveLength(1);
+    expect(
+      await repos.outbox.listForPayment(defaultScope, payment.id),
+    ).toHaveLength(1);
   });
 
   it('leaves a Payment alone when an attempt is under review', async () => {
@@ -307,7 +335,9 @@ describe('ExpirePayment with open attempts', () => {
     await expect(expirePayment.execute(payment.id)).resolves.toBe('unclear');
 
     expect(providerCalls()).toBe(0);
-    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
   });
 
   it('holds no transaction open while the provider is queried', async () => {
@@ -339,7 +369,7 @@ describe('ExpirePayment with open attempts', () => {
     const attemptId = await addAttempt(payment.id, 'PENDING');
     clock.set(DEADLINE);
     fake.scriptQuery(async () => {
-      await payments.cancelPayment(payment.id);
+      await payments.cancelPayment(defaultScope, payment.id);
       return { status: 'PENDING', amount: null, rawPayload: {} };
     });
 
@@ -347,13 +377,15 @@ describe('ExpirePayment with open attempts', () => {
       'not-pending',
     );
 
-    const after = await repos.payments.findById(payment.id);
+    const after = await repos.payments.findById(defaultScope, payment.id);
     expect(after?.status).toBe('CANCELLED');
     expect(after?.attempts.find((a) => a.id === attemptId)?.status).toBe(
       'CANCELLED',
     );
     expect(
-      (await repos.outbox.listForPayment(payment.id)).map((e) => e.eventType),
+      (await repos.outbox.listForPayment(defaultScope, payment.id)).map(
+        (e) => e.eventType,
+      ),
     ).not.toContain('PaymentExpired');
   });
 
@@ -364,11 +396,14 @@ describe('ExpirePayment with open attempts', () => {
     fake.scriptQuery(async () => {
       await moduleRef.get(TransactionRunner).run(async (tx) => {
         // Simulate a gateway switch: old attempt cancelled, new one open.
-        const locked = await tx.payments.findForUpdate(payment.id);
-        await tx.payments.updateAttempt(locked!.attempts[0]!.id, {
+        const locked = await tx.payments.findForUpdate(
+          defaultScope,
+          payment.id,
+        );
+        await tx.payments.updateAttempt(defaultScope, locked!.attempts[0]!.id, {
           status: 'CANCELLED',
         });
-        await tx.payments.createAttempt({
+        await tx.payments.createAttempt(defaultScope, {
           id: newId(),
           paymentId: payment.id,
           gatewayId: 'fake',
@@ -380,7 +415,9 @@ describe('ExpirePayment with open attempts', () => {
 
     await expect(expirePayment.execute(payment.id)).resolves.toBe('unclear');
 
-    expect((await repos.payments.findById(payment.id))?.status).toBe('PENDING');
+    expect(
+      (await repos.payments.findById(defaultScope, payment.id))?.status,
+    ).toBe('PENDING');
   });
 
   it('asks the rate limiter before every provider query', async () => {

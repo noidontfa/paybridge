@@ -3,16 +3,25 @@ import type {
   GatewayRawResponse,
   NewGatewayRawResponse,
 } from '../../domain/records.js';
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../../domain/organization-scope.js';
 import type { DbContext } from './db.js';
+import { scopeWhere } from './scope.js';
 
 /** Raw provider payloads, stored for audit and never interpreted. */
 export class PrismaGatewayRawResponseRepository {
   constructor(private readonly ctx: DbContext) {}
 
-  async record(response: NewGatewayRawResponse): Promise<GatewayRawResponse> {
+  async record(
+    scope: OrganizationScope,
+    response: NewGatewayRawResponse,
+  ): Promise<GatewayRawResponse> {
     return this.ctx.db.gatewayRawResponse.create({
       data: {
         id: newId(),
+        organizationId: scope.organizationId,
         attemptId: response.attemptId,
         operation: response.operation,
         payload: (response.payload ?? {}) as object,
@@ -21,9 +30,12 @@ export class PrismaGatewayRawResponseRepository {
   }
 
   /** Every stored response of one attempt, oldest first. */
-  async listForAttempt(attemptId: string): Promise<GatewayRawResponse[]> {
+  async listForAttempt(
+    scope: ReadScope,
+    attemptId: string,
+  ): Promise<GatewayRawResponse[]> {
     return this.ctx.db.gatewayRawResponse.findMany({
-      where: { attemptId },
+      where: { ...scopeWhere(scope), attemptId },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
   }

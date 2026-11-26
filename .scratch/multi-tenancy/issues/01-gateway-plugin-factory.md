@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] The Stripe and `fake` plugins each register a factory that takes credentials and returns a plugin instance
 - [ ] The Gateway Manager finds a plugin instance by gateway identifier through the factories, building each instance once and caching it by a key that can later include a Gateway Connection id and credentials version
