@@ -29,6 +29,7 @@ import {
   GatewayManager,
   UnknownGatewayError,
 } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import type { Repositories } from '../../infrastructure/prisma/repositories.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import { QUEUES, jobIds } from '../../infrastructure/queue/queue.constants.js';
@@ -134,6 +135,7 @@ export class StartAttempt {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(Clock) private readonly clock: Clock,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
     @InjectQueue(QUEUES.attemptInitiate) private readonly initiateQueue: Queue,
@@ -144,7 +146,7 @@ export class StartAttempt {
     scope: OrganizationScope,
     input: StartAttemptInput,
   ): Promise<StartAttemptResult> {
-    const plugin = this.resolveGateway(input.gatewayId);
+    const plugin = await this.resolveGateway(scope, input.gatewayId, true);
     const { payment, attempt, switchedFrom } = await this.openAttempt(
       scope,
       input,
@@ -200,7 +202,11 @@ export class StartAttempt {
       ...(data.description !== undefined && { description: data.description }),
     };
     const outcome = await this.initiate(
-      this.resolveGateway(attempt.gatewayId),
+      await this.resolveGateway(
+        organizationScope(payment.organizationId),
+        attempt.gatewayId,
+        false,
+      ),
       payment,
       attempt,
       input,
@@ -273,9 +279,22 @@ export class StartAttempt {
     return { payment, attempt };
   }
 
-  private resolveGateway(gatewayId: string): PaymentGateway {
+  /**
+   * A new attempt needs an enabled Gateway Connection of the Organization;
+   * a retry of an attempt already started works on a disabled one too.
+   */
+  private async resolveGateway(
+    scope: OrganizationScope,
+    gatewayId: string,
+    isNewAttempt: boolean,
+  ): Promise<PaymentGateway> {
+    if (!this.gateways.isRegistered(gatewayId)) {
+      throw new UnknownGatewayIdError(gatewayId);
+    }
     try {
-      return this.gateways.resolve(gatewayId);
+      return isNewAttempt
+        ? await this.plugins.forStart(scope.organizationId, gatewayId)
+        : await this.plugins.forExisting(scope.organizationId, gatewayId);
     } catch (error) {
       if (error instanceof UnknownGatewayError) {
         throw new UnknownGatewayIdError(gatewayId);

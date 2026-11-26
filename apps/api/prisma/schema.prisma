@@ -130,6 +130,7 @@ model Organization {
   outboxEvents        OutboxEvent[]
   webhookInbox        WebhookInbox[]
   statusTransitions   StatusTransition[]
+  gatewayConnections  GatewayConnection[]
   users               User[]
 
   @@map("iam_organizations")
@@ -404,4 +405,26 @@ model StatusTransition {
   @@index([entityType, entityId, createdAt], map: "core_status_transitions_entity_idx")
   @@index([organizationId, createdAt, id], map: "core_status_transitions_org_created_at_id_idx")
   @@map("core_status_transitions")
+}
+
+/// One Organization's own account with one PaymentGateway (ADR 0007). Never
+/// deleted once used. `credentialsCiphertext` is AES-256-GCM under the key
+/// named by `credentialsKeyId`; both are null for a gateway without credentials
+/// (`fake`). Credentials are never returned by any endpoint.
+model GatewayConnection {
+  id                    String   @id @db.Uuid
+  organizationId        String   @map("organization_id") @db.Uuid
+  gatewayId             String   @map("gateway_id")
+  credentialsCiphertext String?  @map("credentials_ciphertext")
+  credentialsKeyId      String?  @map("credentials_key_id")
+  /// Bumped on every credentials replacement; part of the plugin cache key.
+  credentialsVersion    Int      @default(1) @map("credentials_version")
+  enabled               Boolean  @default(true)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([organizationId, gatewayId], map: "core_gateway_connections_org_gateway_uq")
+  @@map("core_gateway_connections")
 }

@@ -9,7 +9,7 @@ import type { Payment } from '../../domain/payment.js';
 import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import type { QueryResult } from '../../port/index.js';
 import { ProviderQueryRateLimiter } from '../../reliability/provider-query-rate-limiter.js';
 import { applyProviderOutcome } from '../apply-provider-outcome.js';
@@ -70,7 +70,7 @@ export class ExpirePayment {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(Clock) private readonly clock: Clock,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
     @Inject(ProviderQueryRateLimiter)
     private readonly limiter: ProviderQueryRateLimiter,
@@ -131,7 +131,12 @@ export class ExpirePayment {
     for (const attempt of open) {
       try {
         await this.limiter.acquire();
-        const result = await this.gateways.resolve(attempt.gatewayId).query({
+        const result = await (
+          await this.plugins.forExisting(
+            attempt.organizationId,
+            attempt.gatewayId,
+          )
+        ).query({
           attemptKey: attempt.id,
           providerMetadata: attempt.providerMetadata ?? {},
         });

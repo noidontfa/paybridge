@@ -4,6 +4,10 @@ import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
 import type { UserRole } from '../src/identity/domain/user.js';
+import {
+  DEVELOPMENT_CREDENTIAL_KEYS,
+} from '../src/config/env.schema.js';
+import { CredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import {
   callbackSpecs,
@@ -45,6 +49,7 @@ export interface SeedOptions {
 
 export interface SeedResult {
   organizations: number;
+  gatewayConnections: number;
   users: number;
   payments: number;
   attempts: number;
@@ -125,6 +130,18 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
 ];
 
+/** Each Organization's Gateway Connections; one of them is disabled. */
+const SEED_GATEWAY_CONNECTIONS: readonly {
+  organization: OrganizationKey;
+  gatewayId: string;
+  enabled: boolean;
+}[] = [
+  { organization: 'primary', gatewayId: 'fake', enabled: true },
+  { organization: 'primary', gatewayId: 'stripe', enabled: true },
+  { organization: 'acme', gatewayId: 'fake', enabled: true },
+  { organization: 'acme', gatewayId: 'stripe', enabled: false },
+];
+
 function assertAllowed(options: SeedOptions): void {
   if (options.nodeEnv === 'production') {
     throw new SeedRefusedError(
@@ -185,6 +202,43 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             create: { id: id(`user:${user.key}`), ...data },
           });
         }
+        // Gateway Connections: kept across re-runs, reset to the seeded state.
+        // The credentials are obvious dummies, encrypted like real ones.
+        const cipher = CredentialCipher.fromConfig(
+          process.env.GATEWAY_CREDENTIAL_KEYS || DEVELOPMENT_CREDENTIAL_KEYS,
+        );
+        for (const connection of SEED_GATEWAY_CONNECTIONS) {
+          const sealed =
+            connection.gatewayId === 'stripe'
+              ? cipher.encrypt(
+                  JSON.stringify({
+                    secretKey: 'sk_test_seed_not_real',
+                    webhookSecret: 'whsec_seed_not_real',
+                    publishableKey: 'pk_test_seed_not_real',
+                  }),
+                )
+              : null;
+          const data = {
+            organizationId: ORGANIZATIONS[connection.organization].id,
+            gatewayId: connection.gatewayId,
+            credentialsCiphertext: sealed?.ciphertext ?? null,
+            credentialsKeyId: sealed?.keyId ?? null,
+            enabled: connection.enabled,
+          };
+          await tx.gatewayConnection.upsert({
+            where: {
+              organizationId_gatewayId: {
+                organizationId: data.organizationId,
+                gatewayId: data.gatewayId,
+              },
+            },
+            update: data,
+            create: {
+              id: id(`gateway-connection:${connection.organization}:${connection.gatewayId}`),
+              ...data,
+            },
+          });
+        }
         await insertChunked(rows.payments, (data) =>
           tx.payment.createMany({ data }),
         );
@@ -208,6 +262,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   }
   return {
     organizations: Object.keys(ORGANIZATIONS).length,
+    gatewayConnections: SEED_GATEWAY_CONNECTIONS.length,
     users: SEED_USERS.length,
     payments: rows.payments.length,
     attempts: rows.attempts.length,

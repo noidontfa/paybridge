@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import { SettingsPanel } from '@/components/settings-panel';
 import { getEnvironment } from '@/lib/environment';
@@ -12,6 +13,12 @@ export default function SettingsPage() {
     <>
       <PageHeader title="Settings" description="Preferences for this browser and the current environment." />
       <div className="px-4 pb-4">
+        <p className="mb-4 text-sm">
+          <Link href="/settings/gateway-connections" className="underline underline-offset-4">
+            Gateway Connections
+          </Link>{' '}
+          for your Organization
+        </p>
         <SettingsPanel environment={getEnvironment()} />
       </div>
     </>

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../../src/identity/domain/organization.js';
+import { connectFakeGateway } from './reset-db.js';
 import { organizationScope } from '../../src/payment-core/domain/organization-scope.js';
 
 export { DEFAULT_ORGANIZATION_ID };
@@ -27,6 +28,7 @@ export async function ensureOrganization(
     update: {},
     create: { id, name },
   });
+  await connectFakeGateway(prisma);
 }
 
 export function ensureOtherOrganization(prisma: PrismaClient): Promise<void> {

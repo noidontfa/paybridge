@@ -10,7 +10,7 @@ import {
   decideReviewResolution,
   type OperatorResolutionStatus,
 } from '../../domain/rules/review-resolution.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import {
   cancelOtherOpenAttempts,
@@ -54,7 +54,7 @@ export class ResolveReview {
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(Clock) private readonly clock: Clock,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
   ) {}
 
@@ -130,14 +130,17 @@ export class ResolveReview {
     });
 
     // After commit; never throws. Only plugins that declare supportsCancel.
-    await this.cancels.cancel(cancelled.filter((a) => this.canCancel(a)));
+    const cancellable: CancellableAttempt[] = [];
+    for (const a of cancelled) if (await this.canCancel(a)) cancellable.push(a);
+    await this.cancels.cancel(cancellable);
     return payment;
   }
 
-  private canCancel(attempt: CancellableAttempt): boolean {
+  private async canCancel(attempt: CancellableAttempt): Promise<boolean> {
     try {
-      return this.gateways.resolve(attempt.gatewayId).capabilities
-        .supportsCancel;
+      return (
+        await this.plugins.forExisting(attempt.organizationId, attempt.gatewayId)
+      ).capabilities.supportsCancel;
     } catch {
       return false;
     }

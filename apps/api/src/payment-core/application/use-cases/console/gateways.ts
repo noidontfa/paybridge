@@ -71,18 +71,27 @@ export class GatewaysOverview {
 
   private async knownIds(scope: ReadScope): Promise<Set<string>> {
     return new Set([
-      ...this.manager.gatewayIds(),
+      ...this.manager.deploymentGatewayIds(),
       ...(await this.repo.gatewayIdsWithData(scope)),
     ]);
   }
 
+  /** A gateway whose credentials come only from Gateway Connections has no default instance. */
+  private modeOf(id: string): GatewayMode {
+    try {
+      return this.manager.resolve(id).mode ?? 'test';
+    } catch {
+      return 'test';
+    }
+  }
+
   private summary(id: string): GatewaySummary {
-    const registered = this.manager.gatewayIds().includes(id);
+    const registered = this.manager.deploymentGatewayIds().includes(id);
     return {
       id,
       registered,
       configured: registered,
-      mode: registered ? (this.manager.resolve(id).mode ?? 'test') : 'test',
+      mode: registered ? this.modeOf(id) : 'test',
       callbackUrl: `${this.baseUrl}/api/webhooks/${encodeURIComponent(id)}`,
     };
   }
