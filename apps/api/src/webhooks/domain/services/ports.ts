@@ -31,9 +31,38 @@ export abstract class SecretCipher {
   abstract decrypt(sealed: SealedSecret): string;
 }
 
-/** Hands a delivery to a background worker. The job id is the delivery id. */
+/** One attempt of one delivery: its first attempt is number 1. */
+export interface DeliveryAttemptRef {
+  readonly deliveryId: string;
+  readonly attempt: number;
+}
+
+/**
+ * Hands deliveries to a background worker. Each attempt has its own job id,
+ * derived from the delivery id and the attempt number, so handing the same
+ * attempt over twice runs it once.
+ */
 export abstract class DeliveryDispatcher {
+  /** First attempts, now. */
   abstract dispatch(deliveryIds: readonly string[]): Promise<void>;
+  /** A retry, to run at `at`. */
+  abstract schedule(ref: DeliveryAttemptRef, at: Date): Promise<void>;
+  /**
+   * Attempts that are due by PostgreSQL's account: runs each now, whether its
+   * job is waiting for a later time, ended without an attempt, or was lost.
+   */
+  abstract redispatch(refs: readonly DeliveryAttemptRef[]): Promise<void>;
+}
+
+/** Uniform random numbers in [0, 1) for the retry jitter. */
+export abstract class RetryJitter {
+  abstract next(): number;
+}
+
+export class MathRetryJitter extends RetryJitter {
+  next(): number {
+    return Math.random();
+  }
 }
 
 export interface OutboundRequest {

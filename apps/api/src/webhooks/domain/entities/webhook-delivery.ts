@@ -15,7 +15,10 @@ export interface WebhookDelivery {
   readonly paymentId: string | null;
   readonly data: unknown;
   readonly status: WebhookDeliveryStatus;
+  /** Attempts made so far. */
   readonly attempts: number;
+  /** When a `PENDING` delivery is due for its next attempt (null: now). */
+  readonly nextAttemptAt: Date | null;
 }
 
 export interface NewWebhookDelivery {
