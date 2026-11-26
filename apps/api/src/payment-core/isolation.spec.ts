@@ -67,8 +67,8 @@ export function unscopedRepositoryMembers(
   return offenders;
 }
 
-/** Modules whose repositories hold Organization data. */
-const SCANNED_MODULES = ['payment-core', 'checkout'] as const;
+/** Modules whose repositories hold Organization data, scope first. */
+const SCANNED_MODULES = ['payment-core', 'checkout', 'webhooks'] as const;
 
 const files = SCANNED_MODULES.flatMap((module) =>
   repositoryFiles(join(SRC, module)),
@@ -89,6 +89,12 @@ describe('Organization isolation (static)', () => {
     );
     expect(paths).toContain(
       'checkout/domain/repositories/pricing-plan.repository.ts',
+    );
+    expect(paths).toContain(
+      'webhooks/infrastructure/prisma/webhook-endpoint.repository.ts',
+    );
+    expect(paths).toContain(
+      'webhooks/domain/repositories/webhook-delivery.repository.ts',
     );
   });
 

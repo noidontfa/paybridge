@@ -206,7 +206,7 @@ describe('Console sidebar', () => {
   });
 
   describe('Settings items', () => {
-    const names = ['Users', 'Invitations', 'API Keys', 'Publishable Keys', 'Gateway Connections'];
+    const names = ['Users', 'Invitations', 'API Keys', 'Publishable Keys', 'Gateway Connections', 'Webhook Endpoints'];
 
     it('hides what the User has no Permission for', () => {
       renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'reviews:resolve'] });
@@ -225,6 +225,7 @@ describe('Console sidebar', () => {
           'api-keys:manage',
           'publishable-keys:manage',
           'gateway-connections:manage',
+          'webhook-endpoints:manage',
         ],
       });
       for (const name of names) expect(screen.getByRole('link', { name })).toBeInTheDocument();

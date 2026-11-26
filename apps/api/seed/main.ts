@@ -38,6 +38,9 @@ async function main(): Promise<void> {
   for (const k of result.apiKeys) {
     console.log(`API Key (${k.label}${k.revoked ? ', revoked' : ''}): ${k.key}`);
   }
+  console.log(
+    `Webhook Endpoint: ${result.webhookEndpoint.url} (signing secret ${result.webhookEndpoint.secret}); receive with \`pnpm webhooks:receive\`.`,
+  );
   for (const k of result.publishableKeys) {
     console.log(
       `Publishable Key (${k.label}, ${k.allowedOrigins.join(' ')}): ${k.key}`,

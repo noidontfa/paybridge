@@ -12,6 +12,7 @@ import {
   PlugIcon,
   OctagonAlertIcon,
   ReceiptIcon,
+  SendIcon,
   SettingsIcon,
   TagIcon,
   LayoutGridIcon,
@@ -99,6 +100,12 @@ export const secondaryNav: NavItem[] = [
     url: '/settings/gateway-connections',
     icon: PlugIcon,
     permission: 'gateway-connections:manage',
+  },
+  {
+    title: 'Webhook Endpoints',
+    url: '/settings/webhook-endpoints',
+    icon: SendIcon,
+    permission: 'webhook-endpoints:manage',
   },
   { title: 'Docs', url: '/docs', icon: BookOpenIcon },
 ];

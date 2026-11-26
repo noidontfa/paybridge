@@ -22,6 +22,7 @@ import { pricingPlansHandlers } from './pricing-plans';
 import { pricingTablesHandlers } from './pricing-tables';
 import { publishableKeysHandlers } from './publishable-keys';
 import { usersHandlers } from './users';
+import { webhookEndpointsHandlers } from './webhook-endpoints';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -88,6 +89,7 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ...usersHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...invitationsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewayConnectionsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...webhookEndpointsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewaysHandlers(base, store, (request, message) =>
       apiError(request, { status: 404, error: 'Not Found', code: 'GATEWAY_NOT_FOUND', message }, store.now),
     ),

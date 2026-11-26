@@ -11,6 +11,8 @@ import type { UserRole } from '../src/identity/domain/entities/user.js';
 import { PUBLISHABLE_KEY_PREFIX } from '../src/identity/application/publishable-key-secret.js';
 import { DEVELOPMENT_CREDENTIAL_KEYS } from '../src/config/env.schema.js';
 import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
+import { PAYMENT_EVENT_KINDS } from '../src/webhooks/domain/entities/event-kinds.js';
+import { WEBHOOK_SECRET_PREFIX } from '../src/webhooks/application/webhook-secret.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import {
   callbackSpecs,
@@ -67,6 +69,8 @@ export interface SeedResult {
   events: number;
   pricingPlans: number;
   pricingTables: readonly SeededPricingTable[];
+  /** The development Webhook Endpoint and its signing secret (a dev fixture). */
+  webhookEndpoint: typeof SEED_WEBHOOK_ENDPOINT;
 }
 
 const id = (name: string): string => v5(name, NAMESPACE);
@@ -200,6 +204,17 @@ export const SEED_API_KEYS: readonly SeedApiKey[] = [
     revoked: false,
   },
 ];
+
+/**
+ * A Webhook Endpoint of the default Organization, subscribed to every kind,
+ * pointing at a receiver on this machine. The secret is fixed so a local
+ * receiver can verify signatures.
+ */
+export const SEED_WEBHOOK_ENDPOINT = {
+  organization: 'primary' as OrganizationKey,
+  url: 'http://localhost:9998/webhooks',
+  secret: `${WEBHOOK_SECRET_PREFIX}seed_default_00000000000000000000000000`,
+} as const;
 
 export interface SeedPublishableKey {
   readonly label: string;
@@ -367,6 +382,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             },
           });
         }
+        await seedWebhookEndpoint(tx, cipher);
         // A pending Invitation, so the Invitations screen has data. Its link
         // is /accept-invitation?token=SEED_INVITATION_TOKEN (development only).
         const invitation = {
@@ -438,6 +454,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     events: rows.events.length,
     pricingPlans,
     pricingTables,
+    webhookEndpoint: SEED_WEBHOOK_ENDPOINT,
   };
 }
 
@@ -445,6 +462,37 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
 function seedEditor(key: string) {
   const user = SEED_USERS.find((u) => u.key === key)!;
   return { userId: id(`user:${key}`), role: user.role, name: user.name };
+}
+
+/** Kept across re-runs (deliveries point at it), reset to the seeded state. */
+async function seedWebhookEndpoint(
+  tx: Tx,
+  cipher: AesCredentialCipher,
+): Promise<void> {
+  const sealed = cipher.encrypt(SEED_WEBHOOK_ENDPOINT.secret);
+  const admin = SEED_USERS.find((u) => u.key === 'admin-primary')!;
+  const data = {
+    organizationId: ORGANIZATIONS[SEED_WEBHOOK_ENDPOINT.organization].id,
+    url: SEED_WEBHOOK_ENDPOINT.url,
+    eventKinds: [...PAYMENT_EVENT_KINDS],
+    status: 'ENABLED' as const,
+    secretCiphertext: sealed.ciphertext,
+    secretKeyId: sealed.keyId,
+    secretPrefix: SEED_WEBHOOK_ENDPOINT.secret.slice(
+      0,
+      WEBHOOK_SECRET_PREFIX.length + 6,
+    ),
+    updatedByUserId: id(`user:${admin.key}`),
+    updatedByRole: admin.role,
+    updatedByName: admin.name,
+    deletedAt: null,
+  };
+  const endpointId = id('webhook-endpoint:primary');
+  await tx.webhookEndpoint.upsert({
+    where: { id: endpointId },
+    update: data,
+    create: { id: endpointId, ...data },
+  });
 }
 
 type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];

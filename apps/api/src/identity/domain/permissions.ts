@@ -11,6 +11,7 @@ export const PERMISSIONS = [
   'super-admins:manage',
   'pricing:view',
   'pricing:manage',
+  'webhook-endpoints:manage',
   'publishable-keys:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -26,6 +27,7 @@ const ORGANIZATION_ADMIN: readonly Permission[] = [
   'api-keys:manage',
   'gateway-connections:manage',
   'pricing:manage',
+  'webhook-endpoints:manage',
   'publishable-keys:manage',
 ];
 
