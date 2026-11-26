@@ -73,6 +73,7 @@ describe('schema ownership', () => {
       'wh_deliveries',
       'wh_delivery_attempts',
       'wh_endpoints',
+      'wh_secret_rolls',
     ]);
   });
 });

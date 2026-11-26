@@ -7,6 +7,7 @@ import {
   envelopeOf,
   type DeliveryAttemptResult,
 } from '../../domain/entities/webhook-delivery.js';
+import { validPreviousSecret } from '../../domain/entities/webhook-endpoint.js';
 import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   newWebhookId,
@@ -27,7 +28,7 @@ export type DeliverWebhookResult =
 
 /**
  * Makes one attempt of a waiting delivery: signs the envelope with the
- * endpoint's secret, POSTs it and records the attempt. A 2xx answer delivers
+ * endpoint's secret (and the previous one while it is valid), POSTs it and records the attempt. A 2xx answer delivers
  * it; anything else marks it failed (retries come later).
  */
 @Injectable()
@@ -66,10 +67,15 @@ export class DeliverWebhook {
       };
     } else {
       const body = JSON.stringify(envelopeOf(delivery));
-      const secret = this.cipher.decrypt({
-        ciphertext: endpoint.secretCiphertext,
-        keyId: endpoint.secretKeyId,
-      });
+      // During a secret rotation, one signature per valid secret.
+      const previous = validPreviousSecret(endpoint, attemptedAt);
+      const secrets = [
+        this.cipher.decrypt({
+          ciphertext: endpoint.secretCiphertext,
+          keyId: endpoint.secretKeyId,
+        }),
+        ...(previous ? [this.cipher.decrypt(previous)] : []),
+      ];
       const outcome = await this.sender.post({
         url: endpoint.url,
         body,
@@ -77,7 +83,7 @@ export class DeliverWebhook {
           'content-type': 'application/json',
           'user-agent': 'PayBridge-Webhooks/1.0',
           'paybridge-event-id': delivery.eventId,
-          [SIGNATURE_HEADER]: signatureHeader([secret], attemptedAt, body),
+          [SIGNATURE_HEADER]: signatureHeader(secrets, attemptedAt, body),
         },
       });
       result = {

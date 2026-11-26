@@ -3,8 +3,12 @@ import type { OrganizationScope } from '../../../payment-core/port/organization-
 import type { PaymentEventKind } from '../../domain/entities/event-kinds.js';
 import {
   InvalidWebhookUrlError,
+  SECRET_OVERLAPS,
+  validPreviousSecret,
   WebhookEndpointNotFoundError,
   type Actor,
+  type SecretOverlap,
+  type SecretRollRecord,
   type WebhookEndpoint,
   type WebhookEndpointStatus,
 } from '../../domain/entities/webhook-endpoint.js';
@@ -62,8 +66,61 @@ export class ManageWebhookEndpoints {
     return { endpoint, secret };
   }
 
-  list(scope: OrganizationScope): Promise<WebhookEndpoint[]> {
-    return this.runner.repositories.endpoints.list(scope);
+  async list(scope: OrganizationScope): Promise<WebhookEndpoint[]> {
+    const endpoints = await this.runner.repositories.endpoints.list(scope);
+    return endpoints.map((e) => this.current(e));
+  }
+
+  /**
+   * Replaces the signing secret. The current one keeps signing for `overlap`
+   * (and replaces any older previous secret), so the Organization can update
+   * its receiver without rejecting a delivery. Recorded in the audit log.
+   */
+  async rollSecret(
+    scope: OrganizationScope,
+    id: string,
+    overlap: SecretOverlap,
+    actor: Actor,
+  ): Promise<CreatedWebhookEndpoint> {
+    const { secret, prefix } = generateWebhookSecret();
+    const sealed = this.cipher.encrypt(secret);
+    const now = this.clock.now();
+    const endpoint = await this.runner.run(async (tx) => {
+      const existing = await tx.endpoints.findById(scope, id);
+      if (!existing) return null;
+      const validFor = SECRET_OVERLAPS[overlap];
+      return tx.endpoints.rollSecret(
+        scope,
+        id,
+        {
+          secretCiphertext: sealed.ciphertext,
+          secretKeyId: sealed.keyId,
+          secretPrefix: prefix,
+          previousSecret:
+            validFor > 0
+              ? {
+                  ciphertext: existing.secretCiphertext,
+                  keyId: existing.secretKeyId,
+                  expiresAt: new Date(now.getTime() + validFor),
+                }
+              : null,
+          rolledAt: now,
+          rolledBy: actor,
+        },
+        newWebhookId(),
+      );
+    });
+    return { endpoint: this.found(id, endpoint), secret };
+  }
+
+  /** The audit log of an endpoint's secret rolls, newest first. */
+  async secretRolls(
+    scope: OrganizationScope,
+    id: string,
+  ): Promise<SecretRollRecord[]> {
+    const endpoints = this.runner.repositories.endpoints;
+    this.found(id, await endpoints.findById(scope, id));
+    return endpoints.listSecretRolls(scope, id);
   }
 
   async update(
@@ -120,7 +177,15 @@ export class ManageWebhookEndpoints {
 
   private found(id: string, endpoint: WebhookEndpoint | null): WebhookEndpoint {
     if (!endpoint) throw new WebhookEndpointNotFoundError(id);
-    return endpoint;
+    return this.current(endpoint);
+  }
+
+  /** Drops a previous secret whose end time has passed. */
+  private current(endpoint: WebhookEndpoint): WebhookEndpoint {
+    return {
+      ...endpoint,
+      previousSecret: validPreviousSecret(endpoint, this.clock.now()),
+    };
   }
 }
 
