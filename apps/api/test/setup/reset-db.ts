@@ -5,7 +5,7 @@ const DEADLOCK_DETECTED = '40P01';
 const MAX_ATTEMPTS = 5;
 
 /**
- * Empties every `core_*` table, keeping the schema. Call it in `beforeEach`.
+ * Empties every `core_*` and `chk_*` table, keeping the schema. Call it in `beforeEach`.
  * Tables are discovered from the catalog, so new tables need no change here.
  *
  * A booted PaymentCoreModule runs BullMQ sweep jobs (expiry, webhook inbox,
@@ -18,7 +18,8 @@ const MAX_ATTEMPTS = 5;
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables
-    WHERE schemaname = 'public' AND tablename LIKE 'core\\_%'`;
+    WHERE schemaname = 'public'
+      AND (tablename LIKE 'core\\_%' OR tablename LIKE 'chk\\_%')`;
   if (tables.length === 0) return;
   const list = tables.map((t) => `"public"."${t.tablename}"`).join(', ');
   for (let attempt = 1; ; attempt++) {
