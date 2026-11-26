@@ -1,4 +1,5 @@
 import type { DbContext } from './db.js';
+import { PrismaGatewayConnectionRepository } from './gateway-connection.repository.js';
 import { PrismaGatewayRawResponseRepository } from './gateway-raw-response.repository.js';
 import { PrismaIdempotencyKeyRepository } from './idempotency-key.repository.js';
 import { PrismaOutboxRepository } from './outbox.repository.js';
@@ -13,6 +14,8 @@ export type PaymentRepository = PublicOf<PrismaPaymentRepository>;
 export type OutboxRepository = PublicOf<PrismaOutboxRepository>;
 export type WebhookInboxRepository = PublicOf<PrismaWebhookInboxRepository>;
 export type IdempotencyKeyRepository = PublicOf<PrismaIdempotencyKeyRepository>;
+export type GatewayConnectionRepository =
+  PublicOf<PrismaGatewayConnectionRepository>;
 export type GatewayRawResponseRepository =
   PublicOf<PrismaGatewayRawResponseRepository>;
 export type StatusTransitionRepository =
@@ -28,6 +31,7 @@ export interface Repositories {
   readonly outbox: OutboxRepository;
   readonly webhookInbox: WebhookInboxRepository;
   readonly idempotencyKeys: IdempotencyKeyRepository;
+  readonly gatewayConnections: GatewayConnectionRepository;
   readonly gatewayRawResponses: GatewayRawResponseRepository;
   readonly statusTransitions: StatusTransitionRepository;
 }
@@ -38,6 +42,7 @@ export function createRepositories(ctx: DbContext): Repositories {
     outbox: new PrismaOutboxRepository(ctx),
     webhookInbox: new PrismaWebhookInboxRepository(ctx),
     idempotencyKeys: new PrismaIdempotencyKeyRepository(ctx),
+    gatewayConnections: new PrismaGatewayConnectionRepository(ctx),
     gatewayRawResponses: new PrismaGatewayRawResponseRepository(ctx),
     statusTransitions: new PrismaStatusTransitionRepository(ctx),
   };

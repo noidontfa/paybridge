@@ -26,6 +26,7 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
       await prisma.$executeRawUnsafe(
         `TRUNCATE ${list} RESTART IDENTITY CASCADE`,
       );
+      await connectFakeGateway(prisma);
       return;
     } catch (error) {
       if (attempt >= MAX_ATTEMPTS || !isDeadlock(error)) throw error;
@@ -39,5 +40,18 @@ function isDeadlock(error: unknown): boolean {
   const meta = (error as { meta?: { code?: unknown } }).meta;
   return (
     meta?.code === DEADLOCK_DETECTED || error.message.includes(DEADLOCK_DETECTED)
+  );
+}
+
+/**
+ * Every Organization holds an enabled `fake` Gateway Connection (no
+ * credentials) after a reset, so tests start attempts without ceremony. Tests
+ * about Gateway Connections delete or change it.
+ */
+export async function connectFakeGateway(prisma: PrismaClient): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO core_gateway_connections (id, organization_id, gateway_id, updated_at)
+     SELECT gen_random_uuid(), id, 'fake', now() FROM iam_organizations
+     ON CONFLICT DO NOTHING`,
   );
 }

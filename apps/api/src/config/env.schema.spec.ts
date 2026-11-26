@@ -11,6 +11,17 @@ const REDIS_URL = 'redis://localhost:6379';
 const required = { DATABASE_URL, REDIS_URL };
 
 describe('envSchema', () => {
+  it('refuses to start in production without credential encryption keys', () => {
+    const prod = { ...required, NODE_ENV: 'production', AUTH_JWT_PRIVATE_KEY: 'k' };
+    expect(() => envSchema.parse(prod)).toThrow(/GATEWAY_CREDENTIAL_KEYS/);
+    expect(
+      envSchema.parse({
+        ...prod,
+        GATEWAY_CREDENTIAL_KEYS: `k1:${Buffer.alloc(32, 1).toString('base64')}`,
+      }).GATEWAY_CREDENTIAL_KEYS,
+    ).toMatch(/^k1:/);
+  });
+
   it('applies defaults', () => {
     const env = envSchema.parse(required);
     expect(env.NODE_ENV).toBe('development');
@@ -57,6 +68,7 @@ describe('envSchema', () => {
         ...required,
         NODE_ENV: 'production',
         AUTH_JWT_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\n...',
+        GATEWAY_CREDENTIAL_KEYS: `k1:${Buffer.alloc(32, 1).toString('base64')}`,
       }).success,
     ).toBe(true);
   });

@@ -195,3 +195,72 @@ export class ReviewWindowOpenError extends DomainError {
 export class ReviewResolutionNotAllowedError extends DomainError {
   readonly code = 'REVIEW_RESOLUTION_NOT_ALLOWED';
 }
+
+/** The Organization has no Gateway Connection for the gateway. */
+export class GatewayNotConnectedError extends DomainError {
+  readonly code = 'GATEWAY_NOT_CONNECTED';
+
+  constructor(readonly gatewayId: string) {
+    super(
+      `Gateway ${JSON.stringify(gatewayId)} is not connected for this Organization`,
+    );
+  }
+}
+
+/** The Organization's Gateway Connection is disabled: no new PaymentTransactions. */
+export class GatewayDisabledError extends DomainError {
+  readonly code = 'GATEWAY_DISABLED';
+
+  constructor(readonly gatewayId: string) {
+    super(
+      `Gateway ${JSON.stringify(gatewayId)} is disabled for this Organization`,
+    );
+  }
+}
+
+export class GatewayConnectionNotFoundError extends DomainError {
+  readonly code = 'GATEWAY_CONNECTION_NOT_FOUND';
+
+  constructor(readonly connectionId: string) {
+    super(`Gateway Connection ${connectionId} not found`);
+  }
+}
+
+export class GatewayConnectionExistsError extends DomainError {
+  readonly code = 'GATEWAY_CONNECTION_EXISTS';
+
+  constructor(readonly gatewayId: string) {
+    super(
+      `This Organization already has a Gateway Connection for ${JSON.stringify(gatewayId)}`,
+    );
+  }
+}
+
+/** A used Gateway Connection keeps its credentials for Refunds and reconciliation. */
+export class GatewayConnectionUsedError extends DomainError {
+  readonly code = 'GATEWAY_CONNECTION_USED';
+
+  constructor(readonly connectionId: string) {
+    super(
+      'This Gateway Connection has PaymentTransactions and cannot be deleted; disable it instead',
+    );
+  }
+}
+
+/** The credentials do not fit the gateway (missing, malformed or not allowed). */
+export class InvalidGatewayCredentialsError extends InvalidInputError {
+  readonly code = 'INVALID_GATEWAY_CREDENTIALS';
+
+  constructor(
+    readonly gatewayId: string,
+    readonly problems: readonly string[],
+  ) {
+    super(
+      `Invalid credentials for gateway ${JSON.stringify(gatewayId)}: ${problems.join('; ')}`,
+    );
+  }
+
+  override get details() {
+    return { problems: this.problems };
+  }
+}

@@ -90,6 +90,8 @@ export interface SignedInHttp {
   readonly accessToken: string;
   get(path: string): request.Test;
   post(path: string): request.Test;
+  put(path: string): request.Test;
+  delete(path: string): request.Test;
 }
 
 export async function signedInHttp(
@@ -106,5 +108,7 @@ export async function signedInHttp(
     accessToken,
     get: (path) => request(server).get(path).set('Authorization', auth),
     post: (path) => request(server).post(path).set('Authorization', auth),
+    put: (path) => request(server).put(path).set('Authorization', auth),
+    delete: (path) => request(server).delete(path).set('Authorization', auth),
   };
 }

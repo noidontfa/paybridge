@@ -281,6 +281,20 @@ describe('seed organizations', () => {
     expect(organizations.map((o) => o.id)).toContain(DEFAULT_ORGANIZATION_ID);
   });
 
+  it('creates Gateway Connections, one of them disabled, with encrypted credentials', async () => {
+    const connections = await prisma.gatewayConnection.findMany();
+    expect(connections.some((c) => !c.enabled)).toBe(true);
+    expect(connections.some((c) => c.enabled)).toBe(true);
+    const withCredentials = connections.filter((c) => c.credentialsCiphertext);
+    expect(withCredentials.length).toBeGreaterThan(0);
+    for (const c of withCredentials) {
+      expect(c.credentialsCiphertext).not.toContain('sk_test');
+      expect(c.credentialsKeyId).toBeTruthy();
+    }
+    await seed();
+    expect(await prisma.gatewayConnection.count()).toBe(connections.length);
+  });
+
   it('keeps every row of a Payment in the Payment own Organization', async () => {
     const payments = await prisma.payment.findMany({
       include: { transactions: true, outboxEvents: true },

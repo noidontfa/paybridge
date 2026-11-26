@@ -135,4 +135,35 @@ describe('GatewayManager', () => {
     ).toBe(conn1v1);
     expect(create).toHaveBeenCalledTimes(3);
   });
+
+  it('builds a Gateway Connection instance from its credentials, cached by id and version', () => {
+    const { registration: stripe, create } = reg('stripe', { secretKey: 'env' });
+    const manager = new GatewayManager([stripe]);
+    const conn = (version: number, secretKey: string) => ({
+      id: 'c1',
+      credentialsVersion: version,
+      credentials: { secretKey },
+    });
+
+    const v1 = manager.resolveForConnection('stripe', conn(1, 'sk_a'));
+    expect(manager.resolveForConnection('stripe', conn(1, 'sk_a'))).toBe(v1);
+    const v2 = manager.resolveForConnection('stripe', conn(2, 'sk_b'));
+
+    expect(v2).not.toBe(v1);
+    expect(create).toHaveBeenCalledWith({ secretKey: 'sk_a' });
+    expect(create).toHaveBeenCalledWith({ secretKey: 'sk_b' });
+    expect(create).not.toHaveBeenCalledWith({ secretKey: 'env' });
+  });
+
+  it('uses the registered default instance for a connection without credentials', () => {
+    const fake = plugin('fake');
+    const manager = new GatewayManager([fixedPlugin(fake)]);
+    expect(
+      manager.resolveForConnection('fake', {
+        id: 'c1',
+        credentialsVersion: 1,
+        credentials: null,
+      }),
+    ).toBe(fake);
+  });
 });

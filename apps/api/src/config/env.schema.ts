@@ -103,6 +103,25 @@ const envObject = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().optional(),
   ),
+  /**
+   * Keys that encrypt Gateway Connection credentials: `id:base64key` pairs
+   * separated by commas, each key 32 random bytes; the first encrypts, all
+   * decrypt. Unset => a fixed development key (never in production, which
+   * refuses to start without it).
+   */
+  GATEWAY_CREDENTIAL_KEYS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine(
+        (v) =>
+          v
+            .split(',')
+            .every((e) => /^[A-Za-z0-9_-]+:[A-Za-z0-9+/]{43}=$/.test(e.trim())),
+        { message: 'must be id:base64key pairs, each key 32 bytes' },
+      )
+      .optional(),
+  ),
   /** Stripe Gateway Plugin: all three keys or none. */
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
@@ -116,6 +135,14 @@ export const envSchema = envObject
         code: 'custom',
         path: ['AUTH_JWT_PRIVATE_KEY'],
         message: 'is required in production (an ES256 PKCS#8 PEM key)',
+      });
+    }
+    if (env.NODE_ENV === 'production' && !env.GATEWAY_CREDENTIAL_KEYS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GATEWAY_CREDENTIAL_KEYS'],
+        message:
+          'is required in production (id:base64key pairs; each key 32 random bytes)',
       });
     }
     const missing = STRIPE_KEYS.filter((k) => !env[k]);
@@ -171,6 +198,16 @@ export function resolveOutboxRelayEnabled(
   env: Pick<Env, 'NODE_ENV' | 'OUTBOX_RELAY_ENABLED'>,
 ): boolean {
   return env.OUTBOX_RELAY_ENABLED ?? env.NODE_ENV !== 'test';
+}
+
+/** Fixed key for development and tests; never accepted in production. */
+export const DEVELOPMENT_CREDENTIAL_KEYS =
+  'dev:cGF5YnJpZGdlLWRldi1rZXktbm90LWZvci1wcm9kISE=';
+
+export function resolveCredentialKeys(
+  env: Pick<Env, 'GATEWAY_CREDENTIAL_KEYS'>,
+): string {
+  return env.GATEWAY_CREDENTIAL_KEYS ?? DEVELOPMENT_CREDENTIAL_KEYS;
 }
 
 export interface StripeConfig {
