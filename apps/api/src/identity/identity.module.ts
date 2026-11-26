@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  Module,
+  RequestMethod,
+  type MiddlewareConsumer,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import {
@@ -16,6 +21,7 @@ import {
   SetPublishableKeyOrigins,
 } from './application/use-cases/publishable-keys.js';
 import { PublishableKeysController } from './infrastructure/http/publishable-keys.controller.js';
+import { CheckoutCorsMiddleware } from './infrastructure/http/checkout-cors.middleware.js';
 import { PublishableKeyRules } from './domain/services/publishable-key-rules.js';
 import { isProduction, type Env } from '../config/env.schema.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
@@ -146,4 +152,11 @@ import { UserRepository } from './domain/repositories/user.repository.js';
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })
-export class IdentityModule {}
+export class IdentityModule implements NestModule {
+  /** CORS for the checkout endpoints; the middleware ignores every other path. */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(CheckoutCorsMiddleware)
+      .forRoutes({ path: '{*path}', method: RequestMethod.ALL });
+  }
+}
