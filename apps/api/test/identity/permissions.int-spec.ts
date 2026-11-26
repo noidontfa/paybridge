@@ -369,6 +369,31 @@ describe('Super Admin scope', () => {
     );
     expect(all.body.items).toHaveLength(0);
   });
+
+  it.each(['OPERATOR', 'ORGANIZATION_ADMIN'] as const)(
+    'keeps a %s in their own Organization whatever header they send',
+    async (role) => {
+      const own = await seedReview(defaultScope);
+      const foreign = await seedReview(organizationScope(other));
+      const user = await signedInHttp(app, prisma, { role });
+      for (const header of [other, 'all', 'not-an-id']) {
+        const read = await withOrg(
+          user.get('/internal/reviews'),
+          header,
+        ).expect(200);
+        expect(read.body.items).toHaveLength(1);
+      }
+      // A write cannot be redirected to another Organization either.
+      await withOrg(
+        user
+          .post(`/internal/payments/${foreign.paymentId}/review-resolution`)
+          .send(resolveBody(foreign.attemptId)),
+        other,
+      ).expect(404);
+      expect(await attemptStatus(foreign.attemptId)).toBe('REQUIRES_REVIEW');
+      expect(own.attemptId).toBeDefined();
+    },
+  );
 });
 
 describe('GET /internal/organizations (manage Organizations)', () => {
