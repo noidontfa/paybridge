@@ -16,6 +16,12 @@ export abstract class UserRepository {
     id: string,
     changes: { role?: UserRole; active?: boolean },
   ): Promise<void>;
+  /** Every Super Admin, by name. */
+  abstract listSuperAdmins(): Promise<User[]>;
+  /** Locks every Super Admin row until the transaction ends. */
+  abstract lockSuperAdmins(): Promise<void>;
+  /** Active Super Admins, not counting `exceptUserId`. */
+  abstract countActiveSuperAdmins(exceptUserId: string): Promise<number>;
   /** Active Organization Admins of the Organization, not counting `exceptUserId`. */
   abstract countActiveAdmins(
     organizationId: string,

@@ -75,6 +75,25 @@ export class PrismaUserRepository extends UserRepository {
     await this.ctx.db.user.update({ where: { id }, data: changes });
   }
 
+  async listSuperAdmins(): Promise<User[]> {
+    const rows = await this.ctx.db.user.findMany({
+      where: { role: 'SUPER_ADMIN' },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toUser);
+  }
+
+  async lockSuperAdmins(): Promise<void> {
+    await this.ctx.db
+      .$queryRaw`SELECT id FROM iam_users WHERE role = 'SUPER_ADMIN' ORDER BY id FOR UPDATE`;
+  }
+
+  async countActiveSuperAdmins(exceptUserId: string): Promise<number> {
+    return this.ctx.db.user.count({
+      where: { role: 'SUPER_ADMIN', active: true, id: { not: exceptUserId } },
+    });
+  }
+
   async countActiveAdmins(
     organizationId: string,
     exceptUserId: string,

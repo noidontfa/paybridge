@@ -1,0 +1,13 @@
+import { PageHeader } from '@/components/page-header';
+import { SuperAdminsScreen } from '@/components/platform/super-admins-screen';
+
+export const metadata = { title: 'Super Admins' };
+
+export default function Page() {
+  return (
+    <>
+      <PageHeader title="Super Admins" description="The people who run the platform." />
+      <SuperAdminsScreen />
+    </>
+  );
+}

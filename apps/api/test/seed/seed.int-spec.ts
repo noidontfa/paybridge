@@ -321,6 +321,16 @@ describe('seed organizations', () => {
     expect(new Set(same.map((p) => p.organizationId)).size).toBe(2);
   });
 
+  it('includes a suspended Organization whose admin cannot sign in', async () => {
+    const suspended = await prisma.organization.findMany({
+      where: { name: 'Dormant Goods' },
+      include: { users: true },
+    });
+    expect(suspended).toHaveLength(1);
+    expect(suspended[0]!.status).toBe('SUSPENDED');
+    expect(suspended[0]!.users.length).toBeGreaterThan(0);
+  });
+
   it('leaves the Organizations in place on a re-run', async () => {
     const before = await prisma.organization.count();
     await seed();

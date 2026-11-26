@@ -4,7 +4,7 @@
 
 **Blocked by:** 06, 08
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A Super Admin creates an Organization with a name and an Invitation for its first Organization Admin
 - [ ] A Super Admin suspends an Organization: its API Keys are refused, its Users cannot sign in or refresh, and its sensitive writes are refused at once; Callbacks, re-queries, reconciliation and expiry for attempts already under way are still processed

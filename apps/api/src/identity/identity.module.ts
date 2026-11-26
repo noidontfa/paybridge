@@ -21,6 +21,12 @@ import {
 import { InvitationsController } from './http/invitations.controller.js';
 import { ManageUsers } from './application/use-cases/manage-users.js';
 import { UsersController } from './http/users.controller.js';
+import { SuperAdminsController } from './http/super-admins.controller.js';
+import {
+  CreateOrganization,
+  SetOrganizationSuspension,
+} from './application/use-cases/manage-organizations.js';
+import { ManageSuperAdmins } from './application/use-cases/manage-super-admins.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
@@ -54,6 +60,7 @@ import { UserRepository } from './port/user.repository.js';
     OrganizationsController,
     InvitationsController,
     UsersController,
+    SuperAdminsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
@@ -98,6 +105,9 @@ import { UserRepository } from './port/user.repository.js';
     ListPendingInvitations,
     AcceptInvitation,
     ManageUsers,
+    CreateOrganization,
+    SetOrganizationSuspension,
+    ManageSuperAdmins,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })

@@ -36,7 +36,8 @@ describe('the seed', () => {
 
     const roles = new Set<string>();
     for (const seeded of SEED_USERS) {
-      if (seeded.active === false) {
+      // A deactivated User, or one of the seed's suspended Organization.
+      if (seeded.active === false || seeded.organization === 'dormant') {
         await signIn(app, {
           email: seeded.email,
           password: SEED_PASSWORD,

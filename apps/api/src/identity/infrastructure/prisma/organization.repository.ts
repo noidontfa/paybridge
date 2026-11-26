@@ -2,6 +2,7 @@ import type { Organization as OrganizationRow } from '../../../generated/prisma/
 import type {
   NewOrganization,
   Organization,
+  OrganizationStatus,
 } from '../../domain/organization.js';
 import { OrganizationRepository } from '../../port/organization.repository.js';
 import type { DbContext } from './db.js';
@@ -39,6 +40,10 @@ export class PrismaOrganizationRepository extends OrganizationRepository {
       data: { id: organization.id, name: organization.name },
     });
     return toOrganization(row);
+  }
+
+  async setStatus(id: string, status: OrganizationStatus): Promise<void> {
+    await this.ctx.db.organization.update({ where: { id }, data: { status } });
   }
 
   async lockForUpdate(id: string): Promise<void> {

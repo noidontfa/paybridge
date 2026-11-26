@@ -2,7 +2,9 @@ import {
   BookOpenIcon,
   CreditCardIcon,
   FileClockIcon,
+  BuildingIcon,
   GaugeIcon,
+  ShieldCheckIcon,
   LandmarkIcon,
   OctagonAlertIcon,
   ReceiptIcon,
@@ -57,6 +59,15 @@ export const mainNav: NavSection[] = [
   },
 ];
 
+/** The Super Admin's Platform area; shown only with the Permission to manage Organizations. */
+export const platformNav: NavSection = {
+  label: 'Platform',
+  items: [
+    { title: 'Organizations', url: '/platform/organizations', icon: BuildingIcon },
+    { title: 'Super Admins', url: '/platform/super-admins', icon: ShieldCheckIcon },
+  ],
+};
+
 export const secondaryNav: NavItem[] = [
   { title: 'Users', url: '/settings/users', icon: UsersIcon },
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
@@ -70,9 +81,10 @@ export function isActivePath(pathname: string, url: string): boolean {
 
 /** Breadcrumb trail for a pathname, derived from the navigation. */
 export function breadcrumbFor(pathname: string, current?: string): { title: string; url?: string }[] {
-  const all = [...mainNav.flatMap((s) => s.items), ...secondaryNav];
+  const sections = [...mainNav, platformNav];
+  const all = [...sections.flatMap((s) => s.items), ...secondaryNav];
   const match = all.find((i) => i.url && i.url !== '/' && isActivePath(pathname, i.url));
-  const section = mainNav.find((s) => s.items.some((i) => i === match))?.label;
+  const section = sections.find((s) => s.items.some((i) => i === match))?.label;
   const trail: { title: string; url?: string }[] = [{ title: 'PayBridge Console', url: '/' }];
   if (!match) {
     if (pathname === '/') return [{ title: 'Overview' }];
