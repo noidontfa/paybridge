@@ -9,10 +9,12 @@ import {
   ORGANIZATION_HEADER,
   type Principal,
 } from '../../common/principal/principal.js';
-import { INTERNAL_PREFIX } from '../../constants.js';
+import { GLOBAL_PREFIX, INTERNAL_PREFIX } from '../../constants.js';
 import { AccessTokenService } from '../port/access-token.service.js';
 import { IdentityClock } from '../port/clock.js';
 import { PrincipalResolver } from '../port/principal-resolver.js';
+import { AuthenticateApiKey } from '../application/use-cases/api-keys.js';
+import { InvalidApiKeyError } from '../domain/api-key.js';
 import { StubPrincipalResolver } from './stub-principal.resolver.js';
 
 interface RequestLike {
@@ -56,14 +58,18 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     @Inject(IdentityClock) private readonly clock: IdentityClock,
     @Inject(StubPrincipalResolver)
     private readonly publicApi: StubPrincipalResolver,
+    @Inject(AuthenticateApiKey)
+    private readonly apiKeys: AuthenticateApiKey,
   ) {
     super();
   }
 
-  resolve(request: unknown): Principal {
+  async resolve(request: unknown): Promise<Principal> {
     const req = request as RequestLike;
     const path = req.path ?? req.url ?? '';
-    if (!path.startsWith(`/${INTERNAL_PREFIX}/`)) return this.publicApi.resolve();
+    if (!path.startsWith(`/${INTERNAL_PREFIX}/`)) {
+      return this.resolvePublic(path, req.headers.authorization);
+    }
 
     const header = req.headers.authorization;
     const match = typeof header === 'string' ? /^Bearer (\S+)$/.exec(header) : null;
@@ -86,4 +92,40 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     // naming another one is ignored.
     return { organizationId: claims.organizationId, user };
   }
+
+  /**
+   * The public payments API takes the Organization from the API Key. Two
+   * routes carry no key and stay on the stub until their own tickets: the
+   * customer's browser return, and gateway Callbacks (signature-verified).
+   */
+  private async resolvePublic(
+    path: string,
+    authorization: string | string[] | undefined,
+  ): Promise<Principal> {
+    if (NO_KEY_ROUTES.some((route) => route.test(path))) {
+      return this.publicApi.resolve();
+    }
+    const match =
+      typeof authorization === 'string'
+        ? /^Bearer (\S+)$/.exec(authorization)
+        : null;
+    try {
+      if (!match) throw new InvalidApiKeyError();
+      const { organizationId } = await this.apiKeys.execute(match[1]!);
+      return { organizationId, user: null };
+    } catch (error) {
+      if (error instanceof InvalidApiKeyError) {
+        throw new UnauthorizedException({
+          message: error.message,
+          code: 'INVALID_API_KEY',
+        });
+      }
+      throw error;
+    }
+  }
 }
+
+const NO_KEY_ROUTES: readonly RegExp[] = [
+  new RegExp(`^/${GLOBAL_PREFIX}/payments/[^/]+/return/?$`),
+  new RegExp(`^/${GLOBAL_PREFIX}/webhooks/`),
+];

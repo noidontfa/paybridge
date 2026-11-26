@@ -8,6 +8,7 @@ import { FixtureHttpClient } from '../../src/gateways/stripe/fixture-http-client
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 
 // End to end: a merchant starts a Stripe attempt over HTTP. The Stripe SDK's
 // HTTP layer replays a recorded PaymentIntent create response; no live calls.
@@ -19,6 +20,7 @@ const STRIPE_ENV = {
 };
 
 const prisma = createTestPrismaClient();
+let apiKey: string;
 const stripeHttp = new FixtureHttpClient();
 let app: INestApplication;
 
@@ -31,6 +33,7 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ logger: false });
   app.setGlobalPrefix(GLOBAL_PREFIX);
   await app.init();
+  apiKey = await createApiKey(prisma);
 });
 
 afterAll(async () => {
@@ -47,7 +50,7 @@ describe('POST /api/payments/:paymentId/attempts with gatewayId "stripe"', () =>
   it('returns a CLIENT_SDK next action with clientParams', async () => {
     stripeHttp.respond(200, 'payment-intent.requires-payment-method');
     const created = await request(app.getHttpServer())
-      .post('/api/payments')
+      .post('/api/payments').set(bearer(apiKey))
       .send({
         amount: '150000',
         currency: 'VND',
@@ -56,7 +59,7 @@ describe('POST /api/payments/:paymentId/attempts with gatewayId "stripe"', () =>
       .expect(201);
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${created.body.id}/attempts`)
+      .post(`/api/payments/${created.body.id}/attempts`).set(bearer(apiKey))
       .send({ gatewayId: 'stripe', returnUrl: 'https://shop.example/return' })
       .expect(201);
 
