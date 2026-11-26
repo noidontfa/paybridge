@@ -124,7 +124,10 @@ export interface CheckoutCaller {
   readonly organizationId: string;
   readonly publishableKeyId: string;
   readonly allowedOrigins: readonly string[];
-  /** The request's own origin, one of `allowedOrigins`. */
+  /**
+   * The host page the request acts for, one of `allowedOrigins`: the
+   * request's own `Origin`, or, from the checkout app, the host page it names.
+   */
   readonly origin: string;
 }
 
@@ -140,12 +143,22 @@ export class AuthenticatePublishableKey {
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
     @Inject(OrganizationRepository)
     private readonly organizations: OrganizationRepository,
+    @Inject(PublishableKeyRules) private readonly rules: PublishableKeyRules,
   ) {}
 
+  /**
+   * `hostOrigin` counts only when `origin` is the checkout app's: its iframe
+   * page acts for the host page it is embedded in, and that page's origin is
+   * the one the key must allow. Anyone else is judged by their own `Origin`.
+   */
   async execute(
     presented: string,
-    origin: string | undefined,
+    requestOrigin: string | undefined,
+    hostOrigin?: string,
   ): Promise<CheckoutCaller> {
+    const origin = this.isCheckoutApp(requestOrigin)
+      ? hostOrigin
+      : requestOrigin;
     if (!looksLikePublishableKey(presented)) {
       throw new InvalidPublishableKeyError();
     }
@@ -167,5 +180,10 @@ export class AuthenticatePublishableKey {
       allowedOrigins: stored.allowedOrigins,
       origin: new URL(origin!).origin,
     };
+  }
+
+  private isCheckoutApp(origin: string | undefined): boolean {
+    if (!origin || !URL.canParse(origin)) return false;
+    return this.rules.checkoutAppOrigins.includes(new URL(origin).origin);
   }
 }

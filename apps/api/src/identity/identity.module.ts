@@ -23,7 +23,11 @@ import {
 import { PublishableKeysController } from './infrastructure/http/publishable-keys.controller.js';
 import { CheckoutCorsMiddleware } from './infrastructure/http/checkout-cors.middleware.js';
 import { PublishableKeyRules } from './domain/services/publishable-key-rules.js';
-import { isProduction, type Env } from '../config/env.schema.js';
+import {
+  isProduction,
+  resolveCheckoutAppOrigins,
+  type Env,
+} from '../config/env.schema.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
 import { GetSessionUser } from './application/use-cases/get-session-user.js';
 import { ChangePassword } from './application/use-cases/change-password.js';
@@ -125,6 +129,12 @@ import { UserRepository } from './domain/repositories/user.repository.js';
       useFactory: (config: ConfigService<Env, true>) =>
         new PublishableKeyRules(
           !isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) }),
+          resolveCheckoutAppOrigins({
+            NODE_ENV: config.get('NODE_ENV', { infer: true }),
+            CHECKOUT_APP_ORIGINS: config.get('CHECKOUT_APP_ORIGINS', {
+              infer: true,
+            }),
+          }),
         ),
     },
     CreatePublishableKey,

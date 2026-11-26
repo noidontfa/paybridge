@@ -216,6 +216,73 @@ describe('origin enforcement', () => {
   });
 });
 
+// Ticket 09: the checkout page runs in an iframe served by the checkout app,
+// so its requests carry the checkout app's origin. It names the host page it
+// is embedded in, and that host origin is what the key must allow.
+describe('requests from the checkout app', () => {
+  /** The checkout app's origin outside production (`CHECKOUT_APP_ORIGINS`). */
+  const CHECKOUT_APP = 'http://localhost:3200';
+  const fromCheckoutApp = (key: string, hostOrigin?: string) => {
+    let req = request(server())
+      .get('/api/checkout/probe')
+      .set(bearer(key))
+      .set('Origin', CHECKOUT_APP);
+    if (hostOrigin !== undefined) {
+      req = req.set('X-PayBridge-Host-Origin', hostOrigin);
+    }
+    return req;
+  };
+
+  it('acts for the host page the checkout app names, when the key allows it', async () => {
+    const { key } = await createKey(await admin());
+
+    const res = await fromCheckoutApp(key, SHOP).expect(200);
+
+    expect(res.body.origin).toBe(SHOP);
+  });
+
+  it.each([
+    ['names no host page', undefined],
+    ['names a host page the key does not allow', 'https://evil.example.com'],
+    ['names itself as the host page', CHECKOUT_APP],
+  ])('refuses the checkout app when it %s', async (_name, hostOrigin) => {
+    const { key } = await createKey(await admin());
+
+    const res = await fromCheckoutApp(key, hostOrigin);
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ORIGIN_NOT_ALLOWED');
+  });
+
+  it('ignores a host page named by any other origin', async () => {
+    const { key } = await createKey(await admin());
+
+    const res = await probe(key, 'https://evil.example.com').set(
+      'X-PayBridge-Host-Origin',
+      SHOP,
+    );
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ORIGIN_NOT_ALLOWED');
+  });
+
+  it('lets the browser send the host page header', async () => {
+    const res = await request(server())
+      .options('/api/checkout/probe')
+      .set('Origin', CHECKOUT_APP)
+      .set('Access-Control-Request-Method', 'GET')
+      .set(
+        'Access-Control-Request-Headers',
+        'authorization,x-paybridge-host-origin',
+      );
+
+    expect(res.status).toBe(204);
+    expect(
+      res.headers['access-control-allow-headers']?.toLowerCase(),
+    ).toContain('x-paybridge-host-origin');
+  });
+});
+
 describe('credentials are not interchangeable', () => {
   it('refuses an API Key at a checkout endpoint', async () => {
     const apiKey = await createApiKey(prisma);

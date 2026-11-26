@@ -178,6 +178,24 @@ const envObject = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().optional(),
   ),
+
+  // --- Embedded Checkout (ticket 09): the checkout app ---
+  /**
+   * Origins the checkout app (`apps/checkout`) is served from, comma
+   * separated. Its iframe page calls the checkout endpoints from there on
+   * behalf of the host page it names. Unset => `http://localhost:3200`
+   * outside production, none in production.
+   */
+  CHECKOUT_APP_ORIGINS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine(
+        (v) => v.split(',').every((o) => !o.trim() || URL.canParse(o.trim())),
+        'must be comma-separated origins such as https://checkout.example.com',
+      )
+      .optional(),
+  ),
 });
 
 export const envSchema = envObject
@@ -238,6 +256,23 @@ export function resolveTrustProxy(
   if (/^\d+$/.test(trimmed)) return Number(trimmed);
   return trimmed;
 }
+
+/** The checkout app's origins (`CHECKOUT_APP_ORIGINS`), normalised. */
+export function resolveCheckoutAppOrigins(
+  env: Pick<Env, 'NODE_ENV' | 'CHECKOUT_APP_ORIGINS'>,
+): string[] {
+  const raw =
+    env.CHECKOUT_APP_ORIGINS ??
+    (isProduction(env) ? '' : DEFAULT_CHECKOUT_APP_ORIGIN);
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => new URL(value).origin);
+}
+
+/** Where `pnpm --filter @paybridge/checkout dev` serves the checkout app. */
+export const DEFAULT_CHECKOUT_APP_ORIGIN = 'http://localhost:3200';
 
 /** Resolved values derived from the raw environment. */
 export function isProduction(env: Pick<Env, 'NODE_ENV'>): boolean {

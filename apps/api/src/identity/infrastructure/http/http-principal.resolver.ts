@@ -23,7 +23,7 @@ import {
   InvalidPublishableKeyError,
   OriginNotAllowedError,
 } from '../../domain/entities/publishable-key.js';
-import { isCheckoutPath } from './checkout-endpoint.js';
+import { HOST_ORIGIN_HEADER, isCheckoutPath } from './checkout-endpoint.js';
 
 interface RequestLike {
   readonly path?: string;
@@ -77,7 +77,11 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     const req = request as RequestLike;
     const path = req.path ?? req.url ?? '';
     if (isCheckoutPath(path)) {
-      return this.resolveCheckout(req.headers.authorization, req.headers.origin);
+      return this.resolveCheckout(
+        req.headers.authorization,
+        req.headers.origin,
+        req.headers[HOST_ORIGIN_HEADER],
+      );
     }
     if (!path.startsWith(`/${INTERNAL_PREFIX}/`)) {
       return this.resolvePublic(path, req.headers.authorization);
@@ -112,6 +116,7 @@ export class HttpPrincipalResolver extends PrincipalResolver {
   private async resolveCheckout(
     authorization: string | string[] | undefined,
     origin: string | string[] | undefined,
+    hostOrigin: string | string[] | undefined,
   ): Promise<Principal> {
     const match =
       typeof authorization === 'string'
@@ -122,6 +127,7 @@ export class HttpPrincipalResolver extends PrincipalResolver {
       const caller = await this.publishableKeys.execute(
         match[1]!,
         typeof origin === 'string' ? origin : undefined,
+        typeof hostOrigin === 'string' ? hostOrigin : undefined,
       );
       return {
         organizationId: caller.organizationId,

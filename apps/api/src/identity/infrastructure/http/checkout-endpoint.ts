@@ -19,6 +19,12 @@ export const IS_CHECKOUT_ENDPOINT = 'identity:checkout-endpoint';
  */
 export const CHECKOUT_PATH = `/${GLOBAL_PREFIX}/checkout`;
 
+/**
+ * Sent by the checkout app's iframe page: the origin of the host page it is
+ * embedded in. Honoured only from the checkout app's own origins.
+ */
+export const HOST_ORIGIN_HEADER = 'x-paybridge-host-origin';
+
 export function isCheckoutPath(path: string): boolean {
   return path === CHECKOUT_PATH || path.startsWith(`${CHECKOUT_PATH}/`);
 }

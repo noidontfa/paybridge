@@ -13,6 +13,7 @@ import { PricingPlansController } from './infrastructure/http/pricing-plans.cont
 import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
 import { PaymentCoreModule } from '../payment-core/port/payments.js';
 import { checkoutPaymentsProviders } from './infrastructure/checkout-payments.providers.js';
+import { CheckoutFrameController } from './infrastructure/http/checkout-frame.controller.js';
 import { CheckoutPaymentsController } from './infrastructure/http/checkout-payments.controller.js';
 import { CorePricingPlanPayments } from './infrastructure/references/core-pricing-plan-payments.js';
 import {
@@ -35,6 +36,7 @@ import { CheckoutPricingTablesController } from './infrastructure/http/checkout-
     PricingTablesController,
     CheckoutPricingTablesController,
     CheckoutPaymentsController,
+    CheckoutFrameController,
   ],
   providers: [
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
