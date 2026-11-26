@@ -1,18 +1,7 @@
 import { z } from 'zod';
 import { REVIEW_REASONS } from '../../domain/statuses.js';
-import type { ReviewRow } from '../../infrastructure/prisma/console-read/reviews-read.repository.js';
-import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
-import { optionalParam, pagingShape } from '../shared/list-query.js';
-
-/** By the time the Review opened; a cursor only continues its own order. */
-export function reviewsCursor(order: 'asc' | 'desc') {
-  return keysetCursor<ReviewRow>({
-    tag: `reviewOpenedAt:${order}`,
-    valueOf: (row) => row.reviewOpenedAt.toISOString(),
-    isValue: isIsoTime,
-    invalidMessage: 'is not valid for this list and order',
-  });
-}
+import { reviewsCursor } from '../../application/use-cases/console/list-reviews.js';
+import { optionalParam, pagingShape } from './list-query.js';
 
 export const reviewsListQuerySchema = z
   .object({

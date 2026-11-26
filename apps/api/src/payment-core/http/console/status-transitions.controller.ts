@@ -7,14 +7,13 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { StatusTransitionsReadRepository } from '../../infrastructure/prisma/console-read/status-transitions-read.repository.js';
+import { ListStatusTransitions } from '../../application/use-cases/console/status-transitions.js';
 import {
   type StatusTransitionsListQuery,
-  statusTransitionsCursor,
   statusTransitionsListQuerySchema,
 } from './status-transitions.query.js';
 
@@ -26,8 +25,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/status-transitions`)
 export class StatusTransitionsController {
   constructor(
-    @Inject(StatusTransitionsReadRepository)
-    private readonly transitions: StatusTransitionsReadRepository,
+    @Inject(ListStatusTransitions)
+    private readonly listTransitions: ListStatusTransitions,
   ) {}
 
   @Get()
@@ -47,10 +46,7 @@ export class StatusTransitionsController {
     @Query(new ZodValidationPipe(statusTransitionsListQuerySchema))
     query: StatusTransitionsListQuery,
   ) {
-    const page = statusTransitionsCursor.page(
-      await this.transitions.list(scope, query),
-      query.limit,
-    );
+    const page = await this.listTransitions.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,

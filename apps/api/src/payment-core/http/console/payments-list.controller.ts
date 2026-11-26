@@ -7,14 +7,13 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { PaymentsReadRepository } from '../../infrastructure/prisma/console-read/payments-read.repository.js';
+import { ListPayments } from '../../application/use-cases/console/list-payments.js';
 import {
   type PaymentsListQuery,
-  paymentsCursor,
   paymentsListQuerySchema,
 } from './payments-list.query.js';
 
@@ -27,8 +26,7 @@ import {
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentsListController {
   constructor(
-    @Inject(PaymentsReadRepository)
-    private readonly payments: PaymentsReadRepository,
+    @Inject(ListPayments) private readonly listPayments: ListPayments,
   ) {}
 
   @Get()
@@ -47,10 +45,7 @@ export class PaymentsListController {
     @Query(new ZodValidationPipe(paymentsListQuerySchema))
     query: PaymentsListQuery,
   ) {
-    const page = paymentsCursor(query.sort, query.order).page(
-      await this.payments.list(scope, query),
-      query.limit,
-    );
+    const page = await this.listPayments.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,

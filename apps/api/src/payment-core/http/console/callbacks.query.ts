@@ -1,15 +1,7 @@
 import { z } from 'zod';
-import type { CallbackListRow } from '../../infrastructure/prisma/console-read/callbacks-read.repository.js';
 import { WEBHOOK_INBOX_STATUSES } from '../../domain/records.js';
-import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
-import { optionalParam, pagingShape } from '../shared/list-query.js';
-
-/** Newest first by `receivedAt`. */
-export const callbacksCursor = keysetCursor<CallbackListRow>({
-  tag: 'callbacks',
-  valueOf: (row) => row.receivedAt.toISOString(),
-  isValue: isIsoTime,
-});
+import { callbacksCursor } from '../../application/use-cases/console/callbacks.js';
+import { optionalParam, pagingShape } from './list-query.js';
 
 export const callbacksListQuerySchema = z
   .object({

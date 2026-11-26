@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 // Query-string building blocks shared by every operator list endpoint
 // (ADR 0005). Validate with `new ZodValidationPipe(schema)` on `@Query()`.
-// Each list's cursor is defined with `keysetCursor` (./keyset-cursor.ts).
+// Each list's cursor is defined with `keysetCursor`, next to the use case
+// that pages the list (application/use-cases/console/).
 
 export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 100;

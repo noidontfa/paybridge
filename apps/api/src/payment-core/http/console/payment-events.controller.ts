@@ -15,14 +15,16 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { PaymentEventsReadRepository } from '../../infrastructure/prisma/console-read/payment-events-read.repository.js';
+import {
+  GetPaymentEvent,
+  ListPaymentEvents,
+} from '../../application/use-cases/console/payment-events.js';
 import {
   type PaymentEventsListQuery,
-  paymentEventsCursor,
   paymentEventsListQuerySchema,
 } from './payment-events.query.js';
 
@@ -36,8 +38,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/payment-events`)
 export class PaymentEventsController {
   constructor(
-    @Inject(PaymentEventsReadRepository)
-    private readonly events: PaymentEventsReadRepository,
+    @Inject(ListPaymentEvents) private readonly listEvents: ListPaymentEvents,
+    @Inject(GetPaymentEvent) private readonly getEvent: GetPaymentEvent,
   ) {}
 
   @Get()
@@ -56,10 +58,7 @@ export class PaymentEventsController {
     @Query(new ZodValidationPipe(paymentEventsListQuerySchema))
     query: PaymentEventsListQuery,
   ) {
-    const page = paymentEventsCursor.page(
-      await this.events.list(scope, query),
-      query.limit,
-    );
+    const page = await this.listEvents.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -77,7 +76,7 @@ export class PaymentEventsController {
   @ApiOkResponse({ description: 'The Payment Event' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
-    const row = await this.events.findById(scope, id);
+    const row = await this.getEvent.execute(scope, id);
     if (!row) throw new NotFoundException(`Payment Event ${id} not found`);
     return {
       id: row.id,

@@ -12,11 +12,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { PaymentDetailReadRepository } from '../../infrastructure/prisma/console-read/payment-detail-read.repository.js';
+import { GetPaymentDetail } from '../../application/use-cases/console/get-payment-detail.js';
 
 /**
  * Operator endpoint (no authentication in Phase 1; keep `/internal` off the
@@ -27,8 +27,7 @@ import { PaymentDetailReadRepository } from '../../infrastructure/prisma/console
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentDetailController {
   constructor(
-    @Inject(PaymentDetailReadRepository)
-    private readonly payments: PaymentDetailReadRepository,
+    @Inject(GetPaymentDetail) private readonly getPayment: GetPaymentDetail,
   ) {}
 
   @Get(':id')
@@ -42,7 +41,7 @@ export class PaymentDetailController {
     @CurrentReadScope() scope: ReadScope,
     @Param('id') id: string,
   ) {
-    const p = await this.payments.find(scope, id);
+    const p = await this.getPayment.execute(scope, id);
     if (!p) throw new NotFoundException(`Payment "${id}" not found`);
     return {
       id: p.id,

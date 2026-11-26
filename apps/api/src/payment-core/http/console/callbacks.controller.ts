@@ -15,14 +15,16 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { CallbacksReadRepository } from '../../infrastructure/prisma/console-read/callbacks-read.repository.js';
+import {
+  GetCallback,
+  ListCallbacks,
+} from '../../application/use-cases/console/callbacks.js';
 import {
   type CallbacksListQuery,
-  callbacksCursor,
   callbacksListQuerySchema,
 } from './callbacks.query.js';
 
@@ -36,8 +38,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/callbacks`)
 export class CallbacksController {
   constructor(
-    @Inject(CallbacksReadRepository)
-    private readonly callbacks: CallbacksReadRepository,
+    @Inject(ListCallbacks) private readonly listCallbacks: ListCallbacks,
+    @Inject(GetCallback) private readonly getCallback: GetCallback,
   ) {}
 
   @Get()
@@ -56,10 +58,7 @@ export class CallbacksController {
     @Query(new ZodValidationPipe(callbacksListQuerySchema))
     query: CallbacksListQuery,
   ) {
-    const page = callbacksCursor.page(
-      await this.callbacks.list(scope, query),
-      query.limit,
-    );
+    const page = await this.listCallbacks.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -83,7 +82,7 @@ export class CallbacksController {
   @ApiOkResponse({ description: 'The Callback' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
-    const row = await this.callbacks.findById(scope, id);
+    const row = await this.getCallback.execute(scope, id);
     if (!row) throw new NotFoundException(`Callback ${id} not found`);
     return {
       id: row.id,

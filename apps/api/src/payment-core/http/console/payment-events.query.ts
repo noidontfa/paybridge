@@ -1,15 +1,7 @@
 import { z } from 'zod';
-import type { PaymentEventSummaryRow } from '../../infrastructure/prisma/console-read/payment-events-read.repository.js';
 import { OUTBOX_EVENT_TYPES } from '../../domain/records.js';
-import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
-import { optionalParam, pagingShape } from '../shared/list-query.js';
-
-/** Newest first by `createdAt`. */
-export const paymentEventsCursor = keysetCursor<PaymentEventSummaryRow>({
-  tag: 'payment-events',
-  valueOf: (row) => row.createdAt.toISOString(),
-  isValue: isIsoTime,
-});
+import { paymentEventsCursor } from '../../application/use-cases/console/payment-events.js';
+import { optionalParam, pagingShape } from './list-query.js';
 
 export const paymentEventsListQuerySchema = z
   .object({

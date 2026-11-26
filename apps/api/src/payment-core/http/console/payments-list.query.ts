@@ -1,23 +1,7 @@
 import { z } from 'zod';
-import { isDecimalString } from '../../domain/amount.js';
 import { PAYMENT_STATUSES } from '../../domain/statuses.js';
-import type {
-  PaymentListRow,
-  PaymentSortColumn,
-} from '../../infrastructure/prisma/console-read/payments-read.repository.js';
-import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
-import { dayParam, optionalParam, pagingShape } from '../shared/list-query.js';
-
-/** A cursor only continues the sort and order it was made for. */
-export function paymentsCursor(sort: PaymentSortColumn, order: 'asc' | 'desc') {
-  return keysetCursor<PaymentListRow>({
-    tag: `${sort}:${order}`,
-    valueOf: (row) =>
-      sort === 'amount' ? row.amount : row.createdAt.toISOString(),
-    isValue: sort === 'amount' ? isDecimalString : isIsoTime,
-    invalidMessage: 'is not valid for this list, sort and order',
-  });
-}
+import { paymentsCursor } from '../../application/use-cases/console/list-payments.js';
+import { dayParam, optionalParam, pagingShape } from './list-query.js';
 
 export const paymentsListQuerySchema = z
   .object({

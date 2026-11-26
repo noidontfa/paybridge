@@ -7,14 +7,14 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
   GetOverview,
   successRate,
-} from './get-overview.js';
+} from '../../application/use-cases/console/get-overview.js';
 import { type OverviewQuery, overviewQuerySchema } from './overview.query.js';
 
 /**

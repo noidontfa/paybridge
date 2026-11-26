@@ -7,15 +7,14 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { reviewResolvableAt } from '../../domain/rules/review-resolution.js';
-import { ReviewsReadRepository } from '../../infrastructure/prisma/console-read/reviews-read.repository.js';
+import { GetReviewSummary } from '../../application/use-cases/console/get-review-summary.js';
+import { ListReviews } from '../../application/use-cases/console/list-reviews.js';
 import {
   type ReviewsListQuery,
-  reviewsCursor,
   reviewsListQuerySchema,
 } from './reviews-list.query.js';
 
@@ -29,8 +28,9 @@ import {
 @Controller(`${INTERNAL_PREFIX}/reviews`)
 export class ReviewsController {
   constructor(
-    @Inject(ReviewsReadRepository)
-    private readonly reviews: ReviewsReadRepository,
+    @Inject(ListReviews) private readonly listReviews: ListReviews,
+    @Inject(GetReviewSummary)
+    private readonly getReviewSummary: GetReviewSummary,
   ) {}
 
   @Get()
@@ -50,10 +50,7 @@ export class ReviewsController {
     @Query(new ZodValidationPipe(reviewsListQuerySchema))
     query: ReviewsListQuery,
   ) {
-    const page = reviewsCursor(query.order).page(
-      await this.reviews.list(scope, query),
-      query.limit,
-    );
+    const page = await this.listReviews.execute(scope, query);
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -63,7 +60,7 @@ export class ReviewsController {
         transactionStatus: row.transactionStatus,
         refundRequired: row.refundRequired,
         reviewOpenedAt: row.reviewOpenedAt.toISOString(),
-        resolvableAt: reviewResolvableAt(row.reviewOpenedAt).toISOString(),
+        resolvableAt: row.resolvableAt.toISOString(),
         providerReportedAmount: row.providerReportedAmount,
         payment: row.payment,
       })),
@@ -77,6 +74,6 @@ export class ReviewsController {
   })
   @ApiOkResponse({ description: '`{ open, total, byReason }`' })
   summary(@CurrentReadScope() scope: ReadScope) {
-    return this.reviews.counts(scope);
+    return this.getReviewSummary.execute(scope);
   }
 }

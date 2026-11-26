@@ -12,7 +12,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../common/filters/error-response.dto.js';
-import { CurrentReadScope } from '../../http/current-scope.decorator.js';
+import { CurrentReadScope } from '../current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
@@ -20,7 +20,7 @@ import {
   GatewaysOverview,
   type GatewayDetail,
   type GatewaySummary,
-} from './gateways-overview.js';
+} from '../../application/use-cases/console/gateways.js';
 
 /**
  * Operator endpoints (no authentication in Phase 1). The response shapes are
