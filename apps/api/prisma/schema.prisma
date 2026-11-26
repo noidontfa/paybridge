@@ -608,6 +608,10 @@ model WebhookDelivery {
   attempts       Int                   @default(0)
   createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// When a `PENDING` delivery is due for its next attempt (null: now).
+  nextAttemptAt  DateTime?             @map("next_attempt_at") @db.Timestamptz(3)
+  /// Set while one worker makes an attempt; an old lock lost its worker.
+  lockedAt       DateTime?             @map("locked_at") @db.Timestamptz(3)
 
   organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   endpoint     WebhookEndpoint          @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -616,6 +620,7 @@ model WebhookDelivery {
   @@unique([eventId, endpointId], map: "wh_deliveries_event_endpoint_uq")
   @@index([organizationId, createdAt], map: "wh_deliveries_organization_created_idx")
   @@index([endpointId], map: "wh_deliveries_endpoint_id_idx")
+  @@index([status, nextAttemptAt], map: "wh_deliveries_due_idx")
   @@map("wh_deliveries")
 }
 

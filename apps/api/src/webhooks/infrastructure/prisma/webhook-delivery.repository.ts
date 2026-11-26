@@ -76,7 +76,53 @@ export class PrismaWebhookDeliveryRepository extends WebhookDeliveryRepository {
       data: row.payload,
       status: row.status,
       attempts: row.attempts,
+      nextAttemptAt: row.nextAttemptAt,
     };
+  }
+
+  async claim(
+    scope: ReadScope,
+    id: string,
+    now: Date,
+    staleBefore: Date,
+  ): Promise<WebhookDelivery | null> {
+    // One conditional UPDATE: of two workers racing, only one matches.
+    const { count } = await this.ctx.db.webhookDelivery.updateMany({
+      where: {
+        id,
+        ...organizationOf(scope),
+        ...dueAndFree(now, staleBefore),
+      },
+      data: { lockedAt: now },
+    });
+    return count === 0 ? null : this.findById(scope, id);
+  }
+
+  async findDue(
+    scope: ReadScope,
+    now: Date,
+    staleBefore: Date,
+    limit: number,
+  ): Promise<{ id: string; attempts: number }[]> {
+    return this.ctx.db.webhookDelivery.findMany({
+      where: { ...organizationOf(scope), ...dueAndFree(now, staleBefore) },
+      select: { id: true, attempts: true },
+      orderBy: [{ nextAttemptAt: { sort: 'asc', nulls: 'first' } }, { id: 'asc' }],
+      take: limit,
+    });
+  }
+
+  async deleteFinishedBefore(scope: ReadScope, before: Date): Promise<number> {
+    const where = {
+      ...organizationOf(scope),
+      status: { in: ['SUCCEEDED', 'FAILED'] },
+      createdAt: { lt: before },
+    } satisfies Prisma.WebhookDeliveryWhereInput;
+    await this.ctx.db.webhookDeliveryAttempt.deleteMany({
+      where: { delivery: where },
+    });
+    const { count } = await this.ctx.db.webhookDelivery.deleteMany({ where });
+    return count;
   }
 
   async recordAttempt(
@@ -84,6 +130,7 @@ export class PrismaWebhookDeliveryRepository extends WebhookDeliveryRepository {
     deliveryId: string,
     attemptId: string,
     result: DeliveryAttemptResult,
+    nextAttemptAt: Date | null,
   ): Promise<void> {
     await this.ctx.db.webhookDeliveryAttempt.create({
       data: {
@@ -101,9 +148,29 @@ export class PrismaWebhookDeliveryRepository extends WebhookDeliveryRepository {
     await this.ctx.db.webhookDelivery.updateMany({
       where: { id: deliveryId, organizationId: scope.organizationId },
       data: {
-        status: result.succeeded ? 'SUCCEEDED' : 'FAILED',
+        status: result.succeeded
+          ? 'SUCCEEDED'
+          : nextAttemptAt
+            ? 'PENDING'
+            : 'FAILED',
         attempts: { increment: 1 },
+        nextAttemptAt: result.succeeded ? null : nextAttemptAt,
+        lockedAt: null,
       },
     });
   }
+}
+
+/** Waiting, due at `now`, and not held by a live worker. */
+function dueAndFree(
+  now: Date,
+  staleBefore: Date,
+): Prisma.WebhookDeliveryWhereInput {
+  return {
+    status: 'PENDING',
+    AND: [
+      { OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
+      { OR: [{ lockedAt: null }, { lockedAt: { lt: staleBefore } }] },
+    ],
+  };
 }
