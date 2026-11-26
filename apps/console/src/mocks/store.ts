@@ -105,6 +105,9 @@ export class MockStore {
   /** The Organization's Webhook Endpoints. */
   readonly webhookEndpoints: import('@/lib/api/webhook-endpoints').WebhookEndpoint[] = [];
 
+  /** Deliveries to the Organization's Webhook Endpoints, each with its attempts. */
+  readonly webhookDeliveries: import('@/lib/api/webhook-deliveries').WebhookDeliveryDetail[] = [];
+
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [
     mockUser('dana', 'Dana Admin', 'ORGANIZATION_ADMIN'),

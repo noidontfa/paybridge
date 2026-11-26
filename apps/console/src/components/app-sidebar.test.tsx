@@ -199,6 +199,19 @@ describe('Console sidebar', () => {
     });
   });
 
+  describe('Webhook deliveries', () => {
+    it('shows Webhook deliveries under Developers with webhook-deliveries:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'webhook-deliveries:view'] });
+      const developers = screen.getByRole('group', { name: 'Developers' });
+      expect(within(developers).getByRole('link', { name: 'Webhook deliveries' })).toHaveAttribute('href', '/webhooks/deliveries');
+    });
+
+    it('hides Webhook deliveries without webhook-deliveries:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view'] });
+      expect(screen.queryByRole('link', { name: 'Webhook deliveries' })).not.toBeInTheDocument();
+    });
+  });
+
   describe('Settings items', () => {
     const names = ['Users', 'Invitations', 'API Keys', 'Publishable Keys', 'Gateway Connections', 'Webhook Endpoints'];
 

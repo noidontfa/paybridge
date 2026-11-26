@@ -2,6 +2,7 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { WEBHOOK_EVENT_KINDS, type WebhookEndpoint } from '@/lib/api/webhook-endpoints';
 import type { MockStore } from './store';
+import { isFailingEndpoint } from './webhook-deliveries';
 
 type ErrorInit = { status: number; error: string; code: string; message: string };
 
@@ -45,7 +46,9 @@ export function webhookEndpointsHandlers(
   const find = (id: unknown) => store.webhookEndpoints.find((e) => e.id === String(id));
 
   return [
-    http.get(`${base}/internal/webhook-endpoints`, () => HttpResponse.json({ items: store.webhookEndpoints })),
+    http.get(`${base}/internal/webhook-endpoints`, () =>
+      HttpResponse.json({ items: store.webhookEndpoints.map((e) => ({ ...e, failing: isFailingEndpoint(store, e.id) })) }),
+    ),
     http.post(`${base}/internal/webhook-endpoints`, async ({ request }) => {
       const body = (await request.json().catch(() => ({}))) as { url?: unknown; eventKinds?: unknown };
       const problem = validate(body, false);

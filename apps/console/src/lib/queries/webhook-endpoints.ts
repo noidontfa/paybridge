@@ -17,8 +17,8 @@ export const webhookEndpointKeys = {
   list: () => [...webhookEndpointKeys.all, 'list'] as const,
 };
 
-export function useWebhookEndpoints() {
-  return useQuery({ queryKey: webhookEndpointKeys.list(), queryFn: ({ signal }) => listWebhookEndpoints(signal) });
+export function useWebhookEndpoints(enabled = true) {
+  return useQuery({ queryKey: webhookEndpointKeys.list(), queryFn: ({ signal }) => listWebhookEndpoints(signal), enabled });
 }
 
 function useInvalidating<T, R>(mutationFn: (input: T) => Promise<R>) {

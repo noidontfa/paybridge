@@ -61,6 +61,7 @@ export const mainNav: NavSection[] = [
     label: 'Developers',
     items: [
       { title: 'Callbacks', url: '/callbacks', icon: WebhookIcon },
+      { title: 'Webhook deliveries', url: '/webhooks/deliveries', icon: SendIcon, permission: 'webhook-deliveries:view' },
       { title: 'Events', url: '/events', icon: ZapIcon },
       { title: 'Audit log', url: '/audit-log', icon: FileClockIcon },
     ],

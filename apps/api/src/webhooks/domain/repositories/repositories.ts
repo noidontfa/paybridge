@@ -1,3 +1,4 @@
+import type { ManualAttemptRepository } from './manual-attempt.repository.js';
 import type { WebhookDeliveryRepository } from './webhook-delivery.repository.js';
 import type { WebhookEndpointRepository } from './webhook-endpoint.repository.js';
 
@@ -5,4 +6,5 @@ import type { WebhookEndpointRepository } from './webhook-endpoint.repository.js
 export interface Repositories {
   readonly endpoints: WebhookEndpointRepository;
   readonly deliveries: WebhookDeliveryRepository;
+  readonly manualAttempts: ManualAttemptRepository;
 }

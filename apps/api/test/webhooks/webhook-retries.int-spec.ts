@@ -20,15 +20,14 @@ import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { FakeClock } from '../../src/payment-core/domain/services/clock.js';
 import { OutboxRelay } from '../../src/payment-core/infrastructure/queue/outbox-relay.js';
+import { AttemptDelivery } from '../../src/webhooks/application/attempt-delivery.js';
 import { WebhookDeliverySweep } from '../../src/webhooks/application/sweeps/webhook-delivery-sweep.js';
 import { WebhookRetention } from '../../src/webhooks/application/sweeps/webhook-retention.js';
 import { DeliverWebhook } from '../../src/webhooks/application/workers/deliver-webhook.js';
 import { WebhooksTransactionRunner } from '../../src/webhooks/domain/repositories/transaction-runner.js';
 import {
   RetryJitter,
-  SecretCipher,
   WebhooksClock,
-  WebhookSender,
 } from '../../src/webhooks/domain/services/ports.js';
 import {
   WEBHOOK_DELIVERY_OPTIONS,
@@ -340,8 +339,7 @@ describe('a Redis outage', () => {
     const offline = new BullDeliveryDispatcher(flaky, clock);
     const deliverOffline = new DeliverWebhook(
       moduleRef.get(WebhooksTransactionRunner),
-      moduleRef.get(SecretCipher),
-      moduleRef.get(WebhookSender),
+      moduleRef.get(AttemptDelivery),
       clock,
       offline,
       moduleRef.get(RetryJitter),

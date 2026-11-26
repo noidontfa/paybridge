@@ -13,6 +13,8 @@ export const PERMISSIONS = [
   'pricing:manage',
   'webhook-endpoints:manage',
   'publishable-keys:manage',
+  'webhook-deliveries:view',
+  'webhook-deliveries:resend',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -20,6 +22,8 @@ const OPERATOR: readonly Permission[] = [
   'payments:view',
   'reviews:resolve',
   'pricing:view',
+  'webhook-deliveries:view',
+  'webhook-deliveries:resend',
 ];
 const ORGANIZATION_ADMIN: readonly Permission[] = [
   ...OPERATOR,

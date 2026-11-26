@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -13,21 +12,13 @@ import {
   ParseUUIDPipe,
   Post,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { RequireSensitivePermission } from '../../../common/principal/access-policy.js';
-import {
-  PRINCIPAL_REQUEST_KEY,
-  type Principal,
-} from '../../../common/principal/principal.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import {
-  organizationScope,
-  type OrganizationScope,
-} from '../../../payment-core/port/organization-scope.js';
+import { ReadWebhookDeliveries } from '../../application/use-cases/webhook-deliveries.js';
 import { ManageWebhookEndpoints } from '../../application/use-cases/webhook-endpoints.js';
 import { PAYMENT_EVENT_KINDS } from '../../domain/entities/event-kinds.js';
 import {
@@ -35,10 +26,10 @@ import {
   InvalidWebhookUrlError,
   SECRET_OVERLAPS,
   WebhookEndpointNotFoundError,
-  type Actor,
   type SecretOverlap,
   type WebhookEndpoint,
 } from '../../domain/entities/webhook-endpoint.js';
+import { callerOf } from './caller.js';
 
 const url = z.string().trim().min(1).max(2048);
 const eventKinds = z.array(z.enum(PAYMENT_EVENT_KINDS)).min(1).max(20);
@@ -76,29 +67,6 @@ const view = (endpoint: WebhookEndpoint) => ({
   },
 });
 
-/** The Organization the caller works in (ADR 0006), and who they are. */
-function callerOf(request: Record<string, unknown>): {
-  scope: OrganizationScope;
-  actor: Actor;
-} {
-  const principal = request[PRINCIPAL_REQUEST_KEY] as Principal | undefined;
-  if (!principal?.user) throw new UnauthorizedException();
-  if (!principal.organizationId) {
-    throw new ForbiddenException({
-      message: 'Choose one Organization to work in',
-      code: 'ORGANIZATION_REQUIRED',
-    });
-  }
-  return {
-    scope: organizationScope(principal.organizationId),
-    actor: {
-      userId: principal.user.id,
-      role: principal.user.role,
-      name: principal.user.name ?? '',
-    },
-  };
-}
-
 function mapError(error: unknown): never {
   if (error instanceof WebhookEndpointNotFoundError) {
     throw new NotFoundException({
@@ -127,6 +95,8 @@ export class WebhookEndpointsController {
   constructor(
     @Inject(ManageWebhookEndpoints)
     private readonly endpoints: ManageWebhookEndpoints,
+    @Inject(ReadWebhookDeliveries)
+    private readonly deliveries: ReadWebhookDeliveries,
   ) {}
 
   @Post()
@@ -153,11 +123,19 @@ export class WebhookEndpointsController {
 
   @Get()
   @ApiOperation({
-    summary: "List the Organization's Webhook Endpoints (never the secret)",
+    summary:
+      "List the Organization's Webhook Endpoints (never the secret), each marked failing when its latest attempts all failed",
   })
   async list(@Req() request: Record<string, unknown>) {
-    const items = await this.endpoints.list(callerOf(request).scope);
-    return { items: items.map(view) };
+    const { scope } = callerOf(request);
+    const items = await this.endpoints.list(scope);
+    const failing = await this.deliveries.failingEndpoints(
+      scope,
+      items.map((e) => e.id),
+    );
+    return {
+      items: items.map((e) => ({ ...view(e), failing: failing.has(e.id) })),
+    };
   }
 
   @Post(':id')

@@ -34,6 +34,8 @@ export const webhookEndpointSchema = z.object({
     /** Set for a Super Admin, who is shown as the platform. */
     label: z.string().nullable(),
   }),
+  /** In the list only: its latest attempts all failed. */
+  failing: z.boolean().optional(),
 });
 export type WebhookEndpoint = z.infer<typeof webhookEndpointSchema>;
 

@@ -3,29 +3,15 @@ import {
   ALL_ORGANIZATIONS,
   organizationScope,
 } from '../../../payment-core/port/organization-scope.js';
-import {
-  envelopeOf,
-  type DeliveryAttemptResult,
-  type WebhookDelivery,
-} from '../../domain/entities/webhook-delivery.js';
-import {
-  validPreviousSecret,
-  type WebhookEndpoint,
-} from '../../domain/entities/webhook-endpoint.js';
+import { refused, AttemptDelivery } from '../attempt-delivery.js';
 import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import { retryDelayMs } from '../../domain/services/backoff.js';
 import {
   DeliveryDispatcher,
   newWebhookId,
   RetryJitter,
-  SecretCipher,
   WebhooksClock,
-  WebhookSender,
 } from '../../domain/services/ports.js';
-import {
-  SIGNATURE_HEADER,
-  signatureHeader,
-} from '../../domain/services/signature.js';
 
 /**
  * A worker holding a delivery longer than this is taken to be gone, and the
@@ -58,8 +44,7 @@ export class DeliverWebhook {
   constructor(
     @Inject(WebhooksTransactionRunner)
     private readonly runner: WebhooksTransactionRunner,
-    @Inject(SecretCipher) private readonly cipher: SecretCipher,
-    @Inject(WebhookSender) private readonly sender: WebhookSender,
+    @Inject(AttemptDelivery) private readonly attempt: AttemptDelivery,
     @Inject(WebhooksClock) private readonly clock: WebhooksClock,
     @Inject(DeliveryDispatcher) private readonly dispatcher: DeliveryDispatcher,
     @Inject(RetryJitter) private readonly jitter: RetryJitter,
@@ -82,17 +67,13 @@ export class DeliverWebhook {
     const attemptedAt = this.clock.now();
     const result =
       endpoint && endpoint.status === 'ENABLED'
-        ? await this.post(delivery, endpoint, attemptedAt)
-        : {
+        ? await this.attempt.post(delivery, endpoint, attemptedAt)
+        : refused(
             attemptedAt,
-            succeeded: false,
-            httpStatus: null,
-            durationMs: 0,
-            responseBody: null,
-            error: endpoint
+            endpoint
               ? 'The Webhook Endpoint is disabled'
               : 'The Webhook Endpoint was deleted',
-          };
+          );
 
     // A disabled endpoint may be enabled again; a deleted one may not.
     const attempt = delivery.attempts + 1;
@@ -125,34 +106,5 @@ export class DeliverWebhook {
       );
     }
     return 'retrying';
-  }
-
-  /** One signed POST; every attempt, first or retry, goes through here. */
-  private async post(
-    delivery: WebhookDelivery,
-    endpoint: WebhookEndpoint,
-    attemptedAt: Date,
-  ): Promise<DeliveryAttemptResult> {
-    const body = JSON.stringify(envelopeOf(delivery));
-    // During a secret rotation, one signature per secret valid at this attempt.
-    const previous = validPreviousSecret(endpoint, attemptedAt);
-    const secrets = [
-      this.cipher.decrypt({
-        ciphertext: endpoint.secretCiphertext,
-        keyId: endpoint.secretKeyId,
-      }),
-      ...(previous ? [this.cipher.decrypt(previous)] : []),
-    ];
-    const outcome = await this.sender.post({
-      url: endpoint.url,
-      body,
-      headers: {
-        'content-type': 'application/json',
-        'user-agent': 'PayBridge-Webhooks/1.0',
-        'paybridge-event-id': delivery.eventId,
-        [SIGNATURE_HEADER]: signatureHeader(secrets, attemptedAt, body),
-      },
-    });
-    return { attemptedAt, succeeded: outcome.error === null, ...outcome };
   }
 }

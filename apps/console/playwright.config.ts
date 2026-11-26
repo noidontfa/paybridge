@@ -11,12 +11,12 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: `http://localhost:${port}`, trace: 'on-first-retry' },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /review-resolution\.spec\.ts/ },
-    // Changes the mock store (resolves a Review), so it runs after every read-only spec.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /(review-resolution|webhook-deliveries)\.spec\.ts/ },
+    // Change the mock store (resolve a Review, resend a Webhook), so they run after every read-only spec.
     {
       name: 'mutations',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: /review-resolution\.spec\.ts/,
+      testMatch: /(review-resolution|webhook-deliveries)\.spec\.ts/,
       dependencies: ['chromium'],
     },
   ],
