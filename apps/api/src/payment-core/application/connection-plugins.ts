@@ -34,7 +34,7 @@ export class ConnectionPlugins {
     const connection = await this.find(organizationId, gatewayId);
     if (!connection) throw new GatewayNotConnectedError(gatewayId);
     if (!connection.enabled) throw new GatewayDisabledError(gatewayId);
-    return this.build(connection);
+    return this.forConnection(connection);
   }
 
   /**
@@ -49,7 +49,7 @@ export class ConnectionPlugins {
   ): Promise<PaymentGateway> {
     const connection = await this.find(organizationId, gatewayId);
     return connection
-      ? this.build(connection)
+      ? this.forConnection(connection)
       : this.gateways.resolve(gatewayId);
   }
 
@@ -63,7 +63,8 @@ export class ConnectionPlugins {
     );
   }
 
-  private build(connection: GatewayConnection): PaymentGateway {
+  /** The instance acting for this connection, whether or not it is enabled. */
+  forConnection(connection: GatewayConnection): PaymentGateway {
     const { credentialsCiphertext, credentialsKeyId } = connection;
     const credentials =
       credentialsCiphertext && credentialsKeyId

@@ -23,6 +23,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed --",
     "db:studio": "prisma studio",
+    "gateway:import-stripe": "tsx cli/import-env-stripe-account.ts",
     "gateway:reencrypt": "tsx cli/reencrypt-gateway-credentials.ts",
     "identity:create-super-admin": "tsx cli/create-super-admin.ts"
   },

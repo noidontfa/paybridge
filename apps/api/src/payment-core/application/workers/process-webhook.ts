@@ -5,7 +5,7 @@ import {
   organizationScope,
 } from '../../domain/organization-scope.js';
 import type { WebhookInboxEntry } from '../../domain/records.js';
-import { GatewayManager } from '../../gateway-manager/gateway-manager.js';
+import { ConnectionPlugins } from '../connection-plugins.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import type {
   CallbackResult,
@@ -60,7 +60,7 @@ export class ProcessWebhook {
 
   constructor(
     @Inject(TransactionRunner) private readonly runner: TransactionRunner,
-    @Inject(GatewayManager) private readonly gateways: GatewayManager,
+    @Inject(ConnectionPlugins) private readonly plugins: ConnectionPlugins,
     @Inject(BestEffortCancel) private readonly cancels: BestEffortCancel,
     @Inject(Clock) private readonly clock: Clock,
   ) {}
@@ -100,8 +100,12 @@ export class ProcessWebhook {
     return 'processed';
   }
 
-  private parse(entry: WebhookInboxEntry): Promise<CallbackResult> {
-    const plugin = this.gateways.resolve(entry.gatewayId);
+  private async parse(entry: WebhookInboxEntry): Promise<CallbackResult> {
+    // The Organization's own connection, enabled or not.
+    const plugin = await this.plugins.forExisting(
+      entry.organizationId,
+      entry.gatewayId,
+    );
     return plugin.parseCallback({
       rawBody: entry.rawBody,
       headers: entry.headers as HeaderValues,
