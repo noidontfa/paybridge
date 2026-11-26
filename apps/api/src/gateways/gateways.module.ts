@@ -9,7 +9,10 @@ import {
 import type { GatewayRegistration } from '../payment-core/port/index.js';
 import { registration } from '../payment-core/port/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../payment-core/port/gateway-plugins.token.js';
-import { fakeGatewayFactory } from './fake/fake-gateway.plugin.js';
+import {
+  fakeGatewayFactory,
+  fakeQrGatewayFactory,
+} from './fake/fake-gateway.plugin.js';
 import { stripeGatewayFactory } from './stripe/stripe-gateway.plugin.js';
 
 /**
@@ -45,6 +48,7 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
           !isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) })
         ) {
           registrations.push(registration(fakeGatewayFactory, undefined));
+          registrations.push(registration(fakeQrGatewayFactory, undefined));
         }
         // Gateway Connections supply their own credentials; the test hook
         // replaces the HTTP layer for those instances too.

@@ -48,6 +48,12 @@ export interface FakeGatewayOptions {
   supportsCancel?: boolean;
   /** HMAC secret used to sign and verify callbacks. */
   secret?: string;
+  /**
+   * The default NextAction of `initiate`: a redirect to a fake pay page, or a
+   * QR code whose payload is `fake-qr://pay/<attemptKey>` (pay it by sending
+   * a signed callback for that attempt key).
+   */
+  nextAction?: 'REDIRECT' | 'QR_CODE';
 }
 
 interface Calls {
@@ -69,6 +75,7 @@ export class FakeGatewayPlugin implements PaymentGateway {
   readonly calls: Calls = emptyCalls();
 
   private readonly secret: string;
+  private readonly nextActionType: 'REDIRECT' | 'QR_CODE';
   private readonly amounts = new Map<string, string>();
   private scripts = emptyScripts();
 
@@ -76,6 +83,7 @@ export class FakeGatewayPlugin implements PaymentGateway {
     this.gatewayId = options.gatewayId ?? FAKE_GATEWAY_ID;
     this.capabilities = { supportsCancel: options.supportsCancel ?? true };
     this.secret = options.secret ?? 'fake-secret';
+    this.nextActionType = options.nextAction ?? 'REDIRECT';
     if (this.capabilities.supportsCancel) {
       this.cancel = (input) => this.doCancel(input);
     }
@@ -129,10 +137,13 @@ export class FakeGatewayPlugin implements PaymentGateway {
     this.calls.initiate.push(input);
     this.amounts.set(input.attemptKey, input.amount);
     return run(this.scripts.initiate, input, () => ({
-      nextAction: {
-        type: 'REDIRECT',
-        url: `https://fake-gateway.test/pay/${input.attemptKey}`,
-      },
+      nextAction:
+        this.nextActionType === 'QR_CODE'
+          ? { type: 'QR_CODE', payload: `fake-qr://pay/${input.attemptKey}` }
+          : {
+              type: 'REDIRECT',
+              url: `https://fake-gateway.test/pay/${input.attemptKey}`,
+            },
       providerMetadata: { attemptKey: input.attemptKey },
       rawPayload: { fake: 'initiate', attemptKey: input.attemptKey },
     }));
@@ -251,4 +262,19 @@ export const fakeGatewayFactory: GatewayPluginFactory<
 > = {
   gatewayId: FAKE_GATEWAY_ID,
   create: (options) => new FakeGatewayPlugin(options),
+};
+
+export const FAKE_QR_GATEWAY_ID = 'fake-qr';
+
+/**
+ * The fake plugin answering with a QR code instead of a redirect, so local
+ * development and the checkout app's Playwright tests can pay by QR.
+ */
+export const fakeQrGatewayFactory: GatewayPluginFactory<undefined> = {
+  gatewayId: FAKE_QR_GATEWAY_ID,
+  create: () =>
+    new FakeGatewayPlugin({
+      gatewayId: FAKE_QR_GATEWAY_ID,
+      nextAction: 'QR_CODE',
+    }),
 };
