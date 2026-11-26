@@ -39,7 +39,6 @@ import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
 import { OrganizationsController } from './http/organizations.controller.js';
 import { PrincipalGuard } from './http/principal.guard.js';
-import { StubPrincipalResolver } from './http/stub-principal.resolver.js';
 import { Argon2PasswordHasher } from './infrastructure/crypto/argon2-password-hasher.js';
 import { Es256AccessTokenService } from './infrastructure/crypto/es256-access-token.service.js';
 import { ConsoleLogEmailSender } from './infrastructure/email/console-log-email-sender.js';
@@ -74,7 +73,6 @@ import { UserRepository } from './port/user.repository.js';
     { provide: APP_GUARD, useClass: PrincipalGuard },
     { provide: APP_GUARD, useClass: AccessGuard },
     { provide: EmailSender, useClass: ConsoleLogEmailSender },
-    StubPrincipalResolver,
     { provide: PrincipalResolver, useClass: HttpPrincipalResolver },
     { provide: IdentityClock, useClass: SystemIdentityClock },
     { provide: PasswordHasher, useClass: Argon2PasswordHasher },
@@ -84,6 +82,10 @@ import { UserRepository } from './port/user.repository.js';
       useFactory: (config: ConfigService<Env, true>) =>
         new Es256AccessTokenService(
           config.get('AUTH_JWT_PRIVATE_KEY', { infer: true }),
+          (config.get('AUTH_JWT_RETIRED_PUBLIC_KEYS', { infer: true }) ?? '')
+            .split(',')
+            .map((pem) => pem.trim())
+            .filter(Boolean),
         ),
     },
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },

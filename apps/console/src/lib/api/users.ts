@@ -1,7 +1,7 @@
 /**
  * The Organization's Users: `GET /internal/users`, and the sensitive writes
  * that change a Role, deactivate or reactivate a User. Needs the Permission to
- * manage Users. The BFF forwards GET and POST only, so a Role change is a POST.
+ * manage Users. The BFF forwards GET, HEAD, POST and DELETE only, so a Role change is a POST.
  */
 import { z } from 'zod';
 import { request } from './client';

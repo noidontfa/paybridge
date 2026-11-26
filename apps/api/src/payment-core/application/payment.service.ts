@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { OrganizationScope } from '../domain/organization-scope.js';
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../domain/organization-scope.js';
 import type { Payment } from '../domain/payment.js';
 import {
   CreatePayment,
@@ -52,7 +55,7 @@ export class PaymentService {
 
   /** Customer came back from the gateway: no writes, queues a status query. */
   handleBrowserReturn(
-    scope: OrganizationScope,
+    scope: ReadScope,
     input: BrowserReturnInput,
   ): Promise<Payment> {
     return this.handleBrowserReturnUseCase.execute(scope, input);

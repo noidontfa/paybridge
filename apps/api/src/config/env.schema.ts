@@ -104,6 +104,16 @@ const envObject = z.object({
     z.string().optional(),
   ),
   /**
+   * Rotation: public keys (SPKI PEM, `\n` for newlines, comma separated) of
+   * earlier signing keys. They stay in the published JWKS and verify tokens
+   * signed before the rotation, so nobody is signed out. Drop a key once the
+   * access-token lifetime has passed.
+   */
+  AUTH_JWT_RETIRED_PUBLIC_KEYS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
+  /**
    * Keys that encrypt Gateway Connection credentials: `id:base64key` pairs
    * separated by commas, each key 32 random bytes; the first encrypts, all
    * decrypt. Unset => a fixed development key (never in production, which

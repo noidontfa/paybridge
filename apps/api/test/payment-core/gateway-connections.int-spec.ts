@@ -125,7 +125,7 @@ describe('managing Gateway Connections', () => {
   it('replaces credentials, bumping the version, without echoing them', async () => {
     const id = (await connectStripe()).body.id as string;
     const res = await admin
-      .put(`/internal/gateway-connections/${id}/credentials`)
+      .post(`/internal/gateway-connections/${id}/credentials`)
       .send({ credentials: { ...STRIPE, secretKey: 'sk_test_rotated' } });
     expect(res.status, JSON.stringify(res.body)).toBe(200);
     expect(res.body.credentialsVersion).toBe(2);

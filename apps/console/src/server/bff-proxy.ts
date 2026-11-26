@@ -4,7 +4,7 @@
  * path, with method, query and body unchanged. The browser never sees the API
  * base URL and the API needs no CORS.
  *
- * Only `/internal/...` paths and the methods GET, HEAD and POST are forwarded;
+ * Only `/internal/...` paths and the methods GET, HEAD, POST and DELETE are forwarded;
  * path segments that could climb out of that prefix are refused.
  *
  * Identity comes from the session, never from the browser: the access token
