@@ -93,7 +93,13 @@ export function toPayment(
   };
 }
 
-function toCheckoutOrigin(row: PaymentRow): CheckoutOrigin | null {
+/** The checkout origin columns of a Payment row, or null for an API Payment. */
+export function toCheckoutOrigin(
+  row: Pick<
+    PaymentRow,
+    'pricingPlanId' | 'pricingPlanName' | 'customerRef' | 'customerEmail'
+  >,
+): CheckoutOrigin | null {
   if (row.pricingPlanId === null || row.pricingPlanName === null) return null;
   return {
     pricingPlanId: row.pricingPlanId,

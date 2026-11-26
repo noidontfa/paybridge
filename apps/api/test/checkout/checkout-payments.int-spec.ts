@@ -28,6 +28,8 @@ import {
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { signedInHttp } from '../setup/users.js';
+import { paymentListSchema } from '../contract/console/payments-list.js';
+import { operatorPaymentSchema } from '../contract/console/schemas.js';
 
 // Ticket 07: a browser starts, resumes and pays checkout Payments through the
 // public checkout endpoints, over HTTP on real PostgreSQL. Rate limits have
@@ -494,7 +496,8 @@ describe('isolation between Organizations', () => {
 });
 
 describe('Payment Core records', () => {
-  it('stores the checkout origin and carries it in every Payment Event', async () => {
+  it('stores the checkout origin and carries it in every Payment Event, as the Console shows them', async () => {
+    const operator = await signedInHttp(app, prisma);
     const planId = await createPricingPlan(prisma, DEFAULT_ORGANIZATION_ID, {
       name: 'Pro',
     });
@@ -512,24 +515,73 @@ describe('Payment Core records', () => {
       data: { name: 'Pro (renamed)' },
     });
 
-    const events = await prisma.outboxEvent.findMany({
-      where: { paymentId: payment.body.id },
-      orderBy: { createdAt: 'asc' },
-    });
-    expect(events.map((e) => e.eventType)).toEqual([
+    const res = await operator
+      .get(`/internal/payments/${payment.body.id}`)
+      .expect(200);
+    const detail = operatorPaymentSchema.parse(res.body);
+
+    const origin = {
+      pricingPlanId: planId,
+      pricingPlanName: 'Pro',
+      customerReference: 'user-42',
+      customerEmail: 'an@example.com',
+    };
+    expect(detail.checkoutOrigin).toEqual(origin);
+    expect(detail.upstreamReference).toMatch(/^chk_/);
+    expect(detail.events.map((e) => e.type)).toEqual([
       'PaymentCreated',
       'PaymentSucceeded',
     ]);
-    for (const event of events) {
-      expect(event.payload).toMatchObject({
-        checkoutOrigin: {
-          pricingPlanId: planId,
-          pricingPlanName: 'Pro',
-          customerReference: 'user-42',
-          customerEmail: 'an@example.com',
-        },
-      });
+    for (const event of detail.events) {
+      expect(event.payload).toMatchObject({ checkoutOrigin: origin });
     }
+  });
+
+  it('shows no checkout origin on a Payment created through the payments API', async () => {
+    const operator = await signedInHttp(app, prisma);
+    const created = await request(server())
+      .post('/api/payments')
+      .set(bearer(await createApiKey(prisma)))
+      .send({ amount: '1000', currency: 'VND', upstreamReference: 'order-1' })
+      .expect(201);
+
+    const res = await operator
+      .get(`/internal/payments/${created.body.id}`)
+      .expect(200);
+    const detail = operatorPaymentSchema.parse(res.body);
+
+    expect(detail.checkoutOrigin).toBeNull();
+    expect(detail.events[0]!.payload).not.toHaveProperty('checkoutOrigin');
+  });
+
+  it('filters the Payments list by Pricing Plan', async () => {
+    const operator = await signedInHttp(app, prisma);
+    const pro = await createPricingPlan(prisma);
+    const basic = await createPricingPlan(prisma, DEFAULT_ORGANIZATION_ID, {
+      name: 'Basic',
+    });
+    const a = await start({ pricingPlanId: pro, sessionToken: SESSION });
+    const b = await start({ pricingPlanId: pro, sessionToken: `${SESSION}-b` });
+    await start({ pricingPlanId: basic, sessionToken: SESSION });
+    await request(server())
+      .post('/api/payments')
+      .set(bearer(await createApiKey(prisma)))
+      .send({ amount: '1000', currency: 'VND', upstreamReference: 'order-1' })
+      .expect(201);
+
+    const res = await operator
+      .get(`/internal/payments?pricingPlanId=${pro}`)
+      .expect(200);
+    const list = paymentListSchema.parse(res.body);
+
+    expect(list.items.map((p) => p.id).sort()).toEqual(
+      [a.body.id, b.body.id].sort(),
+    );
+    const all = paymentListSchema.parse(
+      (await operator.get('/internal/payments').expect(200)).body,
+    );
+    expect(all.items).toHaveLength(4);
+    await operator.get('/internal/payments?pricingPlanId=nope').expect(400);
   });
 
   it('refuses to delete a Pricing Plan that has a checkout Payment', async () => {

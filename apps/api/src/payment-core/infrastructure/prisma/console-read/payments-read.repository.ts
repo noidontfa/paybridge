@@ -57,6 +57,9 @@ export class PrismaPaymentsReadRepository implements PaymentsReadRepository {
     const { filters, after } = query;
     const and: Prisma.PaymentWhereInput[] = [scopeWhere(scope)];
     if (filters.status) and.push({ status: filters.status });
+    if (filters.pricingPlanId) {
+      and.push({ pricingPlanId: filters.pricingPlanId });
+    }
     if (filters.gatewayId) {
       and.push({ transactions: { some: { gatewayId: filters.gatewayId } } });
     }

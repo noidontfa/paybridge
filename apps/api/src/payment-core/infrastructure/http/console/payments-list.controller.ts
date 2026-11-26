@@ -33,7 +33,7 @@ export class PaymentsListController {
   @ApiOperation({
     summary: 'List Payments with their latest attempt (operator)',
     description:
-      'Filters: status, gatewayId (any attempt), q (Payment id or Upstream Reference), createdFrom, createdTo (YYYY-MM-DD, UTC). Sort: createdAt or amount, asc or desc. Keyset paging with an opaque cursor; limit 1 to 100 (default 20).',
+      'Filters: status, gatewayId (any attempt), pricingPlanId (checkout Payments of that Pricing Plan), q (Payment id or Upstream Reference), createdFrom, createdTo (YYYY-MM-DD, UTC). Sort: createdAt or amount, asc or desc. Keyset paging with an opaque cursor; limit 1 to 100 (default 20).',
   })
   @ApiOkResponse({
     description:

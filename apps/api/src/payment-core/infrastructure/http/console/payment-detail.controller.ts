@@ -49,6 +49,7 @@ export class PaymentDetailController {
       expiresAt: p.expiresAt.toISOString(),
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
+      checkoutOrigin: p.checkoutOrigin,
       attempts: p.attempts.map((a) => ({
         id: a.id,
         gatewayId: a.gatewayId,
