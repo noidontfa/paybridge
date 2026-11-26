@@ -132,6 +132,7 @@ model Organization {
   statusTransitions   StatusTransition[]
   gatewayConnections  GatewayConnection[]
   users               User[]
+  invitations         Invitation[]
 
   @@map("iam_organizations")
 }
@@ -199,6 +200,28 @@ model PasswordReset {
 
   @@index([userId], map: "iam_password_resets_user_id_idx")
   @@map("iam_password_resets")
+}
+
+/// An Invitation to join: an email, a Role and an Organization (none for a
+/// Super Admin). Stored hashed, single-use, valid for 7 days. Re-sending
+/// replaces the hash, which voids the previous link.
+model Invitation {
+  id             String    @id @db.Uuid
+  email          String
+  role           UserRole
+  organizationId String?   @map("organization_id") @db.Uuid
+  invitedById    String?   @map("invited_by_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  acceptedAt     DateTime? @map("accepted_at") @db.Timestamptz(3)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId], map: "iam_invitations_organization_id_idx")
+  @@index([email], map: "iam_invitations_email_idx")
+  @@map("iam_invitations")
 }
 
 // ---------------------------------------------------------------------------

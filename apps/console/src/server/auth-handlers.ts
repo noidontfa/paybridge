@@ -4,6 +4,7 @@
  * what the browser gets back is the signed-in User, never a token.
  */
 import {
+  apiAcceptInvitation,
   apiChangePassword,
   apiCompletePasswordReset,
   apiRequestPasswordReset,
@@ -121,6 +122,20 @@ export async function handleResetPassword(request: Request, options: AuthOptions
   if (typeof token !== 'string' || typeof password !== 'string') return badRequest(request, 'A token and a password are required.');
   try {
     return relay(await apiCompletePasswordReset(options.baseUrl, { token, password }, options.fetch));
+  } catch {
+    return unreachable(request);
+  }
+}
+
+/** `POST /api/auth/accept-invitation` with `{ token, name, password }`. */
+export async function handleAcceptInvitation(request: Request, options: AuthOptions): Promise<Response> {
+  const body: unknown = await request.json().catch(() => undefined);
+  const { token, name, password } = (body ?? {}) as { token?: unknown; name?: unknown; password?: unknown };
+  if (typeof token !== 'string' || typeof name !== 'string' || typeof password !== 'string') {
+    return badRequest(request, 'A token, a name and a password are required.');
+  }
+  try {
+    return relay(await apiAcceptInvitation(options.baseUrl, { token, name, password }, options.fetch));
   } catch {
     return unreachable(request);
   }

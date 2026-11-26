@@ -98,6 +98,14 @@ export async function apiCompletePasswordReset(
   return toPlain(await post(baseUrl, '/internal/auth/password-reset/complete', input, fetchImpl));
 }
 
+export async function apiAcceptInvitation(
+  baseUrl: string,
+  input: { token: string; name: string; password: string },
+  fetchImpl: FetchLike = fetch,
+): Promise<PlainResult> {
+  return toPlain(await post(baseUrl, '/internal/auth/invitations/accept', input, fetchImpl));
+}
+
 export async function apiChangePassword(
   baseUrl: string,
   accessToken: string,

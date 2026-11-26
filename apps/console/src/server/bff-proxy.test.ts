@@ -216,7 +216,13 @@ describe('forwardToApi', () => {
       expect(calls).toHaveLength(0);
     });
 
-    it.each(['PUT', 'PATCH', 'DELETE', 'OPTIONS'])('rejects the method %s', async (method) => {
+    it('forwards DELETE (revoking an Invitation)', async () => {
+      const { calls, response } = await attempt(['internal', 'invitations', 'abc'], 'DELETE');
+      expect(response.status).not.toBe(405);
+      expect(calls[0]?.init.method).toBe('DELETE');
+    });
+
+    it.each(['PUT', 'PATCH', 'OPTIONS'])('rejects the method %s', async (method) => {
       const { calls, response } = await attempt(['internal', 'payments'], method);
       expect(response.status).toBe(405);
       expect(calls).toHaveLength(0);

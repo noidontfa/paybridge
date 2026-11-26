@@ -1,5 +1,6 @@
 import { getEnvironment } from '@/lib/environment';
 import {
+  handleAcceptInvitation,
   handleChangePassword,
   handleForgotPassword,
   handleRefreshRedirect,
@@ -21,6 +22,7 @@ export async function POST(request: Request, { params }: Context): Promise<Respo
   if (action === 'sign-out') return handleSignOut(request, options);
   if (action === 'forgot-password') return handleForgotPassword(request, options);
   if (action === 'reset-password') return handleResetPassword(request, options);
+  if (action === 'accept-invitation') return handleAcceptInvitation(request, options);
   if (action === 'change-password') return handleChangePassword(request, options);
   return new Response(null, { status: 404 });
 }

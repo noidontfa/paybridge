@@ -19,6 +19,12 @@ export default function SettingsPage() {
           </Link>{' '}
           for your Organization
         </p>
+        <p className="mb-4 text-sm">
+          <Link href="/settings/invitations" className="underline">
+            Invitations
+          </Link>{' '}
+          (Organization Admins invite people and see who has not joined yet)
+        </p>
         <SettingsPanel environment={getEnvironment()} />
       </div>
     </>
