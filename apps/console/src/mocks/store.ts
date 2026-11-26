@@ -99,6 +99,9 @@ export class MockStore {
   /** The Organization's Gateway Connections (none until it connects one). */
   readonly gatewayConnections: import('@/lib/api/gateway-connections').GatewayConnection[] = [];
 
+  /** The Organization's Webhook Endpoints. */
+  readonly webhookEndpoints: import('@/lib/api/webhook-endpoints').WebhookEndpoint[] = [];
+
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [
     mockUser('dana', 'Dana Admin', 'ORGANIZATION_ADMIN'),

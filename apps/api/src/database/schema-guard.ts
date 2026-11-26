@@ -3,8 +3,8 @@
  * `schema.spec.ts` (ADR 0001: table-prefix ownership; spec: partial indexes).
  */
 
-/** Table-name prefixes that identify an owning module: Payment Core, Identity and checkout. */
-export const OWNER_PREFIXES = ['core_', 'iam_', 'chk_'] as const;
+/** Table-name prefixes that identify an owning module: Payment Core, Identity, checkout and Webhooks. */
+export const OWNER_PREFIXES = ['core_', 'iam_', 'chk_', 'wh_'] as const;
 
 export interface RequiredIndex {
   name: string;

@@ -10,6 +10,7 @@ import { IdentityModule } from './identity/identity.module.js';
 import { AppLoggerModule } from './logger/app-logger.module.js';
 import { GatewayManagerModule } from './payment-core/gateway-manager.module.js';
 import { PaymentCoreModule } from './payment-core/payment-core.module.js';
+import { WebhooksModule } from './webhooks/webhooks.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PaymentCoreModule } from './payment-core/payment-core.module.js';
     IdentityModule,
     PaymentCoreModule,
     CheckoutModule,
+    WebhooksModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
 })

@@ -70,6 +70,9 @@ describe('schema ownership', () => {
       'iam_publishable_keys',
       'iam_refresh_tokens',
       'iam_users',
+      'wh_deliveries',
+      'wh_delivery_attempts',
+      'wh_endpoints',
     ]);
   });
 });
