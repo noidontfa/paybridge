@@ -68,7 +68,15 @@ export class PublishableKeyRevokedError extends Error {
 
 /** The key is unknown, revoked, or its Organization is suspended. */
 export class InvalidPublishableKeyError extends Error {
-  constructor() {
+  /**
+   * For the developer console only (checkout endpoints show it as the
+   * "unavailable" reason); the caller is refused the same way either way.
+   */
+  constructor(
+    readonly reason:
+      | 'INVALID_PUBLISHABLE_KEY'
+      | 'ORGANIZATION_SUSPENDED' = 'INVALID_PUBLISHABLE_KEY',
+  ) {
     super('A valid Publishable Key is required');
     this.name = 'InvalidPublishableKeyError';
   }

@@ -11,10 +11,15 @@ import {
 } from './domain/services/pricing-plan-references.js';
 import { PricingPlansController } from './infrastructure/http/pricing-plans.controller.js';
 import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
+import { NoPricingPlanPaymentsYet } from './infrastructure/references/pending-references.js';
+import { PaymentCoreModule } from '../payment-core/port/module.js';
 import {
-  NoPricingPlanPaymentsYet,
-  NoPricingTablesYet,
-} from './infrastructure/references/pending-references.js';
+  ManagePricingTables,
+  PricingTablesIncludingPlan,
+  ShowPricingTable,
+} from './application/use-cases/pricing-tables.js';
+import { PricingTablesController } from './infrastructure/http/pricing-tables.controller.js';
+import { CheckoutPricingTablesController } from './infrastructure/http/checkout-pricing-tables.controller.js';
 
 /**
  * Checkout: Pricing Plans (and later Pricing Tables and the public checkout
@@ -22,7 +27,12 @@ import {
  * through their `port/` folders. Needs the global `PrismaModule`.
  */
 @Module({
-  controllers: [PricingPlansController],
+  imports: [PaymentCoreModule],
+  controllers: [
+    PricingPlansController,
+    PricingTablesController,
+    CheckoutPricingTablesController,
+  ],
   providers: [
     { provide: TransactionRunner, useClass: PrismaTransactionRunner },
     { provide: CheckoutClock, useClass: SystemCheckoutClock },
@@ -35,8 +45,10 @@ import {
       }),
     },
     { provide: PricingPlanPayments, useClass: NoPricingPlanPaymentsYet },
-    { provide: PricingTablesOfPlan, useClass: NoPricingTablesYet },
+    { provide: PricingTablesOfPlan, useClass: PricingTablesIncludingPlan },
     ManagePricingPlans,
+    ManagePricingTables,
+    ShowPricingTable,
   ],
 })
 export class CheckoutModule {}

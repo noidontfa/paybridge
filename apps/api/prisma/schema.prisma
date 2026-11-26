@@ -137,6 +137,8 @@ model Organization {
   apiKeys             ApiKey[]
   pricingPlans        PricingPlan[]
   publishableKeys     PublishableKey[]
+  pricingTables       PricingTable[]
+  pricingTablePlans   PricingTablePlan[]
 
   @@map("iam_organizations")
 }
@@ -537,7 +539,72 @@ model PricingPlan {
   updatedAt         DateTime          @map("updated_at") @db.Timestamptz(3)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tables       PricingTablePlan[]
 
   @@index([organizationId, createdAt, id], map: "chk_pricing_plans_org_created_at_idx")
   @@map("chk_pricing_plans")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): Pricing Tables
+// ---------------------------------------------------------------------------
+
+enum PricingTableTheme {
+  light
+  dark
+
+  @@map("chk_pricing_table_theme")
+}
+
+enum PricingTableLanguage {
+  vi
+  en
+
+  @@map("chk_pricing_table_language")
+}
+
+/// One to three Pricing Plans shown side by side on a host page, with a
+/// simple look. Its Pricing Plans, in order, are `chk_pricing_table_plans`.
+/// `main_color` is `#rrggbb` in lower case (CHECK in the migration).
+model PricingTable {
+  id              String               @id @db.Uuid
+  organizationId  String               @map("organization_id") @db.Uuid
+  name            String
+  mainColor       String               @map("main_color")
+  theme           PricingTableTheme
+  language        PricingTableLanguage
+  buttonText      String               @map("button_text")
+  /// The User who last changed it, with their Role and name at that moment.
+  updatedByUserId String               @map("updated_by_user_id") @db.Uuid
+  updatedByRole   String               @map("updated_by_role")
+  updatedByName   String               @map("updated_by_name")
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  plans        PricingTablePlan[]
+
+  @@index([organizationId, createdAt, id], map: "chk_pricing_tables_org_created_at_idx")
+  @@map("chk_pricing_tables")
+}
+
+/// A Pricing Plan's place in a Pricing Table. At most one per table is
+/// recommended (partial unique index in the migration). A Pricing Plan may sit
+/// in several Pricing Tables, and cannot be deleted while it does.
+model PricingTablePlan {
+  pricingTableId String  @map("pricing_table_id") @db.Uuid
+  pricingPlanId  String  @map("pricing_plan_id") @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  /// 0-based card order.
+  position       Int
+  recommended    Boolean @default(false)
+
+  pricingTable PricingTable @relation(fields: [pricingTableId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pricingPlan  PricingPlan  @relation(fields: [pricingPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([pricingTableId, pricingPlanId], map: "chk_pricing_table_plans_pkey")
+  @@unique([pricingTableId, position], map: "chk_pricing_table_plans_table_position_key")
+  @@index([organizationId, pricingPlanId], map: "chk_pricing_table_plans_org_plan_idx")
+  @@map("chk_pricing_table_plans")
 }

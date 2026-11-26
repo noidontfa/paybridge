@@ -60,6 +60,8 @@ import {
   OutboxRelay,
   outboxRelayOptionsProvider,
 } from './infrastructure/queue/outbox-relay.js';
+import { ListEnabledGateways } from './application/enabled-gateways.js';
+import { EnabledGateways } from './port/enabled-gateways.js';
 
 /**
  * Payment Core. Needs `PrismaModule` (global), the config module and the
@@ -102,6 +104,7 @@ import {
     CancelPayment,
     ConnectionPlugins,
     CreatePayment,
+    { provide: EnabledGateways, useClass: ListEnabledGateways },
     ExpirePayment,
     ExpirySweep,
     ExpirySweepProcessor,
@@ -135,6 +138,7 @@ import {
   exports: [
     Clock,
     CredentialCipher,
+    EnabledGateways,
     PaymentService,
     ImportEnvStripeAccount,
     QueueModule,

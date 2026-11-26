@@ -153,8 +153,9 @@ export class AuthenticatePublishableKey {
     const organization = await this.organizations.findById(
       stored.organizationId,
     );
-    if (!organization || organization.status !== 'ACTIVE') {
-      throw new InvalidPublishableKeyError();
+    if (!organization) throw new InvalidPublishableKeyError();
+    if (organization.status !== 'ACTIVE') {
+      throw new InvalidPublishableKeyError('ORGANIZATION_SUSPENDED');
     }
     if (!isOriginAllowed(stored, origin)) throw new OriginNotAllowedError();
     return {

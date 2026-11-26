@@ -135,6 +135,7 @@ export class HttpPrincipalResolver extends PrincipalResolver {
         throw new UnauthorizedException({
           message: error.message,
           code: 'INVALID_PUBLISHABLE_KEY',
+          details: { reason: error.reason },
         });
       }
       if (error instanceof OriginNotAllowedError) {

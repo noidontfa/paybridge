@@ -54,6 +54,8 @@ describe('schema ownership', () => {
   it('declares the Payment Core tables and the identity tables', () => {
     expect(listModelTables(schema).sort()).toEqual([
       'chk_pricing_plans',
+      'chk_pricing_table_plans',
+      'chk_pricing_tables',
       'core_gateway_connections',
       'core_gateway_raw_responses',
       'core_idempotency_keys',
