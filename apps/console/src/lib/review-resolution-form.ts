@@ -19,19 +19,29 @@ export function resolutionFormSchema(paymentAmount: string) {
         .string()
         .trim()
         .min(1, 'Enter a note explaining the decision.')
-        .max(REVIEW_NOTE_MAX_LENGTH, `The note can be at most ${REVIEW_NOTE_MAX_LENGTH} characters.`),
+        .max(
+          REVIEW_NOTE_MAX_LENGTH,
+          `The note can be at most ${REVIEW_NOTE_MAX_LENGTH} characters.`,
+        ),
       amount: z.string().trim(),
     })
     .superRefine((value, ctx) => {
       if (value.action !== 'SUCCEEDED') return;
-      const issue = (message: string) => ctx.addIssue({ code: 'custom', path: ['amount'], message });
-      if (value.amount === '') return issue('Enter the amount the PaymentGateway collected.');
-      if (!/^\d+(\.\d+)?$/.test(value.amount)) return issue('Enter a number, for example 100000.');
+      const issue = (message: string) =>
+        ctx.addIssue({ code: 'custom', path: ['amount'], message });
+      if (value.amount === '')
+        return issue('Enter the amount the PaymentGateway collected.');
+      if (!/^\d+(\.\d+)?$/.test(value.amount))
+        return issue('Enter a number, for example 100000.');
       if (compareDecimal(value.amount, paymentAmount) !== 0) {
         issue(`The amount must equal the Payment Amount (${paymentAmount}).`);
       }
     });
 }
 
-export type ResolutionFormInput = z.input<ReturnType<typeof resolutionFormSchema>>;
-export type ResolutionFormValues = z.output<ReturnType<typeof resolutionFormSchema>>;
+export type ResolutionFormInput = z.input<
+  ReturnType<typeof resolutionFormSchema>
+>;
+export type ResolutionFormValues = z.output<
+  ReturnType<typeof resolutionFormSchema>
+>;

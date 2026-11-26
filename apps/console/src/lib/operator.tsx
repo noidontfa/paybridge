@@ -35,8 +35,18 @@ export function describeOperator(operator: Operator): string | null {
 
 const OperatorContext = createContext<Operator | null>(null);
 
-export function OperatorProvider({ operator, children }: { operator: Operator; children: React.ReactNode }) {
-  return <OperatorContext.Provider value={operator}>{children}</OperatorContext.Provider>;
+export function OperatorProvider({
+  operator,
+  children,
+}: {
+  operator: Operator;
+  children: React.ReactNode;
+}) {
+  return (
+    <OperatorContext.Provider value={operator}>
+      {children}
+    </OperatorContext.Provider>
+  );
 }
 
 /**
@@ -51,6 +61,9 @@ export function useCan(permission: string): boolean {
 
 export function useCurrentOperator(): Operator {
   const operator = useContext(OperatorContext);
-  if (!operator) throw new Error('useCurrentOperator must be used inside <OperatorProvider>.');
+  if (!operator)
+    throw new Error(
+      'useCurrentOperator must be used inside <OperatorProvider>.',
+    );
   return operator;
 }

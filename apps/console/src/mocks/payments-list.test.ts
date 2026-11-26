@@ -21,8 +21,23 @@ function payment(n: number, overrides: Partial<MockPayment> = {}): MockPayment {
   };
 }
 
-function attempt(id: string, paymentId: string, gatewayId: string, createdAt: string, status: MockAttempt['status'] = 'PENDING'): MockAttempt {
-  return { id, paymentId, gatewayId, status, providerRef: null, refundRequired: false, createdAt, updatedAt: createdAt };
+function attempt(
+  id: string,
+  paymentId: string,
+  gatewayId: string,
+  createdAt: string,
+  status: MockAttempt['status'] = 'PENDING',
+): MockAttempt {
+  return {
+    id,
+    paymentId,
+    gatewayId,
+    status,
+    providerRef: null,
+    refundRequired: false,
+    createdAt,
+    updatedAt: createdAt,
+  };
 }
 
 const store = new MockStore(NOW);
@@ -46,7 +61,10 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 interface Page {
-  items: { id: string; latestTransaction: { gatewayId: string; status: string } | null }[];
+  items: {
+    id: string;
+    latestTransaction: { gatewayId: string; status: string } | null;
+  }[];
   nextCursor: string | null;
 }
 
@@ -61,20 +79,31 @@ describe('GET /internal/payments', () => {
     const { body } = await list();
     expect(ids(body)).toEqual(['pay-1', 'pay-2', 'pay-3', 'pay-4', 'pay-5']);
     expect(body.nextCursor).toBeNull();
-    expect(body.items[1]?.latestTransaction).toEqual({ gatewayId: 'fake', status: 'SUCCEEDED' });
+    expect(body.items[1]?.latestTransaction).toEqual({
+      gatewayId: 'fake',
+      status: 'SUCCEEDED',
+    });
     expect(body.items[3]?.latestTransaction).toBeNull();
   });
 
   it('filters by status', async () => {
-    expect(ids((await list('?status=SUCCEEDED')).body)).toEqual(['pay-2', 'pay-3']);
+    expect(ids((await list('?status=SUCCEEDED')).body)).toEqual([
+      'pay-2',
+      'pay-3',
+    ]);
   });
 
   it('filters by the gateway of any transaction', async () => {
-    expect(ids((await list('?gatewayId=stripe')).body)).toEqual(['pay-1', 'pay-2']);
+    expect(ids((await list('?gatewayId=stripe')).body)).toEqual([
+      'pay-1',
+      'pay-2',
+    ]);
   });
 
   it('combines filters', async () => {
-    expect(ids((await list('?gatewayId=stripe&status=SUCCEEDED')).body)).toEqual(['pay-2']);
+    expect(
+      ids((await list('?gatewayId=stripe&status=SUCCEEDED')).body),
+    ).toEqual(['pay-2']);
   });
 
   it('searches the id or the Upstream Reference, ignoring case', async () => {
@@ -84,17 +113,41 @@ describe('GET /internal/payments', () => {
 
   it('filters by created date, both ends inclusive of the day', async () => {
     // pay-1 is 02:00 on the 25th, pay-2 01:00, pay-3 00:00, pay-4 is 23:00 on the 24th.
-    expect(ids((await list('?createdFrom=2026-11-25')).body)).toEqual(['pay-1', 'pay-2', 'pay-3']);
-    expect(ids((await list('?createdTo=2026-11-24&createdFrom=2026-11-24')).body)).toEqual(['pay-4', 'pay-5']);
+    expect(ids((await list('?createdFrom=2026-11-25')).body)).toEqual([
+      'pay-1',
+      'pay-2',
+      'pay-3',
+    ]);
+    expect(
+      ids((await list('?createdTo=2026-11-24&createdFrom=2026-11-24')).body),
+    ).toEqual(['pay-4', 'pay-5']);
   });
 
   it('sorts by created time ascending', async () => {
-    expect(ids((await list('?sort=createdAt&order=asc')).body)).toEqual(['pay-5', 'pay-4', 'pay-3', 'pay-2', 'pay-1']);
+    expect(ids((await list('?sort=createdAt&order=asc')).body)).toEqual([
+      'pay-5',
+      'pay-4',
+      'pay-3',
+      'pay-2',
+      'pay-1',
+    ]);
   });
 
   it('sorts by amount as a number, not as text', async () => {
-    expect(ids((await list('?sort=amount&order=desc')).body)).toEqual(['pay-2', 'pay-5', 'pay-4', 'pay-3', 'pay-1']);
-    expect(ids((await list('?sort=amount&order=asc')).body)).toEqual(['pay-1', 'pay-3', 'pay-4', 'pay-5', 'pay-2']);
+    expect(ids((await list('?sort=amount&order=desc')).body)).toEqual([
+      'pay-2',
+      'pay-5',
+      'pay-4',
+      'pay-3',
+      'pay-1',
+    ]);
+    expect(ids((await list('?sort=amount&order=asc')).body)).toEqual([
+      'pay-1',
+      'pay-3',
+      'pay-4',
+      'pay-5',
+      'pay-2',
+    ]);
   });
 
   it('pages with a cursor and a limit, without gaps or repeats', async () => {

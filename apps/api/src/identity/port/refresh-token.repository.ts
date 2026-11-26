@@ -1,7 +1,4 @@
-import type {
-  NewRefreshToken,
-  RefreshToken,
-} from '../domain/refresh-token.js';
+import type { NewRefreshToken, RefreshToken } from '../domain/refresh-token.js';
 
 export abstract class RefreshTokenRepository {
   abstract create(token: NewRefreshToken): Promise<void>;

@@ -33,7 +33,10 @@ interface ParamsReader {
   get(name: string): string | null;
 }
 
-export function parseTableUrlState(params: ParamsReader, config: TableUrlConfig): TableUrlState {
+export function parseTableUrlState(
+  params: ParamsReader,
+  config: TableUrlConfig,
+): TableUrlState {
   const filters: Record<string, string> = {};
   for (const name of config.filters) {
     const value = params.get(name);
@@ -46,17 +49,28 @@ export function parseTableUrlState(params: ParamsReader, config: TableUrlConfig)
     sort = { id: sortId, desc: params.get('order') !== 'asc' };
   }
 
-  return { q: params.get('q') ?? '', filters, sort, cursor: params.get('cursor') || null };
+  return {
+    q: params.get('q') ?? '',
+    filters,
+    sort,
+    cursor: params.get('cursor') || null,
+  };
 }
 
-export function tableUrlStateToSearchParams(state: TableUrlState, config: TableUrlConfig): URLSearchParams {
+export function tableUrlStateToSearchParams(
+  state: TableUrlState,
+  config: TableUrlConfig,
+): URLSearchParams {
   const params = new URLSearchParams();
   if (state.q) params.set('q', state.q);
   for (const name of config.filters) {
     const value = state.filters[name];
     if (value) params.set(name, value);
   }
-  if (state.sort.id !== config.defaultSort.id || state.sort.desc !== config.defaultSort.desc) {
+  if (
+    state.sort.id !== config.defaultSort.id ||
+    state.sort.desc !== config.defaultSort.desc
+  ) {
     params.set('sort', state.sort.id);
     params.set('order', state.sort.desc ? 'desc' : 'asc');
   }
@@ -73,7 +87,10 @@ export interface TableUrlPatch {
 }
 
 /** Applies a change. Anything but the cursor itself sends the view back to the first page. */
-export function changeTableUrlState(state: TableUrlState, patch: TableUrlPatch): TableUrlState {
+export function changeTableUrlState(
+  state: TableUrlState,
+  patch: TableUrlPatch,
+): TableUrlState {
   const filters = { ...state.filters };
   for (const [name, value] of Object.entries(patch.filters ?? {})) {
     if (value) filters[name] = value;

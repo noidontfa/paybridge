@@ -314,6 +314,21 @@ describe('seed organizations', () => {
   });
 });
 
+describe('seed users', () => {
+  it('includes a deactivated User next to active ones', async () => {
+    await seed();
+    const former = await prisma.user.findUniqueOrThrow({
+      where: { email: 'former.operator@default.paybridge.dev' },
+    });
+    expect(former).toMatchObject({ active: false, role: 'OPERATOR' });
+    expect(
+      await prisma.user.count({
+        where: { organizationId: former.organizationId, active: true },
+      }),
+    ).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('seed timestamps and ids', () => {
   it('uses fixed offsets from the run time and deterministic ids', async () => {
     await seed();

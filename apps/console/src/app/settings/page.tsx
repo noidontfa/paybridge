@@ -10,7 +10,10 @@ export const dynamic = 'force-dynamic';
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" description="Preferences for this browser and the current environment." />
+      <PageHeader
+        title="Settings"
+        description="Preferences for this browser and the current environment."
+      />
       <div className="px-4 pb-4">
         <SettingsPanel environment={getEnvironment()} />
       </div>

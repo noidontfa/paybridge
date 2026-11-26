@@ -24,12 +24,17 @@ export function useTableUrlState(config: TableUrlConfig): {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const state = useMemo(() => parseTableUrlState(searchParams, config), [searchParams, config]);
+  const state = useMemo(
+    () => parseTableUrlState(searchParams, config),
+    [searchParams, config],
+  );
 
   const write = useCallback(
     (next: TableUrlState) => {
       const query = tableUrlStateToSearchParams(next, config).toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
     },
     [config, pathname, router],
   );
@@ -38,7 +43,8 @@ export function useTableUrlState(config: TableUrlConfig): {
   // status, then a gateway) must build on each other, not on the stale URL, so
   // the state last written is kept until the URL catches up.
   const pending = useRef({ from: state, next: state });
-  if (pending.current.from !== state) pending.current = { from: state, next: state };
+  if (pending.current.from !== state)
+    pending.current = { from: state, next: state };
 
   const apply = useCallback(
     (build: (current: TableUrlState) => TableUrlState) => {
@@ -49,10 +55,20 @@ export function useTableUrlState(config: TableUrlConfig): {
     [write],
   );
 
-  const change = useCallback((patch: TableUrlPatch) => apply((current) => changeTableUrlState(current, patch)), [apply]);
+  const change = useCallback(
+    (patch: TableUrlPatch) =>
+      apply((current) => changeTableUrlState(current, patch)),
+    [apply],
+  );
   // Clearing keeps the sort: it is a way of looking at the rows, not a filter.
   const clear = useCallback(
-    () => apply((current) => ({ q: '', filters: {}, sort: current.sort, cursor: null })),
+    () =>
+      apply((current) => ({
+        q: '',
+        filters: {},
+        sort: current.sort,
+        cursor: null,
+      })),
     [apply],
   );
   return { state, change, clear };

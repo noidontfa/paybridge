@@ -14,6 +14,7 @@ import { gatewaysHandlers } from './gateways';
 import { paymentsListHandlers } from './payments-list';
 import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
+import { usersHandlers } from './users';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -27,7 +28,13 @@ export interface HandlerOptions {
 /** The API's error envelope (apps/api AllExceptionsFilter). */
 export function apiError(
   request: Request,
-  init: { status: number; error: string; code?: string; message: string; details?: unknown },
+  init: {
+    status: number;
+    error: string;
+    code?: string;
+    message: string;
+    details?: unknown;
+  },
   now: Date,
 ) {
   const url = new URL(request.url);
@@ -47,33 +54,95 @@ export function apiError(
   );
 }
 
-export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[] {
+export function createHandlers({
+  baseUrl,
+  store,
+}: HandlerOptions): HttpHandler[] {
   const base = baseUrl.replace(/\/$/, '');
   return [
     ...paymentsListHandlers(base, store, (request, message) =>
-      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+      apiError(
+        request,
+        {
+          status: 400,
+          error: 'Bad Request',
+          code: 'VALIDATION_FAILED',
+          message,
+        },
+        store.now,
+      ),
     ),
     ...eventsAuditHandlers(
       base,
       store,
       (request, message) =>
-        apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
-      (request, code, message) => apiError(request, { status: 404, error: 'Not Found', code, message }, store.now),
+        apiError(
+          request,
+          {
+            status: 400,
+            error: 'Bad Request',
+            code: 'VALIDATION_FAILED',
+            message,
+          },
+          store.now,
+        ),
+      (request, code, message) =>
+        apiError(
+          request,
+          { status: 404, error: 'Not Found', code, message },
+          store.now,
+        ),
     ),
     ...reviewHandlers(base, store, (request, message) =>
-      apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+      apiError(
+        request,
+        {
+          status: 400,
+          error: 'Bad Request',
+          code: 'VALIDATION_FAILED',
+          message,
+        },
+        store.now,
+      ),
     ),
-    ...reviewResolutionHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...reviewResolutionHandlers(base, store, (request, init) =>
+      apiError(request, init, store.now),
+    ),
     ...callbacksHandlers(
       base,
       store,
       (request, message) =>
-        apiError(request, { status: 400, error: 'Bad Request', code: 'VALIDATION_FAILED', message }, store.now),
+        apiError(
+          request,
+          {
+            status: 400,
+            error: 'Bad Request',
+            code: 'VALIDATION_FAILED',
+            message,
+          },
+          store.now,
+        ),
       (request, message) =>
-        apiError(request, { status: 404, error: 'Not Found', code: 'CALLBACK_NOT_FOUND', message }, store.now),
+        apiError(
+          request,
+          {
+            status: 404,
+            error: 'Not Found',
+            code: 'CALLBACK_NOT_FOUND',
+            message,
+          },
+          store.now,
+        ),
+    ),
+    ...usersHandlers(base, store, (request, init) =>
+      apiError(request, init, store.now),
     ),
     ...gatewaysHandlers(base, store, (request, message) =>
-      apiError(request, { status: 404, error: 'Not Found', code: 'GATEWAY_NOT_FOUND', message }, store.now),
+      apiError(
+        request,
+        { status: 404, error: 'Not Found', code: 'GATEWAY_NOT_FOUND', message },
+        store.now,
+      ),
     ),
     http.get(`${base}/internal/overview`, ({ request }) => {
       const range = new URL(request.url).searchParams.get('range');
@@ -81,7 +150,12 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
       if (!valid) {
         return apiError(
           request,
-          { status: 400, error: 'Bad Request', code: 'INVALID_RANGE', message: `range must be one of ${OVERVIEW_RANGES.join(', ')}` },
+          {
+            status: 400,
+            error: 'Bad Request',
+            code: 'INVALID_RANGE',
+            message: `range must be one of ${OVERVIEW_RANGES.join(', ')}`,
+          },
           store.now,
         );
       }
@@ -93,7 +167,12 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
       if (!payment) {
         return apiError(
           request,
-          { status: 404, error: 'Not Found', code: 'PAYMENT_NOT_FOUND', message: `Payment ${id} was not found` },
+          {
+            status: 404,
+            error: 'Not Found',
+            code: 'PAYMENT_NOT_FOUND',
+            message: `Payment ${id} was not found`,
+          },
           store.now,
         );
       }

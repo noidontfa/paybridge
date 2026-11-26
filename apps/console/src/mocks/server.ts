@@ -19,13 +19,17 @@ interface MockApiState {
  * the BFF's outgoing calls to the API base URL, so the browser code and the
  * BFF code are the same whether mocks are on or not. Idempotent.
  */
-export function startMockApiIfEnabled(env: Record<string, string | undefined> = process.env): void {
+export function startMockApiIfEnabled(
+  env: Record<string, string | undefined> = process.env,
+): void {
   if (!isMockModeEnabled(env)) return;
   const registry = globalThis as Record<symbol, MockApiState | undefined>;
   if (registry[GLOBAL_KEY]) return;
 
   const store = createSeededStore();
-  const server = setupServer(...createHandlers({ baseUrl: getEnvironment(env).apiBaseUrl, store }));
+  const server = setupServer(
+    ...createHandlers({ baseUrl: getEnvironment(env).apiBaseUrl, store }),
+  );
   server.listen({ onUnhandledFrame: 'bypass' });
   registry[GLOBAL_KEY] = { store, close: () => server.close() };
 }

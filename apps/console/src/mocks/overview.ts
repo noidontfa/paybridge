@@ -38,10 +38,15 @@ function successRate(payments: MockPayment[]): number | null {
 }
 
 function volumeOf(payments: MockPayment[]): bigint {
-  return payments.filter((p) => p.status === 'SUCCEEDED').reduce((sum, p) => sum + toScaled(p.amount), 0n);
+  return payments
+    .filter((p) => p.status === 'SUCCEEDED')
+    .reduce((sum, p) => sum + toScaled(p.amount), 0n);
 }
 
-export function computeOverview(store: MockStore, range: OverviewRange): Overview {
+export function computeOverview(
+  store: MockStore,
+  range: OverviewRange,
+): Overview {
   const { span, bucket } = RANGES[range];
   const to = store.now.getTime();
   const from = to - span;
@@ -50,20 +55,29 @@ export function computeOverview(store: MockStore, range: OverviewRange): Overvie
     return created >= from && created <= to;
   });
 
-  const buckets = Array.from({ length: span / bucket }, () => [] as MockPayment[]);
+  const buckets = Array.from(
+    { length: span / bucket },
+    () => [] as MockPayment[],
+  );
   for (const payment of inRange) {
-    const index = Math.min(buckets.length - 1, Math.floor((new Date(payment.createdAt).getTime() - from) / bucket));
+    const index = Math.min(
+      buckets.length - 1,
+      Math.floor((new Date(payment.createdAt).getTime() - from) / bucket),
+    );
     buckets[index]!.push(payment);
   }
 
-  const gatewayOf = (payment: MockPayment): string | null => store.attemptsOf(payment.id).at(-1)?.gatewayId ?? null;
+  const gatewayOf = (payment: MockPayment): string | null =>
+    store.attemptsOf(payment.id).at(-1)?.gatewayId ?? null;
   const byGateway = new Map<string, MockPayment[]>();
   for (const payment of inRange) {
     const gatewayId = gatewayOf(payment);
-    if (gatewayId) byGateway.set(gatewayId, [...(byGateway.get(gatewayId) ?? []), payment]);
+    if (gatewayId)
+      byGateway.set(gatewayId, [...(byGateway.get(gatewayId) ?? []), payment]);
   }
 
-  const countOf = (status: PaymentStatus) => inRange.filter((p) => p.status === status).length;
+  const countOf = (status: PaymentStatus) =>
+    inRange.filter((p) => p.status === status).length;
 
   return {
     range,
@@ -73,12 +87,17 @@ export function computeOverview(store: MockStore, range: OverviewRange): Overvie
     volume: fromScaled(volumeOf(inRange)),
     paymentCount: inRange.length,
     successRate: successRate(inRange),
-    openReviewCount: store.attempts.filter((a) => a.status === 'REQUIRES_REVIEW').length,
+    openReviewCount: store.attempts.filter(
+      (a) => a.status === 'REQUIRES_REVIEW',
+    ).length,
     volumeSeries: buckets.map((payments, index) => ({
       start: new Date(from + index * bucket).toISOString(),
       volume: fromScaled(volumeOf(payments)),
     })),
-    statusCounts: PAYMENT_STATUSES.map((status) => ({ status, count: countOf(status) })),
+    statusCounts: PAYMENT_STATUSES.map((status) => ({
+      status,
+      count: countOf(status),
+    })),
     gateways: [...byGateway.entries()]
       .sort(([a], [b]) => (a < b ? -1 : 1))
       .map(([gatewayId, payments]) => ({
@@ -88,7 +107,9 @@ export function computeOverview(store: MockStore, range: OverviewRange): Overvie
         successRate: successRate(payments),
       })),
     recentPayments: [...inRange]
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+      .sort((a, b) =>
+        a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,
+      )
       .slice(0, RECENT_COUNT)
       .map((p) => ({
         id: p.id,

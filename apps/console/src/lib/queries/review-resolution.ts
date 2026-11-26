@@ -2,7 +2,10 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { resolveReview, type ReviewResolutionBody } from '@/lib/api/review-resolution';
+import {
+  resolveReview,
+  type ReviewResolutionBody,
+} from '@/lib/api/review-resolution';
 import { overviewKeys } from './overview';
 import { paymentKeys } from './payments';
 import { reviewKeys } from './reviews';
@@ -19,7 +22,11 @@ export function useResolveReview(paymentId: string) {
     // The toast comes first and lives here, not in a per-call callback: the refetch below closes the
     // Review and unmounts the form, and per-call callbacks do not run for an unmounted component.
     onSuccess: async (result, body) => {
-      toast.success(body.status ? `Review resolved: the PaymentTransaction is now ${result.attemptStatus}.` : 'Note added to the Review.');
+      toast.success(
+        body.status
+          ? `Review resolved: the PaymentTransaction is now ${result.attemptStatus}.`
+          : 'Note added to the Review.',
+      );
       await Promise.all([
         client.invalidateQueries({ queryKey: reviewKeys.all }),
         client.invalidateQueries({ queryKey: paymentKeys.all }),

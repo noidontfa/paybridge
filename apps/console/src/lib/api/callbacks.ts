@@ -8,7 +8,12 @@ import { request } from './client';
 import { listPageSchema, type ListPage, type ListQuery } from './pagination';
 
 /** The inbox statuses (API `WebhookInboxStatus`). */
-export const CALLBACK_STATUSES = ['RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED'] as const;
+export const CALLBACK_STATUSES = [
+  'RECEIVED',
+  'PROCESSING',
+  'PROCESSED',
+  'FAILED',
+] as const;
 export const callbackStatusSchema = z.enum(CALLBACK_STATUSES);
 export type CallbackStatus = z.infer<typeof callbackStatusSchema>;
 
@@ -49,10 +54,23 @@ export interface CallbackListQuery extends ListQuery {
   q?: string;
 }
 
-export function listCallbacks(query: CallbackListQuery, signal?: AbortSignal): Promise<CallbackList> {
-  return request('/internal/callbacks', callbackListSchema, { query: { ...query }, signal });
+export function listCallbacks(
+  query: CallbackListQuery,
+  signal?: AbortSignal,
+): Promise<CallbackList> {
+  return request('/internal/callbacks', callbackListSchema, {
+    query: { ...query },
+    signal,
+  });
 }
 
-export function getCallback(id: string, signal?: AbortSignal): Promise<CallbackDetail> {
-  return request(`/internal/callbacks/${encodeURIComponent(id)}`, callbackDetailSchema, { signal });
+export function getCallback(
+  id: string,
+  signal?: AbortSignal,
+): Promise<CallbackDetail> {
+  return request(
+    `/internal/callbacks/${encodeURIComponent(id)}`,
+    callbackDetailSchema,
+    { signal },
+  );
 }

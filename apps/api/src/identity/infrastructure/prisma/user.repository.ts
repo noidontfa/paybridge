@@ -1,7 +1,7 @@
 import { Prisma } from '../../../generated/prisma/client.js';
 import type { User as UserRow } from '../../../generated/prisma/client.js';
 import { EmailTakenError } from '../../domain/errors.js';
-import type { NewUser, User } from '../../domain/user.js';
+import type { NewUser, User, UserRole } from '../../domain/user.js';
 import { UserRepository } from '../../port/user.repository.js';
 import type { DbContext } from './db.js';
 
@@ -57,6 +57,35 @@ export class PrismaUserRepository extends UserRepository {
     await this.ctx.db.user.update({
       where: { id },
       data: { passwordHash, active: true },
+    });
+  }
+
+  async listByOrganization(organizationId: string): Promise<User[]> {
+    const rows = await this.ctx.db.user.findMany({
+      where: { organizationId },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(toUser);
+  }
+
+  async update(
+    id: string,
+    changes: { role?: UserRole; active?: boolean },
+  ): Promise<void> {
+    await this.ctx.db.user.update({ where: { id }, data: changes });
+  }
+
+  async countActiveAdmins(
+    organizationId: string,
+    exceptUserId: string,
+  ): Promise<number> {
+    return this.ctx.db.user.count({
+      where: {
+        organizationId,
+        role: 'ORGANIZATION_ADMIN',
+        active: true,
+        id: { not: exceptUserId },
+      },
     });
   }
 }

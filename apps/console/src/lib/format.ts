@@ -23,7 +23,10 @@ export function formatAbsoluteTime(iso: string): string {
 }
 
 /** Relative hint such as "3 days ago" or "in 2 hours". */
-export function formatRelativeTime(iso: string, now: Date = new Date()): string {
+export function formatRelativeTime(
+  iso: string,
+  now: Date = new Date(),
+): string {
   return formatDistanceStrict(new Date(iso), now, { addSuffix: true });
 }
 

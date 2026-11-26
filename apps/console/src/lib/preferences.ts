@@ -17,7 +17,9 @@ function isDensity(value: unknown): value is Density {
 }
 
 /** Reads defensively: storage may be missing, blocked or hold junk. */
-export function readDensity(storage: Storage | null = browserStorage()): Density {
+export function readDensity(
+  storage: Storage | null = browserStorage(),
+): Density {
   try {
     const value = storage?.getItem(DENSITY_KEY);
     return isDensity(value) ? value : DEFAULT_DENSITY;
@@ -26,7 +28,10 @@ export function readDensity(storage: Storage | null = browserStorage()): Density
   }
 }
 
-export function writeDensity(density: Density, storage: Storage | null = browserStorage()): void {
+export function writeDensity(
+  density: Density,
+  storage: Storage | null = browserStorage(),
+): void {
   try {
     storage?.setItem(DENSITY_KEY, density);
   } catch {

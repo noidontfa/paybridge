@@ -21,13 +21,20 @@ export function createRandom(seed: number): Random {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const int = (min: number, max: number) => min + Math.floor(next() * (max - min + 1));
-  const hex = (n: number) => Array.from({ length: n }, () => int(0, 15).toString(16)).join('');
+  const int = (min: number, max: number) =>
+    min + Math.floor(next() * (max - min + 1));
+  const hex = (n: number) =>
+    Array.from({ length: n }, () => int(0, 15).toString(16)).join('');
   return {
     next,
     int,
     pick: (items) => items[int(0, items.length - 1)]!,
-    uuid: () => `${hex(8)}-${hex(4)}-4${hex(3)}-${int(8, 11).toString(16)}${hex(3)}-${hex(12)}`,
-    token: (length) => Array.from({ length }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[int(0, 35)]).join(''),
+    uuid: () =>
+      `${hex(8)}-${hex(4)}-4${hex(3)}-${int(8, 11).toString(16)}${hex(3)}-${hex(12)}`,
+    token: (length) =>
+      Array.from(
+        { length },
+        () => 'abcdefghijklmnopqrstuvwxyz0123456789'[int(0, 35)],
+      ).join(''),
   };
 }

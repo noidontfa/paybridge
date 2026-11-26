@@ -225,9 +225,7 @@ export class AuthController {
   @SessionOnly()
   @Get('me')
   @ApiOperation({ summary: 'The signed-in User, their Role and Organization' })
-  async me(
-    @Req() request: Record<string, unknown>,
-  ): Promise<SessionUser> {
+  async me(@Req() request: Record<string, unknown>): Promise<SessionUser> {
     const principal = request[PRINCIPAL_REQUEST_KEY] as Principal;
     try {
       return await this.sessionUser.execute(principal.user!.id);

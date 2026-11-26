@@ -8,7 +8,9 @@ describe('isMockModeEnabled', () => {
   });
 
   it('is on when the flag is "true" outside production', () => {
-    expect(isMockModeEnabled({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'development' })).toBe(true);
+    expect(
+      isMockModeEnabled({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'development' }),
+    ).toBe(true);
     expect(isMockModeEnabled({ CONSOLE_API_MOCKS: 'true' })).toBe(true);
   });
 
@@ -18,6 +20,8 @@ describe('isMockModeEnabled', () => {
   });
 
   it('refuses to start in a production build', () => {
-    expect(() => isMockModeEnabled({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'production' })).toThrow(/production/);
+    expect(() =>
+      isMockModeEnabled({ CONSOLE_API_MOCKS: 'true', NODE_ENV: 'production' }),
+    ).toThrow(/production/);
   });
 });

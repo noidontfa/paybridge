@@ -6,14 +6,28 @@ import { MockStore, type MockAttempt, type MockPayment } from './store';
 const NOW = new Date('2026-11-25T03:00:00.000Z');
 const HOUR = 3_600_000;
 const BASE = 'http://api.test';
-const at = (hoursAgo: number) => new Date(NOW.getTime() - hoursAgo * HOUR).toISOString();
+const at = (hoursAgo: number) =>
+  new Date(NOW.getTime() - hoursAgo * HOUR).toISOString();
 
 function payment(id: string, amount = '100000'): MockPayment {
   const createdAt = at(200);
-  return { id, upstreamReference: `order-${id}`, amount, currency: 'VND', status: 'PENDING', expiresAt: NOW.toISOString(), createdAt, updatedAt: createdAt };
+  return {
+    id,
+    upstreamReference: `order-${id}`,
+    amount,
+    currency: 'VND',
+    status: 'PENDING',
+    expiresAt: NOW.toISOString(),
+    createdAt,
+    updatedAt: createdAt,
+  };
 }
 
-function review(id: string, paymentId: string, overrides: Partial<MockAttempt>): MockAttempt {
+function review(
+  id: string,
+  paymentId: string,
+  overrides: Partial<MockAttempt>,
+): MockAttempt {
   return {
     id,
     paymentId,
@@ -30,14 +44,39 @@ function review(id: string, paymentId: string, overrides: Partial<MockAttempt>):
 }
 
 const store = new MockStore(NOW);
-store.payments.push(payment('p1'), payment('p2', '250000'), payment('p3'), payment('p4'), payment('p5'));
+store.payments.push(
+  payment('p1'),
+  payment('p2', '250000'),
+  payment('p3'),
+  payment('p4'),
+  payment('p5'),
+);
 store.attempts.push(
   review('r-new', 'p1', { reviewOpenedAt: at(10) }),
-  review('r-old', 'p2', { reviewOpenedAt: at(90), reviewReason: 'AMOUNT_MISMATCH', providerReportedAmount: '240000', refundRequired: true }),
-  review('r-fake', 'p3', { gatewayId: 'fake', reviewOpenedAt: at(50), reviewReason: 'DUPLICATE_SUCCESS', refundRequired: true }),
+  review('r-old', 'p2', {
+    reviewOpenedAt: at(90),
+    reviewReason: 'AMOUNT_MISMATCH',
+    providerReportedAmount: '240000',
+    refundRequired: true,
+  }),
+  review('r-fake', 'p3', {
+    gatewayId: 'fake',
+    reviewOpenedAt: at(50),
+    reviewReason: 'DUPLICATE_SUCCESS',
+    refundRequired: true,
+  }),
   review('r-closed', 'p4', { status: 'FAILED', reviewOpenedAt: at(120) }),
   // Not a review at all.
-  { id: 'plain', paymentId: 'p5', gatewayId: 'fake', status: 'PENDING', providerRef: null, refundRequired: false, createdAt: at(5), updatedAt: at(5) },
+  {
+    id: 'plain',
+    paymentId: 'p5',
+    gatewayId: 'fake',
+    status: 'PENDING',
+    providerRef: null,
+    refundRequired: false,
+    createdAt: at(5),
+    updatedAt: at(5),
+  },
 );
 
 const server = setupServer(...createHandlers({ baseUrl: BASE, store }));
@@ -53,9 +92,16 @@ interface Item {
   providerReportedAmount: string | null;
   resolvableAt: string;
   reviewOpenedAt: string;
-  payment: { id: string; amount: string; upstreamReference: string; status: string };
+  payment: {
+    id: string;
+    amount: string;
+    upstreamReference: string;
+    status: string;
+  };
 }
-async function list(query = ''): Promise<{ items: Item[]; nextCursor: string | null }> {
+async function list(
+  query = '',
+): Promise<{ items: Item[]; nextCursor: string | null }> {
   const response = await fetch(`${BASE}/internal/reviews${query}`);
   expect(response.status).toBe(200);
   return response.json();
@@ -79,12 +125,21 @@ describe('GET /internal/reviews', () => {
   });
 
   it('sorts newest first with order=desc', async () => {
-    expect(ids(await list('?order=desc'))).toEqual(['r-new', 'r-fake', 'r-old']);
+    expect(ids(await list('?order=desc'))).toEqual([
+      'r-new',
+      'r-fake',
+      'r-old',
+    ]);
   });
 
   it('carries the Payment summary, the provider-reported amount and resolvableAt', async () => {
     const [mismatch, , fresh] = (await list()).items;
-    expect(mismatch?.payment).toMatchObject({ id: 'p2', amount: '250000', upstreamReference: 'order-p2', status: 'PENDING' });
+    expect(mismatch?.payment).toMatchObject({
+      id: 'p2',
+      amount: '250000',
+      upstreamReference: 'order-p2',
+      status: 'PENDING',
+    });
     expect(mismatch?.providerReportedAmount).toBe('240000');
     expect(mismatch?.resolvableAt).toBe(at(90 - 72));
     expect(fresh?.providerReportedAmount).toBeNull();
@@ -100,11 +155,16 @@ describe('GET /internal/reviews', () => {
     expect(second.nextCursor).toBeNull();
   });
 
-  it.each(['?state=maybe', '?reason=NOPE', '?sort=amount', '?limit=0'])('rejects %s with VALIDATION_FAILED', async (query) => {
-    const response = await fetch(`${BASE}/internal/reviews${query}`);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: 'VALIDATION_FAILED' });
-  });
+  it.each(['?state=maybe', '?reason=NOPE', '?sort=amount', '?limit=0'])(
+    'rejects %s with VALIDATION_FAILED',
+    async (query) => {
+      const response = await fetch(`${BASE}/internal/reviews${query}`);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        code: 'VALIDATION_FAILED',
+      });
+    },
+  );
 });
 
 describe('GET /internal/reviews/summary', () => {
@@ -113,7 +173,12 @@ describe('GET /internal/reviews/summary', () => {
     expect(await response.json()).toEqual({
       open: 3,
       total: 4,
-      byReason: { AMBIGUOUS_PROVIDER_STATUS: 1, AMOUNT_MISMATCH: 1, LATE_SUCCESS_ON_CLOSED_PAYMENT: 0, DUPLICATE_SUCCESS: 1 },
+      byReason: {
+        AMBIGUOUS_PROVIDER_STATUS: 1,
+        AMOUNT_MISMATCH: 1,
+        LATE_SUCCESS_ON_CLOSED_PAYMENT: 0,
+        DUPLICATE_SUCCESS: 1,
+      },
     });
   });
 });

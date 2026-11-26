@@ -7,8 +7,12 @@ describe('actorText', () => {
   });
 
   it("labels the platform with the Super Admin's name", () => {
-    expect(actorText({ actor: 'u1', actorName: 'Sam Super', actorLabel: 'Super Admin (PayBridge)' })).toBe(
-      'Super Admin (PayBridge): Sam Super',
-    );
+    expect(
+      actorText({
+        actor: 'u1',
+        actorName: 'Sam Super',
+        actorLabel: 'Super Admin (PayBridge)',
+      }),
+    ).toBe('Super Admin (PayBridge): Sam Super');
   });
 });

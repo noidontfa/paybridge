@@ -12,7 +12,11 @@
  * - `LATE_SUCCESS_ON_CLOSED_PAYMENT` and `DUPLICATE_SUCCESS`: add a note only.
  */
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
-import type { AttemptStatus, PaymentStatus, ReviewReason } from '@/lib/api/schemas';
+import type {
+  AttemptStatus,
+  PaymentStatus,
+  ReviewReason,
+} from '@/lib/api/schemas';
 
 const HOUR = 3_600_000;
 
@@ -39,35 +43,55 @@ export interface ReviewActions {
 const ALLOWED: Verdict = { allowed: true };
 const no = (reason: string): Verdict => ({ allowed: false, reason });
 
-export function reviewActions(facts: ReviewFacts, now: Date = new Date()): ReviewActions {
+export function reviewActions(
+  facts: ReviewFacts,
+  now: Date = new Date(),
+): ReviewActions {
   const open = facts.attemptStatus === 'REQUIRES_REVIEW';
-  const noteOnly = facts.reason === 'LATE_SUCCESS_ON_CLOSED_PAYMENT' || facts.reason === 'DUPLICATE_SUCCESS';
+  const noteOnly =
+    facts.reason === 'LATE_SUCCESS_ON_CLOSED_PAYMENT' ||
+    facts.reason === 'DUPLICATE_SUCCESS';
   const locked =
     !noteOnly &&
-    (!facts.reviewOpenedAt || Date.parse(facts.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR > now.getTime());
+    (!facts.reviewOpenedAt ||
+      Date.parse(facts.reviewOpenedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR >
+        now.getTime());
 
   if (!open) {
     const done = no('This Review has already been resolved.');
     return { open, locked, succeed: done, fail: done, note: done };
   }
   if (locked) {
-    const wait = no(`A Review can be resolved after it has been open for ${REVIEW_RESOLVABLE_AFTER_HOURS} hours.`);
+    const wait = no(
+      `A Review can be resolved after it has been open for ${REVIEW_RESOLVABLE_AFTER_HOURS} hours.`,
+    );
     return { open, locked, succeed: wait, fail: wait, note: wait };
   }
 
   const { reason } = facts;
-  const resolvesStatus = reason === 'AMBIGUOUS_PROVIDER_STATUS' || reason === 'AMOUNT_MISMATCH';
+  const resolvesStatus =
+    reason === 'AMBIGUOUS_PROVIDER_STATUS' || reason === 'AMOUNT_MISMATCH';
   let succeed: Verdict;
   if (reason === 'AMOUNT_MISMATCH') {
-    succeed = no('An amount mismatch cannot be marked succeeded: the collected amount differs from the Payment Amount.');
+    succeed = no(
+      'An amount mismatch cannot be marked succeeded: the collected amount differs from the Payment Amount.',
+    );
   } else if (reason !== 'AMBIGUOUS_PROVIDER_STATUS') {
     succeed = no('This kind of Review only takes a note.');
   } else if (facts.paymentStatus !== 'PENDING') {
-    succeed = no(`SUCCEEDED needs the Payment to be PENDING; it is ${facts.paymentStatus}.`);
+    succeed = no(
+      `SUCCEEDED needs the Payment to be PENDING; it is ${facts.paymentStatus}.`,
+    );
   } else {
     succeed = ALLOWED;
   }
-  const fail: Verdict = resolvesStatus ? ALLOWED : no('This kind of Review only takes a note.');
-  const note: Verdict = resolvesStatus ? no('Resolve this Review to a status instead; the note is recorded with it.') : ALLOWED;
+  const fail: Verdict = resolvesStatus
+    ? ALLOWED
+    : no('This kind of Review only takes a note.');
+  const note: Verdict = resolvesStatus
+    ? no(
+        'Resolve this Review to a status instead; the note is recorded with it.',
+      )
+    : ALLOWED;
   return { open, locked, succeed, fail, note };
 }

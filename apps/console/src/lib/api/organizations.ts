@@ -12,9 +12,13 @@ export const organizationSchema = z.object({
 });
 export type OrganizationSummary = z.infer<typeof organizationSchema>;
 
-export const organizationListSchema = z.object({ items: z.array(organizationSchema) });
+export const organizationListSchema = z.object({
+  items: z.array(organizationSchema),
+});
 export type OrganizationList = z.infer<typeof organizationListSchema>;
 
-export function listOrganizations(signal?: AbortSignal): Promise<OrganizationList> {
+export function listOrganizations(
+  signal?: AbortSignal,
+): Promise<OrganizationList> {
   return request('/internal/organizations', organizationListSchema, { signal });
 }

@@ -16,7 +16,10 @@ const MAX_LIMIT = 100;
 export class BadQueryError extends Error {}
 
 /** Reads `cursor` and `limit`; throws `BadQueryError` for values the API would reject. */
-export function readListWindow(params: URLSearchParams): { offset: number; limit: number } {
+export function readListWindow(params: URLSearchParams): {
+  offset: number;
+  limit: number;
+} {
   const rawLimit = params.get('limit');
   const limit = rawLimit === null ? DEFAULT_LIMIT : Number(rawLimit);
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
@@ -33,9 +36,15 @@ export function readListWindow(params: URLSearchParams): { offset: number; limit
   throw new BadQueryError('cursor is not valid');
 }
 
-export function pageOf<T>(rows: T[], { offset, limit }: { offset: number; limit: number }) {
+export function pageOf<T>(
+  rows: T[],
+  { offset, limit }: { offset: number; limit: number },
+) {
   const end = offset + limit;
-  return { items: rows.slice(offset, end), nextCursor: end < rows.length ? btoa(String(end)) : null };
+  return {
+    items: rows.slice(offset, end),
+    nextCursor: end < rows.length ? btoa(String(end)) : null,
+  };
 }
 
 function startOfDay(day: string): number {
@@ -64,14 +73,25 @@ export function queryPayments(store: MockStore, params: URLSearchParams) {
   const to = readDay(params, 'createdTo');
   const sort = params.get('sort') ?? 'createdAt';
   if (!PAYMENT_SORT_COLUMNS.some((column) => column === sort)) {
-    throw new BadQueryError(`sort must be one of ${PAYMENT_SORT_COLUMNS.join(', ')}`);
+    throw new BadQueryError(
+      `sort must be one of ${PAYMENT_SORT_COLUMNS.join(', ')}`,
+    );
   }
   const direction = params.get('order') === 'asc' ? 1 : -1;
 
   const rows = store.payments
     .filter((p) => !status || p.status === status)
-    .filter((p) => !gatewayId || store.attemptsOf(p.id).some((a) => a.gatewayId === gatewayId))
-    .filter((p) => !q || p.id.toLowerCase().includes(q) || p.upstreamReference.toLowerCase().includes(q))
+    .filter(
+      (p) =>
+        !gatewayId ||
+        store.attemptsOf(p.id).some((a) => a.gatewayId === gatewayId),
+    )
+    .filter(
+      (p) =>
+        !q ||
+        p.id.toLowerCase().includes(q) ||
+        p.upstreamReference.toLowerCase().includes(q),
+    )
     .filter((p) => !from || Date.parse(p.createdAt) >= startOfDay(from))
     .filter((p) => !to || Date.parse(p.createdAt) <= endOfDay(to))
     .sort((a, b) => {
@@ -84,19 +104,31 @@ export function queryPayments(store: MockStore, params: URLSearchParams) {
     })
     .map((p): PaymentListItem => {
       const latest = store.attemptsOf(p.id).at(-1);
-      return { ...p, latestTransaction: latest ? { gatewayId: latest.gatewayId, status: latest.status } : null };
+      return {
+        ...p,
+        latestTransaction: latest
+          ? { gatewayId: latest.gatewayId, status: latest.status }
+          : null,
+      };
     });
 
   return pageOf(rows, window);
 }
 
-export function paymentsListHandlers(base: string, store: MockStore, badRequest: (request: Request, message: string) => Response): HttpHandler[] {
+export function paymentsListHandlers(
+  base: string,
+  store: MockStore,
+  badRequest: (request: Request, message: string) => Response,
+): HttpHandler[] {
   return [
     http.get(`${base}/internal/payments`, ({ request }) => {
       try {
-        return HttpResponse.json(queryPayments(store, new URL(request.url).searchParams));
+        return HttpResponse.json(
+          queryPayments(store, new URL(request.url).searchParams),
+        );
       } catch (error) {
-        if (error instanceof BadQueryError) return badRequest(request, error.message);
+        if (error instanceof BadQueryError)
+          return badRequest(request, error.message);
         throw error;
       }
     }),

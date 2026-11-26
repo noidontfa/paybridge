@@ -26,7 +26,9 @@ export const reviewResolutionResultSchema = z.object({
   attemptStatus: attemptStatusSchema,
   paymentStatus: paymentStatusSchema,
 });
-export type ReviewResolutionResult = z.infer<typeof reviewResolutionResultSchema>;
+export type ReviewResolutionResult = z.infer<
+  typeof reviewResolutionResultSchema
+>;
 
 /**
  * The real API answers with the Payment (its attempts included), the mock with the small
@@ -37,19 +39,37 @@ export const reviewResolutionResponseSchema = z.union([
   z.object({
     id: z.string(),
     status: paymentStatusSchema,
-    attempts: z.array(z.object({ id: z.string(), status: attemptStatusSchema })),
+    attempts: z.array(
+      z.object({ id: z.string(), status: attemptStatusSchema }),
+    ),
   }),
 ]);
-export type ReviewResolutionResponse = z.infer<typeof reviewResolutionResponseSchema>;
+export type ReviewResolutionResponse = z.infer<
+  typeof reviewResolutionResponseSchema
+>;
 
-export function toReviewResolutionResult(response: ReviewResolutionResponse, attemptId: string): ReviewResolutionResult {
+export function toReviewResolutionResult(
+  response: ReviewResolutionResponse,
+  attemptId: string,
+): ReviewResolutionResult {
   if ('paymentId' in response) return response;
   const attempt = response.attempts.find((a) => a.id === attemptId);
-  if (!attempt) throw new Error(`The API response does not contain the attempt ${attemptId}.`);
-  return { paymentId: response.id, attemptId, attemptStatus: attempt.status, paymentStatus: response.status };
+  if (!attempt)
+    throw new Error(
+      `The API response does not contain the attempt ${attemptId}.`,
+    );
+  return {
+    paymentId: response.id,
+    attemptId,
+    attemptStatus: attempt.status,
+    paymentStatus: response.status,
+  };
 }
 
-export async function resolveReview(paymentId: string, body: ReviewResolutionBody): Promise<ReviewResolutionResult> {
+export async function resolveReview(
+  paymentId: string,
+  body: ReviewResolutionBody,
+): Promise<ReviewResolutionResult> {
   const response = await request(
     `/internal/payments/${encodeURIComponent(paymentId)}/review-resolution`,
     reviewResolutionResponseSchema,

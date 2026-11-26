@@ -6,4 +6,6 @@ export abstract class OrganizationRepository {
   /** Every Organization, by name. */
   abstract list(): Promise<Organization[]>;
   abstract create(organization: NewOrganization): Promise<Organization>;
+  /** Locks the row until the transaction ends, to serialize guarded changes. */
+  abstract lockForUpdate(id: string): Promise<void>;
 }

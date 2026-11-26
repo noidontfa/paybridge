@@ -1,10 +1,18 @@
 'use client';
 
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { listPayments, type PaymentListItem, type PaymentListQuery, type PaymentSortColumn } from '@/lib/api/payments-list';
+import {
+  listPayments,
+  type PaymentListItem,
+  type PaymentListQuery,
+  type PaymentSortColumn,
+} from '@/lib/api/payments-list';
 import { PAYMENT_SORT_COLUMNS } from '@/lib/api/payments-list';
 import { paymentKeys } from '@/lib/queries/payments';
-import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
+import type {
+  TableUrlConfig,
+  TableUrlState,
+} from '@/lib/url-state/table-url-state';
 
 export const PAYMENT_LIST_URL_CONFIG: TableUrlConfig = {
   filters: ['status', 'gatewayId', 'createdFrom', 'createdTo'],
@@ -12,7 +20,8 @@ export const PAYMENT_LIST_URL_CONFIG: TableUrlConfig = {
   defaultSort: { id: 'createdAt', desc: true },
 };
 
-export const paymentListKey = (query: PaymentListQuery) => [...paymentKeys.all, 'list', query] as const;
+export const paymentListKey = (query: PaymentListQuery) =>
+  [...paymentKeys.all, 'list', query] as const;
 
 /** The table state as the endpoint's query (without the cursor, which is the page param). */
 export function paymentListQuery(state: TableUrlState): PaymentListQuery {
@@ -33,12 +42,14 @@ export function usePaymentList(state: TableUrlState) {
   const query = paymentListQuery(state);
   const result = useInfiniteQuery({
     queryKey: paymentListKey({ ...query, cursor: state.cursor ?? undefined }),
-    queryFn: ({ pageParam, signal }) => listPayments({ ...query, cursor: pageParam }, signal),
+    queryFn: ({ pageParam, signal }) =>
+      listPayments({ ...query, cursor: pageParam }, signal),
     initialPageParam: state.cursor ?? undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });
-  const rows: PaymentListItem[] = result.data?.pages.flatMap((page) => page.items) ?? EMPTY;
+  const rows: PaymentListItem[] =
+    result.data?.pages.flatMap((page) => page.items) ?? EMPTY;
   return { ...result, rows };
 }
 

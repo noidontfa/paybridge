@@ -25,11 +25,19 @@ function toSummary(gateway: GatewaySummary): GatewaySummary {
   return { id, registered, configured, mode, callbackUrl };
 }
 
-export function gatewayDetail(store: MockStore, gateway: GatewaySummary): GatewayDetail {
+export function gatewayDetail(
+  store: MockStore,
+  gateway: GatewaySummary,
+): GatewayDetail {
   const since = store.now.getTime() - DAY_MS;
   const own = store.callbacks.filter((c) => c.gatewayId === gateway.id);
   const recent = own.filter((c) => Date.parse(c.receivedAt) > since);
-  const callbackCounts = { RECEIVED: 0, PROCESSING: 0, PROCESSED: 0, FAILED: 0 };
+  const callbackCounts = {
+    RECEIVED: 0,
+    PROCESSING: 0,
+    PROCESSED: 0,
+    FAILED: 0,
+  };
   for (const c of recent) callbackCounts[c.status] += 1;
 
   const byCategory = new Map<string, number>();
@@ -43,8 +51,17 @@ export function gatewayDetail(store: MockStore, gateway: GatewaySummary): Gatewa
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count || (a.category < b.category ? -1 : 1));
 
-  const last = own.reduce<string | null>((latest, c) => (latest === null || c.receivedAt > latest ? c.receivedAt : latest), null);
-  return { ...toSummary(gateway), callbackCounts, lastCallbackAt: last, recentErrors };
+  const last = own.reduce<string | null>(
+    (latest, c) =>
+      latest === null || c.receivedAt > latest ? c.receivedAt : latest,
+    null,
+  );
+  return {
+    ...toSummary(gateway),
+    callbackCounts,
+    lastCallbackAt: last,
+    recentErrors,
+  };
 }
 
 export function gatewaysHandlers(
@@ -54,7 +71,11 @@ export function gatewaysHandlers(
 ): HttpHandler[] {
   return [
     http.get(`${base}/internal/gateways`, () =>
-      HttpResponse.json({ items: store.gateways.map(toSummary).sort((a, b) => (a.id < b.id ? -1 : 1)) }),
+      HttpResponse.json({
+        items: store.gateways
+          .map(toSummary)
+          .sort((a, b) => (a.id < b.id ? -1 : 1)),
+      }),
     ),
     http.get(`${base}/internal/gateways/:id`, ({ request, params }) => {
       const id = String(params.id);
