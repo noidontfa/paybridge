@@ -1,4 +1,7 @@
 import { validate as isUuid } from 'uuid';
+import { isDecimalString } from '../../../domain/amount.js';
+
+// Helpers shared by the operator read models (ADR 0005).
 
 /** Makes `%`, `_` and `\` match themselves in a LIKE pattern (Prisma does not). */
 export function escapeLike(text: string): string {
@@ -25,4 +28,19 @@ export function toStringRecord(value: unknown): Record<string, string> {
       typeof item === 'string' ? item : JSON.stringify(item),
     ]),
   );
+}
+
+/**
+ * The amount the provider reported, kept in
+ * `providerMetadata.providerReportedAmount`, as a decimal string. Null when
+ * there is none or it is not a plain decimal.
+ */
+export function providerReportedAmount(metadata: unknown): string | null {
+  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata)) {
+    return null;
+  }
+  const value = (metadata as Record<string, unknown>)['providerReportedAmount'];
+  const text =
+    typeof value === 'number' || typeof value === 'string' ? String(value) : '';
+  return isDecimalString(text) ? text : null;
 }

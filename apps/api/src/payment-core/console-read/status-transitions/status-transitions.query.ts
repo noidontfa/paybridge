@@ -1,7 +1,7 @@
 import { validate as isUuid } from 'uuid';
 import { z } from 'zod';
 import type { StatusTransitionRow } from '../../infrastructure/prisma/console-read/status-transitions-read.repository.js';
-import { STATUS_TRANSITION_ENTITY_TYPES } from '../shared/developer-views.vocab.js';
+import { STATUS_TRANSITION_ENTITY_TYPES } from '../../domain/records.js';
 import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
 import { optionalParam, pagingShape } from '../shared/list-query.js';
 

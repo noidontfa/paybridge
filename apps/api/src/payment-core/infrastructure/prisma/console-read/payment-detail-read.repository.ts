@@ -1,7 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
 import { PrismaService } from '../../../../database/prisma.service.js';
-import type { Prisma } from '../../../../generated/prisma/client.js';
 import type {
   AttemptStatus,
   PaymentStatus,
@@ -9,11 +7,13 @@ import type {
 } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { StatusTransitionEntityType } from '../../../domain/records.js';
 import { scopeWhere } from '../scope.js';
+import { providerReportedAmount, uuidNeedle } from './read-helpers.js';
 
 export interface TransitionRow {
   readonly id: string;
-  readonly entityType: 'PAYMENT' | 'PAYMENT_TRANSACTION' | 'REFUND';
+  readonly entityType: StatusTransitionEntityType;
   readonly entityId: string;
   readonly fromStatus: string | null;
   readonly toStatus: string;
@@ -61,20 +61,6 @@ export interface PaymentDetailRow {
   readonly events: PaymentEventRow[];
 }
 
-function reportedAmount(metadata: Prisma.JsonValue | null): string | null {
-  if (
-    metadata === null ||
-    typeof metadata !== 'object' ||
-    Array.isArray(metadata)
-  ) {
-    return null;
-  }
-  const value = metadata.providerReportedAmount;
-  return typeof value === 'string' || typeof value === 'number'
-    ? String(value)
-    : null;
-}
-
 /**
  * Read model behind the operator Payment detail (ADR 0005). Read only: it
  * uses the shared client directly, never a transaction.
@@ -85,9 +71,10 @@ export class PaymentDetailReadRepository {
 
   /** The Payment with attempts, transitions and events; null if none (or not a UUID). */
   async find(scope: ReadScope, id: string): Promise<PaymentDetailRow | null> {
-    if (!isUuid(id)) return null;
+    const key = uuidNeedle(id);
+    if (!key) return null;
     const payment = await this.prisma.payment.findUnique({
-      where: { id, ...scopeWhere(scope) },
+      where: { id: key, ...scopeWhere(scope) },
       include: {
         transactions: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
         outboxEvents: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
@@ -122,7 +109,7 @@ export class PaymentDetailReadRepository {
         reviewReason: t.reviewReason,
         reviewOpenedAt: t.reviewOpenedAt,
         refundRequired: t.refundRequired,
-        providerReportedAmount: reportedAmount(t.providerMetadata),
+        providerReportedAmount: providerReportedAmount(t.providerMetadata),
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
         transitions: transitions.filter((s) => s.entityId === t.id),

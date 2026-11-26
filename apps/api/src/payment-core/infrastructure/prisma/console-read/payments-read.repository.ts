@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { validate as isUuid } from 'uuid';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
 import type { PaymentStatus, AttemptStatus } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeWhere } from '../scope.js';
+import { escapeLike, uuidNeedle } from './read-helpers.js';
 
 export type PaymentSortColumn = 'createdAt' | 'amount';
 
@@ -44,11 +44,6 @@ export interface PaymentListRow {
     readonly gatewayId: string;
     readonly status: AttemptStatus;
   } | null;
-}
-
-/** Makes `%`, `_` and `\` match themselves in a LIKE pattern (Prisma does not). */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, '\\$&');
 }
 
 /**
@@ -102,9 +97,10 @@ export class PaymentsReadRepository {
     }
     if (filters.q) {
       const needle = filters.q;
+      const id = uuidNeedle(needle);
       and.push({
         OR: [
-          ...(isUuid(needle) ? [{ id: needle.toLowerCase() }] : []),
+          ...(id ? [{ id }] : []),
           {
             merchantOrderId: {
               contains: escapeLike(needle),

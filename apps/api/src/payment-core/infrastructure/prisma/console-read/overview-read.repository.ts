@@ -5,6 +5,7 @@ import {
   PAYMENT_STATUSES,
   type PaymentStatus,
 } from '../../../domain/statuses.js';
+import { TERMINAL_PAYMENT_STATUSES as CLOSED_STATUSES } from '../../../domain/rules/payment-transitions.js';
 import { decimalToString } from '../mappers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeSql, scopeWhere } from '../scope.js';
@@ -49,12 +50,6 @@ export interface OverviewData {
 }
 
 const RECENT_COUNT = 8;
-/** A Payment is closed once it reached one of these final states. */
-const CLOSED_STATUSES: readonly PaymentStatus[] = [
-  'SUCCEEDED',
-  'CANCELLED',
-  'EXPIRED',
-];
 const CURRENCY = 'VND';
 
 /**

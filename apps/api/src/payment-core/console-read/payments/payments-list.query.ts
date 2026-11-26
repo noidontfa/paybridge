@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isDecimalString } from '../../domain/amount.js';
 import { PAYMENT_STATUSES } from '../../domain/statuses.js';
 import type {
   PaymentListRow,
@@ -7,15 +8,13 @@ import type {
 import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
 import { dayParam, optionalParam, pagingShape } from '../shared/list-query.js';
 
-const DECIMAL = /^\d+(\.\d+)?$/;
-
 /** A cursor only continues the sort and order it was made for. */
 export function paymentsCursor(sort: PaymentSortColumn, order: 'asc' | 'desc') {
   return keysetCursor<PaymentListRow>({
     tag: `${sort}:${order}`,
     valueOf: (row) =>
       sort === 'amount' ? row.amount : row.createdAt.toISOString(),
-    isValue: sort === 'amount' ? (v) => DECIMAL.test(v) : isIsoTime,
+    isValue: sort === 'amount' ? isDecimalString : isIsoTime,
     invalidMessage: 'is not valid for this list, sort and order',
   });
 }

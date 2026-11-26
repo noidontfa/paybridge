@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
 import type { OutboxEventType } from '../../../domain/records.js';
-import { escapeLike, uuidNeedle } from './developer-views.shared.js';
+import { escapeLike, uuidNeedle } from './read-helpers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 

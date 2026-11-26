@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { PaymentEventSummaryRow } from '../../infrastructure/prisma/console-read/payment-events-read.repository.js';
-import { OUTBOX_EVENT_TYPES } from '../shared/developer-views.vocab.js';
+import { OUTBOX_EVENT_TYPES } from '../../domain/records.js';
 import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
 import { optionalParam, pagingShape } from '../shared/list-query.js';
 

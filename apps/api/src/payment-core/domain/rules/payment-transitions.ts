@@ -1,4 +1,4 @@
-import type { PaymentStatus } from '../statuses.js';
+import { PAYMENT_STATUSES, type PaymentStatus } from '../statuses.js';
 
 // The Payment state table (spec: Payment states and rules). PENDING is the
 // only non-terminal state; a Payment never leaves SUCCEEDED, CANCELLED or
@@ -21,3 +21,7 @@ export function canTransitionPayment(
 ): boolean {
   return ALLOWED[from].includes(to);
 }
+
+/** The final states: a Payment in one of them is closed and never changes again. */
+export const TERMINAL_PAYMENT_STATUSES: readonly PaymentStatus[] =
+  PAYMENT_STATUSES.filter((status) => ALLOWED[status].length === 0);

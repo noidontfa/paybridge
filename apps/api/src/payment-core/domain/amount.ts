@@ -12,6 +12,11 @@ const MAX_INTEGER_DIGITS = 15;
 
 const DECIMAL = /^(\d+)(?:\.(\d+))?$/;
 
+/** A plain non-negative decimal string such as `"150000"` or `"12.50"`; no sign, exponent or spaces. */
+export function isDecimalString(value: string): boolean {
+  return DECIMAL.test(value);
+}
+
 /** Money in the currency's major unit (VND: whole dong), as an exact decimal string. */
 export interface Amount {
   readonly value: string;

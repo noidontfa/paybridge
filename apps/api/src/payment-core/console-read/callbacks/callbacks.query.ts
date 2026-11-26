@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { CallbackListRow } from '../../infrastructure/prisma/console-read/callbacks-read.repository.js';
-import { CALLBACK_STATUSES } from '../shared/developer-views.vocab.js';
+import { WEBHOOK_INBOX_STATUSES } from '../../domain/records.js';
 import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
 import { optionalParam, pagingShape } from '../shared/list-query.js';
 
@@ -15,7 +15,7 @@ export const callbacksListQuerySchema = z
   .object({
     ...pagingShape,
     gatewayId: optionalParam(z.string().max(100)),
-    status: optionalParam(z.enum(CALLBACK_STATUSES)),
+    status: optionalParam(z.enum(WEBHOOK_INBOX_STATUSES)),
     q: optionalParam(z.string().trim().max(200)),
   })
   .transform((query, ctx) => {

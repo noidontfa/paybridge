@@ -6,7 +6,7 @@ import {
   escapeLike,
   toStringRecord,
   uuidNeedle,
-} from './developer-views.shared.js';
+} from './read-helpers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 

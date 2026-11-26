@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
-import { escapeLike, uuidNeedle } from './developer-views.shared.js';
+import { escapeLike, uuidNeedle } from './read-helpers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
+import type { StatusTransitionEntityType as TransitionEntityType } from '../../../domain/records.js';
 import { scopeSql } from '../scope.js';
 
-export type TransitionEntityType = 'PAYMENT' | 'PAYMENT_TRANSACTION' | 'REFUND';
 
 export interface StatusTransitionListFilters {
   readonly entityType?: TransitionEntityType;
