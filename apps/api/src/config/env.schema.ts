@@ -132,6 +132,27 @@ const envObject = z.object({
       )
       .optional(),
   ),
+  // --- Webhooks (outbound delivery) -----------------------------------------
+  /**
+   * SSRF protection of Webhook deliveries: HTTPS only, and only public
+   * addresses (checked after DNS, then connected to exactly). Unset =>
+   * on in production, off in development and tests (a receiver on localhost).
+   */
+  WEBHOOK_SSRF_PROTECTION: z.stringbool().optional(),
+  /** Give up on one Webhook attempt after this many milliseconds. */
+  WEBHOOK_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(60_000)
+    .default(10_000),
+  /** Days a finished Webhook delivery is kept, matching the outbox retention. */
+  WEBHOOK_DELIVERY_RETENTION_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(3650)
+    .default(7),
   /** Stripe Gateway Plugin: all three keys or none. */
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),

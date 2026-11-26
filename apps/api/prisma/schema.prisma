@@ -3,8 +3,8 @@
 //
 // Conventions (spec: PostgreSQL schema; ADR 0001):
 // - Every table and enum type is mapped to a prefixed name: `core_` for Payment
-//   Core, `iam_` for the Identity module, `chk_` for the checkout module
-//   (ADR 0001). src/database/schema.spec.ts
+//   Core, `iam_` for the Identity module, `chk_` for the checkout module,
+//   `wh_` for Webhooks (ADR 0001). src/database/schema.spec.ts
 //   enforces the prefix and the partial indexes.
 // - Every `core_*` table that holds Organization data has a non-null
 //   `organization_id` foreign key to `iam_organizations` (ADR 0006).
@@ -136,6 +136,10 @@ model Organization {
   invitations         Invitation[]
   apiKeys             ApiKey[]
   pricingPlans        PricingPlan[]
+  webhookEndpoints    WebhookEndpoint[]
+  webhookDeliveries   WebhookDelivery[]
+  webhookAttempts     WebhookDeliveryAttempt[]
+  webhookSecretRolls  WebhookSecretRoll[]
   publishableKeys     PublishableKey[]
   checkoutSessions    CheckoutSession[]
 
@@ -581,4 +585,128 @@ model CheckoutSession {
 
   @@index([organizationId, sessionTokenHash, pricingPlanId, customerReference, customerEmail, createdAt], map: "chk_checkout_sessions_lookup_idx")
   @@map("chk_checkout_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Webhooks (wh_): Webhook Endpoints, deliveries and their attempts
+// ---------------------------------------------------------------------------
+
+enum WebhookEndpointStatus {
+  ENABLED
+  DISABLED
+
+  @@map("wh_endpoint_status")
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+
+  @@map("wh_delivery_status")
+}
+
+/// A URL of an Organization's system that receives Webhooks. The signing
+/// secret is AES-256-GCM under `secretKeyId` (shown in full once, then by
+/// `secretPrefix`). Deleting sets `deletedAt`: deliveries keep their endpoint.
+/// `updatedBy*` record who wrote it last (a Super Admin shows as the platform).
+model WebhookEndpoint {
+  id                       String                @id @db.Uuid
+  organizationId           String                @map("organization_id") @db.Uuid
+  url                      String
+  /// Subscribed Payment Event kinds, such as `payment.succeeded`.
+  eventKinds               String[]              @map("event_kinds")
+  status                   WebhookEndpointStatus @default(ENABLED)
+  secretCiphertext         String                @map("secret_ciphertext")
+  secretKeyId              String                @map("secret_key_id")
+  secretPrefix             String                @map("secret_prefix")
+  /// The secret before the last roll (ticket 04): it still signs until
+  /// `previousSecretExpiresAt`.
+  previousSecretCiphertext String?               @map("previous_secret_ciphertext")
+  previousSecretKeyId      String?               @map("previous_secret_key_id")
+  previousSecretExpiresAt  DateTime?             @map("previous_secret_expires_at") @db.Timestamptz(3)
+  updatedByUserId          String                @map("updated_by_user_id") @db.Uuid
+  updatedByRole            String                @map("updated_by_role")
+  updatedByName            String                @map("updated_by_name")
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                DateTime?             @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  deliveries   WebhookDelivery[]
+  secretRolls  WebhookSecretRoll[]
+
+  @@index([organizationId], map: "wh_endpoints_organization_id_idx")
+  @@map("wh_endpoints")
+}
+
+/// One Payment Event to one Webhook Endpoint. `eventId` is the outbox event
+/// id (stable across attempts and resends); `payload` is the envelope's
+/// `data`, the Payment Event payload as Core wrote it.
+model WebhookDelivery {
+  id             String                @id @db.Uuid
+  organizationId String                @map("organization_id") @db.Uuid
+  endpointId     String                @map("endpoint_id") @db.Uuid
+  eventId        String                @map("event_id") @db.Uuid
+  eventKind      String                @map("event_kind")
+  eventCreatedAt DateTime              @map("event_created_at") @db.Timestamptz(3)
+  paymentId      String?               @map("payment_id") @db.Uuid
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// When a `PENDING` delivery is due for its next attempt (null: now).
+  nextAttemptAt  DateTime?             @map("next_attempt_at") @db.Timestamptz(3)
+  /// Set while one worker makes an attempt; an old lock lost its worker.
+  lockedAt       DateTime?             @map("locked_at") @db.Timestamptz(3)
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  endpoint     WebhookEndpoint          @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attemptRows  WebhookDeliveryAttempt[]
+
+  @@unique([eventId, endpointId], map: "wh_deliveries_event_endpoint_uq")
+  @@index([organizationId, createdAt], map: "wh_deliveries_organization_created_idx")
+  @@index([endpointId], map: "wh_deliveries_endpoint_id_idx")
+  @@index([status, nextAttemptAt], map: "wh_deliveries_due_idx")
+  @@map("wh_deliveries")
+}
+
+/// One HTTP POST of a delivery: when, the HTTP status (null when no answer),
+/// how long it took, a truncated response body, and why it failed.
+model WebhookDeliveryAttempt {
+  id             String   @id @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  deliveryId     String   @map("delivery_id") @db.Uuid
+  attemptedAt    DateTime @map("attempted_at") @db.Timestamptz(3)
+  succeeded      Boolean
+  httpStatus     Int?     @map("http_status")
+  durationMs     Int      @map("duration_ms")
+  responseBody   String?  @map("response_body")
+  error          String?
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  delivery     WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([deliveryId, attemptedAt], map: "wh_delivery_attempts_delivery_idx")
+  @@map("wh_delivery_attempts")
+}
+
+/// The audit log of signing secret rolls: who rolled an endpoint's secret,
+/// when, and until when the previous secret stayed valid (null: at once).
+model WebhookSecretRoll {
+  id                      String    @id @db.Uuid
+  organizationId          String    @map("organization_id") @db.Uuid
+  endpointId              String    @map("endpoint_id") @db.Uuid
+  rolledAt                DateTime  @map("rolled_at") @db.Timestamptz(3)
+  previousSecretExpiresAt DateTime? @map("previous_secret_expires_at") @db.Timestamptz(3)
+  rolledByUserId          String    @map("rolled_by_user_id") @db.Uuid
+  rolledByRole            String    @map("rolled_by_role")
+  rolledByName            String    @map("rolled_by_name")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  endpoint     WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([endpointId, rolledAt], map: "wh_secret_rolls_endpoint_idx")
+  @@map("wh_secret_rolls")
 }

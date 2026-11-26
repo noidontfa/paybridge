@@ -108,6 +108,7 @@ describe('OutboxRelay.publishPending', () => {
     expect(job?.name).toBe('PaymentCreated');
     expect(job?.data).toEqual<OutboxJobData>({
       outboxEventId: row!.id,
+      organizationId: row!.organizationId,
       eventType: 'PaymentCreated',
       paymentId,
       payload: row!.payload,
