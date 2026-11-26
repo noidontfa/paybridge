@@ -574,9 +574,10 @@ describe('Payment Core records', () => {
       .expect(200);
     const list = paymentListSchema.parse(res.body);
 
-    expect(list.items.map((p) => p.id).sort()).toEqual(
-      [a.body.id, b.body.id].sort(),
+    expect(new Set(list.items.map((p) => p.id))).toEqual(
+      new Set([a.body.id, b.body.id]),
     );
+    expect(list.items).toHaveLength(2);
     const all = paymentListSchema.parse(
       (await operator.get('/internal/payments').expect(200)).body,
     );
