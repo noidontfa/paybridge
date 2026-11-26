@@ -133,6 +133,7 @@ model Organization {
   gatewayConnections  GatewayConnection[]
   users               User[]
   invitations         Invitation[]
+  apiKeys             ApiKey[]
 
   @@map("iam_organizations")
 }
@@ -222,6 +223,24 @@ model Invitation {
   @@index([organizationId], map: "iam_invitations_organization_id_idx")
   @@index([email], map: "iam_invitations_email_idx")
   @@map("iam_invitations")
+}
+
+/// An Organization's credential for the public payments API, stored as a
+/// SHA-256 hash plus a recognisable prefix. The full key is shown only once.
+model ApiKey {
+  id             String    @id @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  label          String
+  prefix         String
+  keyHash        String    @unique @map("key_hash")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt     DateTime? @map("last_used_at") @db.Timestamptz(3)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId], map: "iam_api_keys_organization_id_idx")
+  @@map("iam_api_keys")
 }
 
 // ---------------------------------------------------------------------------

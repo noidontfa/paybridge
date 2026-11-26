@@ -5,5 +5,5 @@ import type { Principal } from '../../common/principal/principal.js';
  * parameter: only from a User's access token (or, later, an API Key).
  */
 export abstract class PrincipalResolver {
-  abstract resolve(request: unknown): Principal;
+  abstract resolve(request: unknown): Principal | Promise<Principal>;
 }

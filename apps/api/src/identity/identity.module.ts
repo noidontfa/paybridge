@@ -2,6 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import type { Env } from '../config/env.schema.js';
+import {
+  AuthenticateApiKey,
+  CreateApiKey,
+  ListApiKeys,
+  RevokeApiKey,
+} from './application/use-cases/api-keys.js';
+import { ApiKeysController } from './http/api-keys.controller.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
 import { GetSessionUser } from './application/use-cases/get-session-user.js';
 import { ChangePassword } from './application/use-cases/change-password.js';
@@ -53,6 +60,7 @@ import { UserRepository } from './port/user.repository.js';
     JwksController,
     OrganizationsController,
     InvitationsController,
+    ApiKeysController,
     UsersController,
   ],
   providers: [
@@ -84,6 +92,10 @@ import { UserRepository } from './port/user.repository.js';
       useFactory: (runner: TransactionRunner) => runner.repositories.users,
     },
     GetOrganization,
+    CreateApiKey,
+    ListApiKeys,
+    RevokeApiKey,
+    AuthenticateApiKey,
     SignIn,
     RefreshSession,
     SignOut,

@@ -82,6 +82,9 @@ const mockUser = (id: string, name: string, role: 'OPERATOR' | 'ORGANIZATION_ADM
 });
 
 export class MockStore {
+  /** The Organization's API Keys (the mock has one Organization). */
+  readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [
     mockUser('dana', 'Dana Admin', 'ORGANIZATION_ADMIN'),

@@ -50,7 +50,7 @@ export class AccessGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Record<string, unknown>>();
     const principal = request[PRINCIPAL_REQUEST_KEY] as Principal | undefined;
-    // The public payments API is not a User's: API Keys come in ticket 09.
+    // The public payments API belongs to an API Key, not a User: no policy applies.
     if (!principal?.user) return true;
 
     const policy = this.reflector.getAllAndOverride<AccessPolicy | undefined>(

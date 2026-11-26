@@ -15,6 +15,7 @@ import {
   createOrganization,
   DEFAULT_ORGANIZATION_ID,
 } from '../setup/organizations.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { signedInHttp, type SignedInHttp } from '../setup/users.js';
@@ -26,6 +27,7 @@ const stripeHttp = new FixtureHttpClient();
 let app: INestApplication;
 let moduleRef: TestingModule;
 let admin: SignedInHttp;
+let apiKey: string;
 
 const STRIPE = {
   secretKey: 'sk_test_conn',
@@ -49,9 +51,11 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetDatabase(prisma);
   admin = await signedInHttp(app, prisma, { role: 'ORGANIZATION_ADMIN' });
+  apiKey = await createApiKey(prisma);
 });
 
 const api = () => request(app.getHttpServer());
+const authed = () => ({ ...bearer(apiKey) });
 const connectionsOf = (organizationId = DEFAULT_ORGANIZATION_ID) =>
   prisma.gatewayConnection.findMany({ where: { organizationId } });
 
@@ -64,6 +68,7 @@ async function connectStripe(token = admin) {
 async function startAttempt(gatewayId: string) {
   const created = await api()
     .post('/api/payments')
+    .set(authed())
     .send({
       amount: '150000',
       currency: 'VND',
@@ -72,6 +77,7 @@ async function startAttempt(gatewayId: string) {
     .expect(201);
   const res = await api()
     .post(`/api/payments/${created.body.id}/attempts`)
+    .set(authed())
     .send({ gatewayId, returnUrl: 'https://shop.example/return' });
   return { paymentId: created.body.id as string, res };
 }

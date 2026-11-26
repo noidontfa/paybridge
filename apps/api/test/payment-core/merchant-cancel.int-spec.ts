@@ -28,6 +28,7 @@ import {
 } from '../../src/payment-core/port/index.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
+import { bearer, createApiKey } from '../setup/api-keys.js';
 import { defaultScope } from '../setup/organizations.js';
 
 // Merchant cancel (ticket 17): one transaction cancels the Payment and its
@@ -55,6 +56,7 @@ const beta = new FakeGatewayPlugin({
 class TwoGatewaysModule {}
 
 const prisma = createTestPrismaClient();
+let apiKey: string;
 const clock = new FakeClock(NOW);
 let moduleRef: TestingModule;
 let service: PaymentService;
@@ -263,6 +265,7 @@ describe('POST /api/payments/:id/cancel', () => {
     app = ref.createNestApplication({ logger: false });
     app.setGlobalPrefix(GLOBAL_PREFIX);
     await app.init();
+  apiKey = await createApiKey(prisma);
     fake = app
       .get(GatewayManager, { strict: false })
       .resolve('fake') as FakeGatewayPlugin;
@@ -276,7 +279,7 @@ describe('POST /api/payments/:id/cancel', () => {
 
   async function create(): Promise<string> {
     const res = await request(app.getHttpServer())
-      .post('/api/payments')
+      .post('/api/payments').set(bearer(apiKey))
       .send({
         amount: '150000',
         currency: 'VND',
@@ -290,12 +293,12 @@ describe('POST /api/payments/:id/cancel', () => {
     const id = await create();
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(200);
     expect(res.body).toMatchObject({ id, status: 'CANCELLED' });
 
     await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(200);
   });
 
@@ -307,7 +310,7 @@ describe('POST /api/payments/:id/cancel', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`)
+      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
       .expect(409);
     expect(res.body.code).toBe('PAYMENT_NOT_PENDING');
   });
@@ -315,9 +318,11 @@ describe('POST /api/payments/:id/cancel', () => {
   it('404 for an unknown Payment and 400 for a malformed id', async () => {
     await request(app.getHttpServer())
       .post(`/api/payments/${newId()}/cancel`)
+      .set(bearer(apiKey))
       .expect(404);
     await request(app.getHttpServer())
       .post('/api/payments/not-a-uuid/cancel')
+      .set(bearer(apiKey))
       .expect(400);
   });
 });
