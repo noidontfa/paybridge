@@ -80,6 +80,12 @@ export class PrismaPaymentRepository implements PaymentRepository {
           currency: payment.currency,
           status: payment.status,
           expiresAt: payment.expiresAt,
+          ...(payment.checkoutOrigin && {
+            pricingPlanId: payment.checkoutOrigin.pricingPlanId,
+            pricingPlanName: payment.checkoutOrigin.pricingPlanName,
+            customerRef: payment.checkoutOrigin.customerReference,
+            customerEmail: payment.checkoutOrigin.customerEmail,
+          }),
         },
       }),
     );
@@ -191,6 +197,17 @@ export class PrismaPaymentRepository implements PaymentRepository {
   }
 
   /** The id of the Organization's Payment with this Upstream Reference, if any. */
+  async anyForPricingPlan(
+    scope: OrganizationScope,
+    pricingPlanId: string,
+  ): Promise<boolean> {
+    const row = await this.ctx.db.payment.findFirst({
+      where: { organizationId: scope.organizationId, pricingPlanId },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   async findIdByUpstreamReference(
     scope: OrganizationScope,
     merchantOrderId: string,

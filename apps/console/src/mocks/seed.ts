@@ -21,6 +21,7 @@ import { createRandom, type Random } from './random';
 import { seedCallbacks } from './seed-callbacks';
 import { MockStore, type MockAttempt, type MockPayment } from './store';
 import { seedPricingPlans } from './pricing-plans';
+import { seedCheckoutPayments } from './checkout-payments';
 import { seedWebhookDeliveries } from './webhook-deliveries';
 
 /** The fixed "now" of the mock world. */
@@ -226,6 +227,7 @@ export function createSeededStore(options: { seed?: number; now?: Date } = {}): 
   }
   seedCallbacks(store, createRandom((options.seed ?? DEFAULT_SEED) ^ 0xca11bac));
   seedPricingPlans(store);
+  seedCheckoutPayments(store);
   seedWebhookDeliveries(store);
   return store;
 }

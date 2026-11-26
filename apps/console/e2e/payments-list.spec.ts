@@ -77,3 +77,22 @@ test('follows the table density from Settings', async ({ page }) => {
   const comfortable = await rowHeight();
   expect(compact).toBeLessThan(comfortable);
 });
+
+test('filters Payments by Pricing Plan and shows the checkout origin', async ({ page }) => {
+  const plan = store.pricingPlans.find((p) => p.id === 'plan-pro')!;
+  const fromPlan = queryPayments(store, new URLSearchParams(`pricingPlanId=${plan.id}&limit=100`));
+  expect(fromPlan.items.length).toBeGreaterThan(1);
+  const first = fromPlan.items[0]!;
+
+  await page.goto('/payments');
+  const table = page.getByRole('table', { name: 'Payments' });
+  await expect(table.getByRole('link').first()).toBeVisible();
+  await page.getByRole('combobox', { name: 'Pricing Plan' }).selectOption({ label: plan.name });
+  await expect(page).toHaveURL(`/payments?pricingPlanId=${plan.id}`);
+  await expect(table.getByRole('link').first()).toHaveText(first.upstreamReference);
+
+  await table.getByRole('link', { name: first.upstreamReference }).click();
+  const origin = page.getByRole('group', { name: 'Embedded Checkout' });
+  await expect(origin).toBeVisible();
+  await expect(origin.getByRole('link', { name: plan.name })).toHaveAttribute('href', `/pricing-plans/${plan.id}`);
+});

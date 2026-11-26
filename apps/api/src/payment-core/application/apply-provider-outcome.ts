@@ -1,4 +1,7 @@
-import type { Payment } from '../domain/entities/payment.js';
+import {
+  checkoutOriginPayload,
+  type Payment,
+} from '../domain/entities/payment.js';
 import type {
   PaymentTransaction,
   PaymentTransactionChanges,
@@ -188,6 +191,7 @@ export async function succeedPayment(
       status: succeeded.status,
       attemptId: attempt.id,
       gatewayId: attempt.gatewayId,
+      ...checkoutOriginPayload(succeeded),
     },
   });
 }
@@ -250,6 +254,7 @@ async function openReview(
       reviewReason,
       refundRequired: true,
       reviewOpenedAt: options.now.toISOString(),
+      ...checkoutOriginPayload(payment),
     },
   });
   return inReview;
