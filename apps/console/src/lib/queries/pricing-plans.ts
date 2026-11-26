@@ -53,3 +53,11 @@ export function useRestorePricingPlan() {
 export function useDeletePricingPlan() {
   return useInvalidating((id: string) => deletePricingPlan(id));
 }
+
+/** Pricing Plans as filter options, by name; empty without `pricing:view`. */
+export function usePricingPlanOptions(enabled: boolean) {
+  const { data } = useQuery({ queryKey: pricingPlanKeys.list(), queryFn: ({ signal }) => listPricingPlans(signal), enabled });
+  return (data?.items ?? [])
+    .map((plan) => ({ value: plan.id, label: plan.name }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}

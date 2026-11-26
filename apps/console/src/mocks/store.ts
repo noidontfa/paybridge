@@ -19,6 +19,7 @@ import type {
   PaymentStatus,
   ReviewReason,
   StatusTransition,
+  CheckoutOrigin,
 } from '@/lib/api/schemas';
 
 export interface MockPayment {
@@ -30,6 +31,8 @@ export interface MockPayment {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+  /** Set on Payments the Embedded Checkout created. */
+  checkoutOrigin?: CheckoutOrigin | null;
 }
 
 export interface MockAttempt {
@@ -171,6 +174,7 @@ export class MockStore {
     if (!payment) return undefined;
     return {
       ...payment,
+      checkoutOrigin: payment.checkoutOrigin ?? null,
       attempts: this.attemptsOf(id).map(({ paymentId: _paymentId, ...attempt }) => ({
         ...attempt,
         transitions: this.transitionsOf(attempt.id),

@@ -59,6 +59,7 @@ export function queryPayments(store: MockStore, params: URLSearchParams) {
   const window = readListWindow(params);
   const status = params.get('status') || null;
   const gatewayId = params.get('gatewayId') || null;
+  const pricingPlanId = params.get('pricingPlanId') || null;
   const q = (params.get('q') ?? '').trim().toLowerCase();
   const from = readDay(params, 'createdFrom');
   const to = readDay(params, 'createdTo');
@@ -71,6 +72,7 @@ export function queryPayments(store: MockStore, params: URLSearchParams) {
   const rows = store.payments
     .filter((p) => !status || p.status === status)
     .filter((p) => !gatewayId || store.attemptsOf(p.id).some((a) => a.gatewayId === gatewayId))
+    .filter((p) => !pricingPlanId || p.checkoutOrigin?.pricingPlanId === pricingPlanId)
     .filter((p) => !q || p.id.toLowerCase().includes(q) || p.upstreamReference.toLowerCase().includes(q))
     .filter((p) => !from || Date.parse(p.createdAt) >= startOfDay(from))
     .filter((p) => !to || Date.parse(p.createdAt) <= endOfDay(to))
@@ -82,7 +84,7 @@ export function queryPayments(store: MockStore, params: URLSearchParams) {
       // The id breaks ties so a page boundary never repeats or skips a row.
       return direction * order || (a.id < b.id ? -1 : 1);
     })
-    .map((p): PaymentListItem => {
+    .map(({ checkoutOrigin: _origin, ...p }): PaymentListItem => {
       const latest = store.attemptsOf(p.id).at(-1);
       return { ...p, latestTransaction: latest ? { gatewayId: latest.gatewayId, status: latest.status } : null };
     });
