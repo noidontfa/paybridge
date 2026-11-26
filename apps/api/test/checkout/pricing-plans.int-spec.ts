@@ -5,6 +5,11 @@ import { AppModule } from '../../src/app.module.js';
 import { PricingPlanPayments } from '../../src/checkout/domain/services/pricing-plan-references.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import {
+  pricingPlanDetailSchema,
+  pricingPlanListSchema,
+  pricingPlanSchema,
+} from '../contract/console/pricing-plans.js';
+import {
   DEFAULT_ORGANIZATION_ID,
   ensureOtherOrganization,
   OTHER_ORGANIZATION_ID,
@@ -76,6 +81,11 @@ describe('creating a Pricing Plan', () => {
     });
     const one = await admin.get(`${PLANS}/${created.body.id}`).expect(200);
     expect(one.body).toMatchObject({ ...validPlan(), pricingTables: [] });
+
+    // The Console's copied schemas accept every answer (ADR 0004).
+    pricingPlanSchema.parse(created.body);
+    pricingPlanListSchema.parse(list.body);
+    pricingPlanDetailSchema.parse(one.body);
   });
 });
 

@@ -12,6 +12,7 @@ import {
   OctagonAlertIcon,
   ReceiptIcon,
   SettingsIcon,
+  TagIcon,
   UsersIcon,
   WebhookIcon,
   ZapIcon,
@@ -61,6 +62,10 @@ export const mainNav: NavSection[] = [
       { title: 'Events', url: '/events', icon: ZapIcon },
       { title: 'Audit log', url: '/audit-log', icon: FileClockIcon },
     ],
+  },
+  {
+    label: 'Checkout',
+    items: [{ title: 'Pricing Plans', url: '/pricing-plans', icon: TagIcon, permission: 'pricing:view' }],
   },
 ];
 

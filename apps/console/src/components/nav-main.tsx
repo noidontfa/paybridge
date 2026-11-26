@@ -11,12 +11,17 @@ import {
 } from '@/components/ui/sidebar';
 import { OpenReviewsBadge } from '@/components/open-reviews-badge';
 import { isActivePath, type NavSection } from '@/lib/navigation';
+import { useCanFn } from '@/lib/operator';
 
 export function NavMain({ sections }: { sections: NavSection[] }) {
   const pathname = usePathname();
+  const can = useCanFn();
   return (
     <>
-      {sections.map((section, index) => {
+      {sections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => !item.permission || can(item.permission)),
+      })).filter((section) => section.items.length > 0).map((section, index) => {
         const labelId = section.label ? `nav-group-${section.label.toLowerCase()}` : undefined;
         return (
           <SidebarGroup

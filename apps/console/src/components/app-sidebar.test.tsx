@@ -76,6 +76,7 @@ describe('Console sidebar', () => {
     ['Callbacks', '/callbacks'],
     ['Events', '/events'],
     ['Audit log', '/audit-log'],
+    ['Pricing Plans', '/pricing-plans'],
     ['Settings', '/settings'],
     ['Docs', '/docs'],
   ])('links %s to %s', (name, href) => {
@@ -181,6 +182,20 @@ describe('Console sidebar', () => {
     it('is not offered to anyone else', () => {
       renderShell('/', null, { id: 'u', name: 'Una', role: 'ORGANIZATION_ADMIN', organization: 'Acme Retail', permissions: ['payments:view', 'users:manage'] }, organizations);
       expect(screen.queryByRole('combobox', { name: 'Organization' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Checkout items', () => {
+    it('shows Pricing Plans under Checkout with pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'pricing:view'] });
+      const checkout = screen.getByRole('group', { name: 'Checkout' });
+      expect(within(checkout).getByRole('link', { name: 'Pricing Plans' })).toHaveAttribute('href', '/pricing-plans');
+    });
+
+    it('hides the Checkout section without pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view'] });
+      expect(screen.queryByRole('link', { name: 'Pricing Plans' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Checkout' })).not.toBeInTheDocument();
     });
   });
 

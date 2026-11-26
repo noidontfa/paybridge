@@ -18,6 +18,9 @@ const ROUTES = [
   '/audit-log',
   '/settings',
   '/docs',
+  '/pricing-plans',
+  '/pricing-plans/new',
+  '/pricing-plans/warm-up',
   // The BFF route handler and the mock API behind it.
   '/api/bff/internal/reviews/summary',
   '/api/bff/internal/gateways',
