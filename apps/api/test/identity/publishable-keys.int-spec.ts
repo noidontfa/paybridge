@@ -158,3 +158,129 @@ describe('listing Publishable Keys', () => {
     ]);
   });
 });
+
+describe('editing allowed origins', () => {
+  it('replaces the origins and records who changed them', async () => {
+    const http = await admin();
+    const created = await createKey(http);
+
+    const res = await http
+      .post(`/internal/publishable-keys/${created.id}/allowed-origins`)
+      .send({ allowedOrigins: ['https://new.example.com'] })
+      .expect(200);
+
+    expect(res.body.allowedOrigins).toEqual(['https://new.example.com']);
+    expect(res.body.key).toBe(created.key);
+    expect(res.body.updatedBy.role).toBe('ORGANIZATION_ADMIN');
+  });
+
+  it('refuses an empty list', async () => {
+    const http = await admin();
+    const created = await createKey(http);
+
+    const res = await http
+      .post(`/internal/publishable-keys/${created.id}/allowed-origins`)
+      .send({ allowedOrigins: [] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_ALLOWED_ORIGINS');
+  });
+
+  it('refuses a revoked key', async () => {
+    const http = await admin();
+    const created = await createKey(http);
+    await http.post(`/internal/publishable-keys/${created.id}/revoke`).expect(200);
+
+    const res = await http
+      .post(`/internal/publishable-keys/${created.id}/allowed-origins`)
+      .send({ allowedOrigins: [SHOP] });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('PUBLISHABLE_KEY_REVOKED');
+  });
+
+  it('gives not-found for another Organization’s key', async () => {
+    const http = await admin();
+    const theirs = await createKey(await admin(await createOrganization(prisma)));
+
+    await http
+      .post(`/internal/publishable-keys/${theirs.id}/allowed-origins`)
+      .send({ allowedOrigins: [SHOP] })
+      .expect(404);
+  });
+});
+
+describe('revoking a Publishable Key', () => {
+  it('marks it revoked; revoking twice is harmless', async () => {
+    const http = await admin();
+    const created = await createKey(http);
+
+    await http.post(`/internal/publishable-keys/${created.id}/revoke`).expect(200);
+    await http.post(`/internal/publishable-keys/${created.id}/revoke`).expect(200);
+
+    const listed = await http.get('/internal/publishable-keys').expect(200);
+    expect(listed.body.items[0].revokedAt).not.toBeNull();
+  });
+
+  it('gives not-found for another Organization’s key', async () => {
+    const http = await admin();
+    const theirs = await createKey(await admin(await createOrganization(prisma)));
+
+    await http.post(`/internal/publishable-keys/${theirs.id}/revoke`).expect(404);
+  });
+});
+
+describe('who may manage Publishable Keys', () => {
+  it('refuses an Operator on every route', async () => {
+    const operator = await signedInHttp(app, prisma, { role: 'OPERATOR' });
+    const created = await createKey(await admin());
+
+    await operator
+      .post('/internal/publishable-keys')
+      .send({ label: 'x', allowedOrigins: [SHOP] })
+      .expect(403);
+    await operator
+      .post(`/internal/publishable-keys/${created.id}/allowed-origins`)
+      .send({ allowedOrigins: [SHOP] })
+      .expect(403);
+    await operator
+      .post(`/internal/publishable-keys/${created.id}/revoke`)
+      .expect(403);
+    await operator.get('/internal/publishable-keys').expect(403);
+  });
+
+  it('treats writes as sensitive: a deactivated Admin is refused at once', async () => {
+    const http = await admin();
+    const created = await createKey(http);
+    await prisma.user.update({
+      where: { id: http.user.id },
+      data: { active: false },
+    });
+
+    const res = await http.post(`/internal/publishable-keys/${created.id}/revoke`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ACCOUNT_DEACTIVATED');
+  });
+
+  it('labels a Super Admin’s writes as the platform', async () => {
+    const orgId = await createOrganization(prisma);
+    const superAdmin = await signedInHttp(app, prisma, { role: 'SUPER_ADMIN' });
+
+    const res = await superAdmin
+      .post('/internal/publishable-keys')
+      .set('X-Organization-Id', orgId)
+      .send({ label: 'Support', allowedOrigins: [SHOP] })
+      .expect(201);
+
+    expect(res.body.createdBy).toEqual({
+      name: 'Test SUPER_ADMIN',
+      role: 'SUPER_ADMIN',
+      label: 'Super Admin (PayBridge)',
+    });
+    const listed = await (await admin(orgId))
+      .get('/internal/publishable-keys')
+      .expect(200);
+    expect(listed.body.items[0].createdBy.label).toBe('Super Admin (PayBridge)');
+  });
+});
