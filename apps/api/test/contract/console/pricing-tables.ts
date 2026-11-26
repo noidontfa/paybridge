@@ -46,7 +46,7 @@ export const publicPricingTablePlanSchema = z.object({
   /** Allowed by the Pricing Plan and enabled for the Organization. */
   gateways: z.array(z.object({ id: z.string() })),
   buyable: z.boolean(),
-  /** For the developer console only: PRICING_PLAN_ARCHIVED or NO_GATEWAY. */
+  /** For the developer console only: PRICING_PLAN_ARCHIVED or NO_GATEWAY_AVAILABLE. */
   unavailableReason: z.string().nullable(),
 });
 

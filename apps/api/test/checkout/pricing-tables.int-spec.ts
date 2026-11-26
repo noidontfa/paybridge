@@ -404,7 +404,7 @@ function expectUnavailable(
   res: { status: number; body: Record<string, unknown> },
   reason: string,
 ) {
-  expect(res.status).toBe(404);
+  expect(res.status).toBe(422);
   expect(res.body).toMatchObject({
     code: 'CHECKOUT_UNAVAILABLE',
     message: 'Payment is not available right now',
@@ -473,7 +473,7 @@ describe('reading a Pricing Table for display', () => {
     expect(before.body.plans[2]).toMatchObject({
       gateways: [],
       buyable: false,
-      unavailableReason: 'NO_GATEWAY',
+      unavailableReason: 'NO_GATEWAY_AVAILABLE',
     });
 
     // A disabled Gateway Connection disappears from the choices.
@@ -486,7 +486,7 @@ describe('reading a Pricing Table for display', () => {
     expect(after.body.plans[1]).toMatchObject({
       gateways: [],
       buyable: false,
-      unavailableReason: 'NO_GATEWAY',
+      unavailableReason: 'NO_GATEWAY_AVAILABLE',
     });
   });
 

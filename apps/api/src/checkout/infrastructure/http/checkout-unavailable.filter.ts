@@ -13,7 +13,7 @@ import { checkoutUnavailable } from './checkout-error.interceptor.js';
 /**
  * On public checkout endpoints, the credential checks identity runs before
  * the controller (unknown or revoked key, suspended Organization, origin not
- * allowed) answer like every other "cannot sell": 404 `CHECKOUT_UNAVAILABLE`,
+ * allowed) answer like every other "cannot sell": 422 `CHECKOUT_UNAVAILABLE`,
  * the reason in `details.reason` for the developer console only.
  */
 @Catch(HttpException)

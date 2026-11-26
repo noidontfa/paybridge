@@ -4,6 +4,7 @@ import {
   HttpException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
   type CallHandler,
   type ExecutionContext,
   type NestInterceptor,
@@ -22,11 +23,11 @@ import {
 
 /**
  * The one answer a Customer's browser gets when the checkout cannot serve it:
- * 404 `CHECKOUT_UNAVAILABLE`, with the reason only in `details.reason`.
+ * 422 `CHECKOUT_UNAVAILABLE`, with the reason only in `details.reason`.
  */
 export function checkoutUnavailable(reason: string): HttpException {
   const error = new CheckoutUnavailableError(reason);
-  return new NotFoundException({
+  return new UnprocessableEntityException({
     message: error.message,
     code: error.code,
     details: { reason },

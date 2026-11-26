@@ -131,7 +131,7 @@ export class PricingTablesIncludingPlan extends PricingTablesOfPlan {
 }
 
 /** Why a card cannot be bought, for the developer console only. */
-export type PlanUnavailableReason = 'PRICING_PLAN_ARCHIVED' | 'NO_GATEWAY';
+export type PlanUnavailableReason = 'PRICING_PLAN_ARCHIVED' | 'NO_GATEWAY_AVAILABLE';
 
 /** One card of a Pricing Table as a host page shows it. */
 export interface PricingTableCard {
@@ -173,7 +173,7 @@ function card(
     plan.status !== 'ACTIVE'
       ? 'PRICING_PLAN_ARCHIVED'
       : gatewayIds.length === 0
-        ? 'NO_GATEWAY'
+        ? 'NO_GATEWAY_AVAILABLE'
         : null;
   return {
     id: plan.id,

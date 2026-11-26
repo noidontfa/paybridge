@@ -20,7 +20,7 @@ import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 /**
  * The Pricing Table a host page shows, read by the SDK with a Publishable
  * Key from one of its allowed origins (ADR 0009). Anything that keeps it from
- * being shown answers 404 `CHECKOUT_UNAVAILABLE` with a developer reason.
+ * being shown answers 422 `CHECKOUT_UNAVAILABLE` with a developer reason.
  */
 @ApiTags('checkout')
 @CheckoutEndpoint()
