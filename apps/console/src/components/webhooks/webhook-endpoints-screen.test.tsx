@@ -113,6 +113,48 @@ describe('WebhookEndpointsScreen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('The URL is not valid');
   });
 
+  it('rolls the signing secret, shows the new one once and when the old one expires', async () => {
+    store.clock = () => new Date('2026-11-25T03:00:00.000Z');
+    const user = userEvent.setup();
+    renderScreen(admin);
+    await screen.findByText('No Webhook Endpoints yet.');
+    await register(user, 'https://erp.example.com/hook');
+    const first = (await screen.findByRole('status', { name: 'New signing secret' })).querySelector('code')!.textContent!;
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    const rowOf = async () => (await screen.findByText('https://erp.example.com/hook')).closest('tr')!;
+    expect(within(await rowOf()).queryByText(/Previous secret/)).not.toBeInTheDocument();
+
+    await user.click(within(await rowOf()).getByRole('button', { name: 'Roll secret https://erp.example.com/hook' }));
+    const form = screen.getByRole('form', { name: 'Roll signing secret' });
+    await user.selectOptions(within(form).getByLabelText('Keep the old secret valid for'), '24 hours');
+    await user.click(within(form).getByRole('button', { name: 'Roll secret' }));
+
+    const banner = await screen.findByRole('status', { name: 'New signing secret' });
+    const second = banner.querySelector('code')!.textContent!;
+    expect(second).toMatch(/^whsec_pb_/);
+    expect(second).not.toBe(first);
+    const expires = new Date('2026-11-26T03:00:00.000Z').toLocaleString();
+    expect(await within(await rowOf()).findByText(`Previous secret valid until ${expires}`)).toBeInTheDocument();
+    expect(within(await rowOf()).getByText(`${second.slice(0, 15)}…`)).toBeInTheDocument();
+  });
+
+  it('ends the old secret at once when chosen', async () => {
+    const user = userEvent.setup();
+    renderScreen(admin);
+    await screen.findByText('No Webhook Endpoints yet.');
+    await register(user, 'https://erp.example.com/hook');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Roll secret https://erp.example.com/hook' }));
+    const form = screen.getByRole('form', { name: 'Roll signing secret' });
+    await user.selectOptions(within(form).getByLabelText('Keep the old secret valid for'), 'Not at all');
+    await user.click(within(form).getByRole('button', { name: 'Roll secret' }));
+
+    await screen.findByRole('status', { name: 'New signing secret' });
+    const row = (await screen.findByText('https://erp.example.com/hook')).closest('tr')!;
+    expect(within(row).queryByText(/Previous secret/)).not.toBeInTheDocument();
+  });
+
   it('tells a User without the Permission, and calls nothing', () => {
     renderScreen({ id: 'u', name: 'Una', permissions: ['payments:view'] });
     expect(screen.getByText(/do not have permission/i)).toBeInTheDocument();

@@ -5,8 +5,10 @@ import {
   createWebhookEndpoint,
   deleteWebhookEndpoint,
   listWebhookEndpoints,
+  rollWebhookEndpointSecret,
   setWebhookEndpointEnabled,
   updateWebhookEndpoint,
+  type SecretOverlap,
   type WebhookEndpointInput,
 } from '@/lib/api/webhook-endpoints';
 
@@ -43,4 +45,10 @@ export function useSetWebhookEndpointEnabled() {
 
 export function useDeleteWebhookEndpoint() {
   return useInvalidating((id: string) => deleteWebhookEndpoint(id));
+}
+
+export function useRollWebhookEndpointSecret() {
+  return useInvalidating(({ id, overlap }: { id: string; overlap: SecretOverlap }) =>
+    rollWebhookEndpointSecret(id, overlap),
+  );
 }
