@@ -71,6 +71,7 @@ export class GatewayConnectionsController {
   }
 
   @Post(':id/credentials')
+  @HttpCode(200)
   @RequireSensitivePermission('gateway-connections:manage')
   @ApiOperation({ summary: 'Replace a Gateway Connection’s credentials' })
   replaceCredentials(

@@ -4,6 +4,7 @@ import {
   GatewayNotConnectedError,
 } from '../domain/errors.js';
 import type { GatewayConnection } from '../domain/gateway-connection.js';
+import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/organization.js';
 import { organizationScope } from '../domain/organization-scope.js';
 import { GatewayManager } from '../gateway-manager/gateway-manager.js';
 import { CredentialCipher } from '../infrastructure/crypto/credential-cipher.js';
@@ -39,18 +40,34 @@ export class ConnectionPlugins {
 
   /**
    * For everything after the start (re-queries, reconciliation, expiry,
-   * cancels, Refunds): works on a disabled connection too. Falls back to the
-   * deployment's own instance when the Organization has no connection (the
-   * legacy env account).
+   * cancels, Refunds): works on a disabled connection too. An Organization
+   * without a connection has no account to act for: never the deployment's
+   * own credentials (ADR 0007).
    */
   async forExisting(
     organizationId: string,
     gatewayId: string,
   ): Promise<PaymentGateway> {
     const connection = await this.find(organizationId, gatewayId);
-    return connection
-      ? this.forConnection(connection)
-      : this.gateways.resolve(gatewayId);
+    if (!connection) throw new GatewayNotConnectedError(gatewayId);
+    return this.forConnection(connection);
+  }
+
+  /**
+   * The legacy callback route only (`POST /webhooks/:gatewayId`): the default
+   * Organization may still verify with the deployment's own credentials until
+   * it has a Gateway Connection. No other Organization falls back.
+   */
+  async forLegacyCallback(
+    organizationId: string,
+    gatewayId: string,
+  ): Promise<PaymentGateway> {
+    const connection = await this.find(organizationId, gatewayId);
+    if (connection) return this.forConnection(connection);
+    if (organizationId !== DEFAULT_ORGANIZATION_ID) {
+      throw new GatewayNotConnectedError(gatewayId);
+    }
+    return this.gateways.resolve(gatewayId);
   }
 
   private find(

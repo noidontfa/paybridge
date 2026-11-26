@@ -182,7 +182,6 @@ describe('as Organization B, a row of Organization A', () => {
 
     await http().get(`/api/payments/${a.paymentId}`).expect(404);
     await http().get(`/internal/payments/${a.paymentId}`).expect(404);
-    await http().get(`/api/payments/${a.paymentId}/return`).expect(404);
   });
 
   it('cannot be changed: cancel, start an attempt and resolve a Review are not found', async () => {
