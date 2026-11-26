@@ -155,7 +155,9 @@ async function settledDeliveries(count: number) {
   await expect
     .poll(
       () =>
-        prisma.webhookDelivery.count({ where: { status: { not: 'PENDING' } } }),
+        prisma.webhookDelivery.count({
+          where: { attempts: { gt: 0 }, lockedAt: null },
+        }),
       { timeout: 10_000 },
     )
     .toBe(count);
@@ -348,7 +350,7 @@ describe('a failed attempt', () => {
     await publish();
     const [delivery] = await settledDeliveries(1);
 
-    expect(delivery!.status).toBe('FAILED');
+    expect(delivery!.status).toBe('PENDING'); // retried later (ticket 02)
     expect(delivery!.attemptRows[0]).toMatchObject({
       succeeded: false,
       httpStatus: 500,
@@ -436,7 +438,7 @@ describe('SSRF protection', () => {
     const [delivery] = await settledDeliveries(1);
 
     expect(received).toEqual([]);
-    expect(delivery!.status).toBe('FAILED');
+    expect(delivery!.status).toBe('PENDING'); // retried later (ticket 02)
     expect(delivery!.attemptRows[0]).toMatchObject({
       succeeded: false,
       httpStatus: null,

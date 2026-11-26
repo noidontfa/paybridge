@@ -16,6 +16,7 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import { FakeClock } from '../../src/payment-core/domain/services/clock.js';
 import { OutboxRelay } from '../../src/payment-core/infrastructure/queue/outbox-relay.js';
 import { WebhookDeliverySweep } from '../../src/webhooks/application/sweeps/webhook-delivery-sweep.js';
+import { DeliverWebhook } from '../../src/webhooks/application/workers/deliver-webhook.js';
 import {
   RetryJitter,
   WebhooksClock,
@@ -191,5 +192,85 @@ describe('retrying a delivery', () => {
     expect((await sweep()).dispatched).toBe(0);
     await new Promise((r) => setTimeout(r, 200));
     expect(received).toHaveLength(2);
+  });
+
+  it('retries an attempt that timed out', async () => {
+    await registerEndpoint('/slow');
+    options.timeoutMs = 300;
+    answer = (n, p, res) => {
+      if (n > 0) ok(n, p, res); // the first request is never answered
+    };
+    await paymentEvent();
+
+    const timedOut = await deliveryAfter(1);
+    expect(timedOut.status).toBe('PENDING');
+    expect(timedOut.attemptRows[0]!.error).toMatch(/Timed out/);
+
+    clock.advance(MIN);
+    await sweep();
+    const delivered = await deliveryAfter(2);
+
+    expect(delivered.status).toBe('SUCCEEDED');
+    expect(received).toHaveLength(2);
+  });
+
+  it('fails the delivery after the twelfth attempt and stops retrying', async () => {
+    await registerEndpoint('/down');
+    answer = status(503);
+    await paymentEvent();
+    await deliveryAfter(1);
+
+    const waits: number[] = [];
+    for (let attempt = 2; attempt <= 12; attempt += 1) {
+      const before = await prisma.webhookDelivery.findFirstOrThrow();
+      waits.push(before.nextAttemptAt!.getTime() - clock.now().getTime());
+      clock.set(before.nextAttemptAt!);
+      expect((await sweep()).dispatched).toBe(1);
+      await deliveryAfter(attempt);
+    }
+    const failed = await prisma.webhookDelivery.findFirstOrThrow({
+      include: { attemptRows: true },
+    });
+
+    expect(waits).toEqual([
+      1 * MIN,
+      3 * MIN,
+      9 * MIN,
+      27 * MIN,
+      81 * MIN,
+      243 * MIN,
+      12 * HOUR,
+      12 * HOUR,
+      12 * HOUR,
+      12 * HOUR,
+      12 * HOUR,
+    ]);
+    expect(failed.status).toBe('FAILED');
+    expect(failed.nextAttemptAt).toBeNull();
+    expect(failed.attemptRows).toHaveLength(12);
+    expect(received).toHaveLength(12);
+
+    clock.advance(7 * 24 * HOUR);
+    expect((await sweep()).dispatched).toBe(0);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(received).toHaveLength(12);
+  });
+
+  it('lets only one instance send an attempt, and only once it is due', async () => {
+    await registerEndpoint('/hook');
+    answer = status(500);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+    // Two instances get the retry's job at the same time.
+    answer = (n, p, res) => setTimeout(() => ok(n, p, res), 300);
+    const deliver = moduleRef.get(DeliverWebhook);
+
+    expect(await deliver.execute(id)).toBe('skipped'); // not due yet
+    clock.advance(MIN);
+    const results = await Promise.all([deliver.execute(id), deliver.execute(id)]);
+
+    expect(results.sort()).toEqual(['skipped', 'succeeded']);
+    expect(received).toHaveLength(2);
+    expect(await prisma.webhookDeliveryAttempt.count()).toBe(2);
   });
 });
