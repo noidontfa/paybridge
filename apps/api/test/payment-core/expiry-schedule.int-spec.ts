@@ -12,12 +12,12 @@ import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gat
 import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
-import { ExpirySweep } from '../../src/payment-core/reliability/expiry-sweep.js';
+import { ExpirySweep } from '../../src/payment-core/application/sweeps/expiry-sweep.js';
 import {
   EXPIRY_SWEEP_EVERY_MS,
   EXPIRY_SWEEP_JOB,
   EXPIRY_SWEEP_SCHEDULER_ID,
-} from '../../src/payment-core/reliability/expiry-sweep.scheduler.js';
+} from '../../src/payment-core/infrastructure/queue/schedulers/expiry-sweep.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

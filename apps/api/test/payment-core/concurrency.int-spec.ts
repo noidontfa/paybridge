@@ -14,9 +14,9 @@ import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import { PaymentNotPendingError } from '../../src/payment-core/domain/errors.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import type { Payment } from '../../src/payment-core/domain/payment.js';
+import { UniqueViolationError } from '../../src/payment-core/domain/repositories.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
-import { isUniqueViolation } from '../../src/payment-core/infrastructure/prisma/unique-violation.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
@@ -474,7 +474,7 @@ describe('one open attempt per Payment (database partial index)', () => {
     commit.open();
     await first;
 
-    expect(isUniqueViolation(await second)).toBe(true);
+    expect(await second).toBeInstanceOf(UniqueViolationError);
     expect(await attemptRows(payment.id)).toHaveLength(1);
   });
 
@@ -495,7 +495,7 @@ describe('one open attempt per Payment (database partial index)', () => {
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     for (const r of results) {
       if (r.status === 'rejected') {
-        expect(isUniqueViolation(r.reason)).toBe(true);
+        expect(r.reason).toBeInstanceOf(UniqueViolationError);
       }
     }
     expect(await attemptRows(payment.id)).toHaveLength(1);

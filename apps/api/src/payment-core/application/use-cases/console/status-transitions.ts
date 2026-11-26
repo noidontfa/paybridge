@@ -4,7 +4,7 @@ import {
   StatusTransitionsReadRepository,
   type StatusTransitionListQuery,
   type StatusTransitionRow,
-} from '../../../infrastructure/prisma/console-read/status-transitions-read.repository.js';
+} from '../../../domain/console-read/status-transitions-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The audit log cursor: newest first by `createdAt`. */

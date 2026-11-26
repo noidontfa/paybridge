@@ -4,7 +4,7 @@ import { resolveCredentialKeys } from '../src/config/env.schema.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { ReencryptGatewayCredentials } from '../src/payment-core/application/use-cases/manage-gateway-connections.js';
 import { ALL_ORGANIZATIONS } from '../src/payment-core/domain/organization-scope.js';
-import { CredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
+import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { PrismaTransactionRunner } from '../src/payment-core/infrastructure/prisma/transaction-runner.js';
 
 // `pnpm gateway:reencrypt`
@@ -21,7 +21,7 @@ config({
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is not set.');
-  const cipher = CredentialCipher.fromConfig(
+  const cipher = AesCredentialCipher.fromConfig(
     resolveCredentialKeys({
       GATEWAY_CREDENTIAL_KEYS: process.env.GATEWAY_CREDENTIAL_KEYS || undefined,
     }),

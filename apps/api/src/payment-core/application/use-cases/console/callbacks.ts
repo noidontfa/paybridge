@@ -5,7 +5,7 @@ import {
   type CallbackDetailRow,
   type CallbackListQuery,
   type CallbackListRow,
-} from '../../../infrastructure/prisma/console-read/callbacks-read.repository.js';
+} from '../../../domain/console-read/callbacks-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Callbacks list cursor: newest first by `receivedAt`. */

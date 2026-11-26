@@ -1,41 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import type { Prisma } from '../../../../generated/prisma/client.js';
-import type { OutboxEventType } from '../../../domain/records.js';
 import { escapeLike, uuidNeedle } from './read-helpers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeWhere } from '../scope.js';
-
-export interface PaymentEventListFilters {
-  readonly type?: OutboxEventType;
-  /** `true`: relay has published it; `false`: still waiting. */
-  readonly published?: boolean;
-  /** Event id or Payment id (exact), or part of the Upstream Reference. */
-  readonly q?: string;
-}
-
-export interface PaymentEventListQuery {
-  readonly filters: PaymentEventListFilters;
-  /** `createdAt` and id of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface PaymentEventSummaryRow {
-  readonly id: string;
-  readonly type: OutboxEventType;
-  readonly paymentId: string;
-  readonly createdAt: Date;
-  readonly publishedAt: Date | null;
-}
-
-export interface PaymentEventDetailRow extends PaymentEventSummaryRow {
-  readonly payload: Record<string, unknown>;
-}
+import {
+  PaymentEventsReadRepository,
+  type PaymentEventListQuery,
+  type PaymentEventSummaryRow,
+  type PaymentEventDetailRow,
+} from '../../../domain/console-read/payment-events-read.repository.js';
 
 /** Read model behind the operator Payment Events pages (stored in `core_outbox_events`). */
 @Injectable()
-export class PaymentEventsReadRepository {
+export class PrismaPaymentEventsReadRepository implements PaymentEventsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first, without payloads. */

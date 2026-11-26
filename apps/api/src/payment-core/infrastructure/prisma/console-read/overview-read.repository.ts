@@ -9,45 +9,11 @@ import { TERMINAL_PAYMENT_STATUSES as CLOSED_STATUSES } from '../../../domain/ru
 import { decimalToString } from '../mappers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeSql, scopeWhere } from '../scope.js';
-
-export interface OverviewWindow {
-  readonly from: Date;
-  readonly to: Date;
-  /** Bucket width in milliseconds; `bucketCount` buckets cover the window. */
-  readonly bucketMs: number;
-  readonly bucketCount: number;
-}
-
-export interface OverviewData {
-  readonly currency: string;
-  /** Sum of succeeded Amounts, decimal string. */
-  readonly volume: string;
-  readonly paymentCount: number;
-  readonly succeeded: number;
-  readonly closed: number;
-  readonly openReviewCount: number;
-  /** One decimal string per bucket, oldest first. */
-  readonly volumeSeries: readonly string[];
-  readonly statusCounts: ReadonlyArray<{
-    status: PaymentStatus;
-    count: number;
-  }>;
-  readonly gateways: ReadonlyArray<{
-    gatewayId: string;
-    count: number;
-    volume: string;
-    succeeded: number;
-    closed: number;
-  }>;
-  readonly recent: ReadonlyArray<{
-    id: string;
-    upstreamReference: string;
-    amount: string;
-    status: PaymentStatus;
-    gatewayId: string | null;
-    createdAt: Date;
-  }>;
-}
+import {
+  OverviewReadRepository,
+  type OverviewWindow,
+  type OverviewData,
+} from '../../../domain/console-read/overview-read.repository.js';
 
 const RECENT_COUNT = 8;
 const CURRENCY = 'VND';
@@ -57,7 +23,7 @@ const CURRENCY = 'VND';
  * database; no transaction, no writes.
  */
 @Injectable()
-export class OverviewReadRepository {
+export class PrismaOverviewReadRepository implements OverviewReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async overview(

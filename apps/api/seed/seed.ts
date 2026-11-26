@@ -3,12 +3,13 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { v5 } from 'uuid';
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { DEFAULT_ORGANIZATION_ID } from '../src/identity/domain/organization.js';
-import { API_KEY_PREFIX, hashApiKey } from '../src/identity/application/api-key-secret.js';
-import type { UserRole } from '../src/identity/domain/user.js';
 import {
-  DEVELOPMENT_CREDENTIAL_KEYS,
-} from '../src/config/env.schema.js';
-import { CredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
+  API_KEY_PREFIX,
+  hashApiKey,
+} from '../src/identity/application/api-key-secret.js';
+import type { UserRole } from '../src/identity/domain/user.js';
+import { DEVELOPMENT_CREDENTIAL_KEYS } from '../src/config/env.schema.js';
+import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { Argon2PasswordHasher } from '../src/identity/infrastructure/crypto/argon2-password-hasher.js';
 import {
   callbackSpecs,
@@ -256,7 +257,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
         }
         // Keys are replaced on every run, so a revoked one never revives.
         await tx.apiKey.deleteMany({
-          where: { id: { in: SEED_API_KEYS.map((k) => id(`api-key:${k.label}`)) } },
+          where: {
+            id: { in: SEED_API_KEYS.map((k) => id(`api-key:${k.label}`)) },
+          },
         });
         for (const k of SEED_API_KEYS) {
           await tx.apiKey.create({
@@ -272,7 +275,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
         }
         // Gateway Connections: kept across re-runs, reset to the seeded state.
         // The credentials are obvious dummies, encrypted like real ones.
-        const cipher = CredentialCipher.fromConfig(
+        const cipher = AesCredentialCipher.fromConfig(
           process.env.GATEWAY_CREDENTIAL_KEYS || DEVELOPMENT_CREDENTIAL_KEYS,
         );
         for (const connection of SEED_GATEWAY_CONNECTIONS) {
@@ -302,7 +305,9 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             },
             update: data,
             create: {
-              id: id(`gateway-connection:${connection.organization}:${connection.gatewayId}`),
+              id: id(
+                `gateway-connection:${connection.organization}:${connection.gatewayId}`,
+              ),
               ...data,
             },
           });

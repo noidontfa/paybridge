@@ -5,39 +5,11 @@ import { escapeLike, uuidNeedle } from './read-helpers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import type { StatusTransitionEntityType as TransitionEntityType } from '../../../domain/records.js';
 import { scopeSql } from '../scope.js';
-
-
-export interface StatusTransitionListFilters {
-  readonly entityType?: TransitionEntityType;
-  readonly entityId?: string;
-  readonly trigger?: string;
-  readonly actor?: string;
-  /** Entity id or Payment id (exact), or part of the Upstream Reference. */
-  readonly q?: string;
-}
-
-export interface StatusTransitionListQuery {
-  readonly filters: StatusTransitionListFilters;
-  /** `createdAt` and id of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface StatusTransitionRow {
-  readonly id: string;
-  readonly entityType: TransitionEntityType;
-  readonly entityId: string;
-  readonly fromStatus: string | null;
-  readonly toStatus: string;
-  readonly trigger: string;
-  readonly actor: string;
-  readonly actorRole: string | null;
-  readonly actorName: string | null;
-  readonly reason: string | null;
-  readonly createdAt: Date;
-  /** A Payment resolves to itself, a PaymentTransaction to its Payment, a Refund to none. */
-  readonly paymentId: string | null;
-}
+import {
+  StatusTransitionsReadRepository,
+  type StatusTransitionListQuery,
+  type StatusTransitionRow,
+} from '../../../domain/console-read/status-transitions-read.repository.js';
 
 interface RawRow {
   id: string;
@@ -60,7 +32,7 @@ interface RawRow {
  * to; the join is also what lets the search match an Upstream Reference.
  */
 @Injectable()
-export class StatusTransitionsReadRepository {
+export class PrismaStatusTransitionsReadRepository implements StatusTransitionsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, newest first. */

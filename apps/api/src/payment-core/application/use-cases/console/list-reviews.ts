@@ -5,7 +5,7 @@ import {
   ReviewsReadRepository,
   type ReviewListQuery,
   type ReviewRow,
-} from '../../../infrastructure/prisma/console-read/reviews-read.repository.js';
+} from '../../../domain/console-read/reviews-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Reviews list cursor, by opening time; it only continues its own order. */

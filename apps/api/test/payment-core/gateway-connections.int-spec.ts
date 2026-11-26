@@ -10,7 +10,8 @@ import { ReencryptGatewayCredentials } from '../../src/payment-core/application/
 import { RequeryAttempt } from '../../src/payment-core/application/workers/requery-attempt.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
-import { CredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
+import { CredentialCipher } from '../../src/payment-core/domain/credential-cipher.js';
+import { AesCredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import {
   createOrganization,
   DEFAULT_ORGANIZATION_ID,
@@ -98,7 +99,9 @@ describe('managing Gateway Connections', () => {
     for (const secret of Object.values(STRIPE)) {
       expect(everything).not.toContain(secret);
     }
-    const stored = (await connectionsOf()).find((c) => c.gatewayId === 'stripe');
+    const stored = (await connectionsOf()).find(
+      (c) => c.gatewayId === 'stripe',
+    );
     expect(stored?.credentialsCiphertext).toBeTruthy();
     expect(stored?.credentialsCiphertext).not.toContain('sk_test_conn');
     expect(stored?.credentialsKeyId).toBe('dev');
@@ -154,7 +157,9 @@ describe('managing Gateway Connections', () => {
     const fake = (await connectionsOf()).find((c) => c.gatewayId === 'fake')!;
     const { res } = await startAttempt('fake');
     expect(res.status).toBe(201);
-    const refused = await admin.delete(`/internal/gateway-connections/${fake.id}`);
+    const refused = await admin.delete(
+      `/internal/gateway-connections/${fake.id}`,
+    );
     expect(refused.status).toBe(409);
     expect(refused.body.code).toBe('GATEWAY_CONNECTION_USED');
     expect((await connectionsOf()).some((c) => c.id === fake.id)).toBe(true);
@@ -185,7 +190,9 @@ describe('managing Gateway Connections', () => {
     });
     const id = (await connectStripe()).body.id as string;
 
-    const list = await otherAdmin.get('/internal/gateway-connections').expect(200);
+    const list = await otherAdmin
+      .get('/internal/gateway-connections')
+      .expect(200);
     expect(
       (list.body.items as { id: string }[]).map((c) => c.id),
     ).not.toContain(id);
@@ -232,9 +239,7 @@ describe('starting a PaymentTransaction', () => {
     await admin.post(`/internal/gateway-connections/${id}/disable`).expect(200);
 
     stripeHttp.respond(200, 'payment-intent.succeeded');
-    const outcome = await moduleRef
-      .get(RequeryAttempt)
-      .execute(attemptId);
+    const outcome = await moduleRef.get(RequeryAttempt).execute(attemptId);
     expect(outcome).toBe('applied');
   });
 
@@ -263,7 +268,7 @@ describe('credential key rotation', () => {
     expect(before.credentialsKeyId).toBe('dev');
 
     // A new primary key in front of the old one.
-    const rotated = CredentialCipher.fromConfig(
+    const rotated = AesCredentialCipher.fromConfig(
       `k2:${randomBytes(32).toString('base64')},dev:${Buffer.from('paybridge-dev-key-not-for-prod!!').toString('base64')}`,
     );
     const rotatedApp = await Test.createTestingModule({ imports: [AppModule] })

@@ -3,7 +3,7 @@ import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
 import type { OrganizationScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/transaction-runner.js';
 
 /**
  * Reads a Payment with all its attempts, oldest first (spec: Use cases,

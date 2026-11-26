@@ -8,19 +8,20 @@ import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { expiredPendingPaymentsQuery } from '../../src/payment-core/infrastructure/prisma/payment.repository.js';
 import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
+import { JobDispatcher } from '../../src/payment-core/domain/job-dispatcher.js';
 import { ALL_ORGANIZATIONS } from '../../src/payment-core/domain/organization-scope.js';
 import type { PaymentStatus } from '../../src/payment-core/domain/statuses.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   EXPIRE_PAYMENT_JOB,
   EXPIRY_SWEEP_OPTIONS,
   ExpirySweep,
-} from '../../src/payment-core/reliability/expiry-sweep.js';
-import { ExpirySweepProcessor } from '../../src/payment-core/reliability/processors/expiry-sweep.processor.js';
-import { PaymentExpiryProcessor } from '../../src/payment-core/reliability/processors/payment-expiry.processor.js';
+} from '../../src/payment-core/application/sweeps/expiry-sweep.js';
+import { ExpirySweepProcessor } from '../../src/payment-core/infrastructure/queue/processors/expiry-sweep.processor.js';
+import { PaymentExpiryProcessor } from '../../src/payment-core/infrastructure/queue/processors/payment-expiry.processor.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';
@@ -164,8 +165,8 @@ describe('ExpirySweep', () => {
     const ids = [await payment(minutes(-2)), await payment(minutes(-1))];
     const before = await prisma.payment.findMany({ orderBy: { id: 'asc' } });
     const down = {
-      addBulk: () => Promise.reject(new Error('connect ECONNREFUSED')),
-    } as unknown as Queue;
+      enqueueMany: () => Promise.reject(new Error('connect ECONNREFUSED')),
+    } as unknown as JobDispatcher;
     const sweepWithoutRedis = new ExpirySweep(
       moduleRef.get(TransactionRunner),
       clock,

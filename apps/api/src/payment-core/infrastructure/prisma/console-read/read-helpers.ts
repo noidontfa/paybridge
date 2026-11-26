@@ -36,7 +36,11 @@ export function toStringRecord(value: unknown): Record<string, string> {
  * there is none or it is not a plain decimal.
  */
 export function providerReportedAmount(metadata: unknown): string | null {
-  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata)) {
+  if (
+    typeof metadata !== 'object' ||
+    metadata === null ||
+    Array.isArray(metadata)
+  ) {
     return null;
   }
   const value = (metadata as Record<string, unknown>)['providerReportedAmount'];

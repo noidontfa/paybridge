@@ -14,7 +14,7 @@ import {
   RETENTION_EVERY_MS,
   RETENTION_JOB,
   RETENTION_SCHEDULER_ID,
-} from '../../src/payment-core/reliability/retention.scheduler.js';
+} from '../../src/payment-core/infrastructure/queue/schedulers/retention.scheduler.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

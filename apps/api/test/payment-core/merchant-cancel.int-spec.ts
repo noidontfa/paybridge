@@ -19,8 +19,8 @@ import type { Payment } from '../../src/payment-core/domain/payment.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
 import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   GatewayUnavailableError,
@@ -265,7 +265,7 @@ describe('POST /api/payments/:id/cancel', () => {
     app = ref.createNestApplication({ logger: false });
     app.setGlobalPrefix(GLOBAL_PREFIX);
     await app.init();
-  apiKey = await createApiKey(prisma);
+    apiKey = await createApiKey(prisma);
     fake = app
       .get(GatewayManager, { strict: false })
       .resolve('fake') as FakeGatewayPlugin;
@@ -279,7 +279,8 @@ describe('POST /api/payments/:id/cancel', () => {
 
   async function create(): Promise<string> {
     const res = await request(app.getHttpServer())
-      .post('/api/payments').set(bearer(apiKey))
+      .post('/api/payments')
+      .set(bearer(apiKey))
       .send({
         amount: '150000',
         currency: 'VND',
@@ -293,12 +294,14 @@ describe('POST /api/payments/:id/cancel', () => {
     const id = await create();
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(200);
     expect(res.body).toMatchObject({ id, status: 'CANCELLED' });
 
     await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(200);
   });
 
@@ -310,7 +313,8 @@ describe('POST /api/payments/:id/cancel', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post(`/api/payments/${id}/cancel`).set(bearer(apiKey))
+      .post(`/api/payments/${id}/cancel`)
+      .set(bearer(apiKey))
       .expect(409);
     expect(res.body.code).toBe('PAYMENT_NOT_PENDING');
   });

@@ -11,8 +11,8 @@ import { canTransitionAttempt } from '../../src/payment-core/domain/rules/attemp
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
 import { fixedPlugin } from '../../src/payment-core/gateway-manager/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../../src/payment-core/gateway-manager/gateway-plugins.token.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
   GatewayRejectedError,

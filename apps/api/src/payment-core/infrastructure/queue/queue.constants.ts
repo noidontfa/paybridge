@@ -42,6 +42,14 @@ function rowJobId(kind: string, id: string): string {
   return id.toLowerCase();
 }
 
+/** The job id of a job the application built from a row id (see `JobRequest`). */
+export function toJobId(id: string): string {
+  if (!UUID.test(id)) {
+    throw new Error(`Job id must be the UUID of its row (got "${id}")`);
+  }
+  return id.toLowerCase();
+}
+
 export const jobIds = {
   /** A per-attempt job (status query): the attempt id. */
   attempt: (attemptId: string): string => rowJobId('attempt', attemptId),

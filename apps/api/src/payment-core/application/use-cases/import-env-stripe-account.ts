@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DEFAULT_ORGANIZATION_ID } from '../../../identity/domain/organization.js';
 import { newId } from '../../domain/ids.js';
 import { organizationScope } from '../../domain/organization-scope.js';
-import { CredentialCipher } from '../../infrastructure/crypto/credential-cipher.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { CredentialCipher } from '../../domain/credential-cipher.js';
+import { TransactionRunner } from '../../domain/transaction-runner.js';
 
 export interface EnvStripeAccount {
   readonly secretKey: string;

@@ -11,7 +11,7 @@ import type { PaymentTransaction } from '../../domain/payment-transaction.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { isReviewRequeryEligible } from '../../domain/rules/review-requery.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/transaction-runner.js';
 import {
   GatewayNotFoundError,
   isGatewayError,

@@ -5,7 +5,7 @@ import {
   type PaymentEventDetailRow,
   type PaymentEventListQuery,
   type PaymentEventSummaryRow,
-} from '../../../infrastructure/prisma/console-read/payment-events-read.repository.js';
+} from '../../../domain/console-read/payment-events-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Payment Events list cursor: newest first by `createdAt`. */

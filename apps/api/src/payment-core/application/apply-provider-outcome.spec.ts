@@ -8,7 +8,7 @@ import type {
   PaymentTransactionChanges,
 } from '../domain/payment-transaction.js';
 import type { NewOutboxEvent, NewStatusTransition } from '../domain/records.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { Repositories } from '../domain/repositories.js';
 import { applyProviderOutcome } from './apply-provider-outcome.js';
 
 // The database forbids two open attempts on one Payment (invariant 6a), so

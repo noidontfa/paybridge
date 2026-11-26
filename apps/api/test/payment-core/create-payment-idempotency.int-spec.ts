@@ -10,11 +10,9 @@ import {
 } from '../../src/payment-core/domain/errors.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import type { Repositories } from '../../src/payment-core/infrastructure/prisma/repositories.js';
-import {
-  PrismaTransactionRunner,
-  TransactionRunner,
-} from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import type { Repositories } from '../../src/payment-core/domain/repositories.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
+import { PrismaTransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';

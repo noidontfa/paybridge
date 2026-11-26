@@ -20,28 +20,37 @@ import {
 } from './application/use-cases/console/payment-events.js';
 import { ListStatusTransitions } from './application/use-cases/console/status-transitions.js';
 import { Clock, SystemClock } from './domain/clock.js';
-import { CallbacksController } from './http/console/callbacks.controller.js';
-import { GatewaysController } from './http/console/gateways.controller.js';
-import { OverviewController } from './http/console/overview.controller.js';
-import { PaymentDetailController } from './http/console/payment-detail.controller.js';
-import { PaymentEventsController } from './http/console/payment-events.controller.js';
-import { PaymentsListController } from './http/console/payments-list.controller.js';
-import { ReviewsController } from './http/console/reviews.controller.js';
-import { StatusTransitionsController } from './http/console/status-transitions.controller.js';
-import { CallbacksReadRepository } from './infrastructure/prisma/console-read/callbacks-read.repository.js';
-import { GatewaysReadRepository } from './infrastructure/prisma/console-read/gateways-read.repository.js';
-import { OverviewReadRepository } from './infrastructure/prisma/console-read/overview-read.repository.js';
-import { PaymentDetailReadRepository } from './infrastructure/prisma/console-read/payment-detail-read.repository.js';
-import { PaymentEventsReadRepository } from './infrastructure/prisma/console-read/payment-events-read.repository.js';
-import { PaymentsReadRepository } from './infrastructure/prisma/console-read/payments-read.repository.js';
-import { ReviewsReadRepository } from './infrastructure/prisma/console-read/reviews-read.repository.js';
-import { StatusTransitionsReadRepository } from './infrastructure/prisma/console-read/status-transitions-read.repository.js';
+import { CallbacksReadRepository } from './domain/console-read/callbacks-read.repository.js';
+import { GatewaysReadRepository } from './domain/console-read/gateways-read.repository.js';
+import { OverviewReadRepository } from './domain/console-read/overview-read.repository.js';
+import { PaymentDetailReadRepository } from './domain/console-read/payment-detail-read.repository.js';
+import { PaymentEventsReadRepository } from './domain/console-read/payment-events-read.repository.js';
+import { PaymentsReadRepository } from './domain/console-read/payments-read.repository.js';
+import { ReviewsReadRepository } from './domain/console-read/reviews-read.repository.js';
+import { StatusTransitionsReadRepository } from './domain/console-read/status-transitions-read.repository.js';
+import { CallbacksController } from './infrastructure/http/console/callbacks.controller.js';
+import { GatewaysController } from './infrastructure/http/console/gateways.controller.js';
+import { OverviewController } from './infrastructure/http/console/overview.controller.js';
+import { PaymentDetailController } from './infrastructure/http/console/payment-detail.controller.js';
+import { PaymentEventsController } from './infrastructure/http/console/payment-events.controller.js';
+import { PaymentsListController } from './infrastructure/http/console/payments-list.controller.js';
+import { ReviewsController } from './infrastructure/http/console/reviews.controller.js';
+import { StatusTransitionsController } from './infrastructure/http/console/status-transitions.controller.js';
+import { PrismaCallbacksReadRepository } from './infrastructure/prisma/console-read/callbacks-read.repository.js';
+import { PrismaGatewaysReadRepository } from './infrastructure/prisma/console-read/gateways-read.repository.js';
+import { PrismaOverviewReadRepository } from './infrastructure/prisma/console-read/overview-read.repository.js';
+import { PrismaPaymentDetailReadRepository } from './infrastructure/prisma/console-read/payment-detail-read.repository.js';
+import { PrismaPaymentEventsReadRepository } from './infrastructure/prisma/console-read/payment-events-read.repository.js';
+import { PrismaPaymentsReadRepository } from './infrastructure/prisma/console-read/payments-read.repository.js';
+import { PrismaReviewsReadRepository } from './infrastructure/prisma/console-read/reviews-read.repository.js';
+import { PrismaStatusTransitionsReadRepository } from './infrastructure/prisma/console-read/status-transitions-read.repository.js';
 
 /**
  * The operator read endpoints under `/internal` (ADR 0005), laid out by
  * layer like the rest of Payment Core: controllers and query schemas in
- * `http/console/`, read use cases in `application/use-cases/console/`, and
- * queries in `infrastructure/prisma/console-read/`. Needs the global
+ * `infrastructure/http/console/`, read use cases in `application/use-cases/console/`,
+ * the read contracts in `domain/console-read/`, and their queries in
+ * `infrastructure/prisma/console-read/`. Needs the global
  * `PrismaModule` and `GatewayManagerModule`.
  */
 @Module({
@@ -58,16 +67,19 @@ import { StatusTransitionsReadRepository } from './infrastructure/prisma/console
   providers: [
     ListPayments,
     GetPaymentDetail,
-    PaymentsReadRepository,
-    PaymentDetailReadRepository,
+    { provide: PaymentsReadRepository, useClass: PrismaPaymentsReadRepository },
+    {
+      provide: PaymentDetailReadRepository,
+      useClass: PrismaPaymentDetailReadRepository,
+    },
     ListReviews,
     GetReviewSummary,
-    ReviewsReadRepository,
+    { provide: ReviewsReadRepository, useClass: PrismaReviewsReadRepository },
     GetOverview,
-    OverviewReadRepository,
+    { provide: OverviewReadRepository, useClass: PrismaOverviewReadRepository },
     { provide: Clock, useClass: SystemClock },
     GatewaysOverview,
-    GatewaysReadRepository,
+    { provide: GatewaysReadRepository, useClass: PrismaGatewaysReadRepository },
     {
       provide: PUBLIC_BASE_URL,
       inject: [ConfigService],
@@ -76,12 +88,21 @@ import { StatusTransitionsReadRepository } from './infrastructure/prisma/console
     },
     ListCallbacks,
     GetCallback,
-    CallbacksReadRepository,
+    {
+      provide: CallbacksReadRepository,
+      useClass: PrismaCallbacksReadRepository,
+    },
     ListPaymentEvents,
     GetPaymentEvent,
-    PaymentEventsReadRepository,
+    {
+      provide: PaymentEventsReadRepository,
+      useClass: PrismaPaymentEventsReadRepository,
+    },
     ListStatusTransitions,
-    StatusTransitionsReadRepository,
+    {
+      provide: StatusTransitionsReadRepository,
+      useClass: PrismaStatusTransitionsReadRepository,
+    },
   ],
 })
 export class ConsoleReadModule {}

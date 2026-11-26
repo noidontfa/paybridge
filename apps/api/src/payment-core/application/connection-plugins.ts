@@ -7,8 +7,8 @@ import type { GatewayConnection } from '../domain/gateway-connection.js';
 import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/organization.js';
 import { organizationScope } from '../domain/organization-scope.js';
 import { GatewayManager } from '../gateway-manager/gateway-manager.js';
-import { CredentialCipher } from '../infrastructure/crypto/credential-cipher.js';
-import { TransactionRunner } from '../infrastructure/prisma/transaction-runner.js';
+import { CredentialCipher } from '../domain/credential-cipher.js';
+import { TransactionRunner } from '../domain/transaction-runner.js';
 import type { PaymentGateway } from '../port/index.js';
 
 /**

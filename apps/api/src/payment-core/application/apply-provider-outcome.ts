@@ -11,7 +11,7 @@ import { organizationScope } from '../domain/organization-scope.js';
 import { isOpenAttempt } from '../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../domain/rules/payment-transitions.js';
 import type { ReviewReason } from '../domain/statuses.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { Repositories } from '../domain/repositories.js';
 import type { NormalizedOutcome } from '../port/index.js';
 import {
   recordAttemptTransition,

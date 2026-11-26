@@ -13,7 +13,7 @@ import {
   organizationScope,
   type OrganizationScope,
 } from '../../src/payment-core/domain/organization-scope.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { apiErrorBodySchema } from '../contract/console/schemas.js';
 import { createOrganization, defaultScope } from '../setup/organizations.js';
 import { resetDatabase } from '../setup/reset-db.js';

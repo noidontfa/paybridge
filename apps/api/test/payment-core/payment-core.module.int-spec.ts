@@ -6,7 +6,7 @@ import { Clock } from '../../src/payment-core/domain/clock.js';
 import { newId } from '../../src/payment-core/domain/ids.js';
 import { GatewaysModule } from '../../src/gateways/gateways.module.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import { defaultScope } from '../setup/organizations.js';

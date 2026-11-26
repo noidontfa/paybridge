@@ -3,7 +3,7 @@ import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   ReviewsReadRepository,
   type ReviewCounts,
-} from '../../../infrastructure/prisma/console-read/reviews-read.repository.js';
+} from '../../../domain/console-read/reviews-read.repository.js';
 
 /** `GET /internal/reviews/summary`: open, total and open-by-reason counts. */
 @Injectable()

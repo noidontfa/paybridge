@@ -6,7 +6,7 @@ import {
   type PaymentListQuery,
   type PaymentListRow,
   type PaymentSortColumn,
-} from '../../../infrastructure/prisma/console-read/payments-read.repository.js';
+} from '../../../domain/console-read/payments-read.repository.js';
 import { isIsoTime, keysetCursor, type Page } from './keyset-cursor.js';
 
 /** The Payments list cursor; it only continues the sort and order it was made for. */

@@ -6,7 +6,7 @@ import type {
 import { canTransitionAttempt } from '../domain/rules/attempt-transitions.js';
 import type { AttemptStatus } from '../domain/statuses.js';
 import { organizationScope } from '../domain/organization-scope.js';
-import type { Repositories } from '../infrastructure/prisma/repositories.js';
+import type { Repositories } from '../domain/repositories.js';
 
 /** What caused an attempt transition, written to the status-transition trail. */
 export interface TransitionCause {

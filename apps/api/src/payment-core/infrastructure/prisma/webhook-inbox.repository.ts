@@ -8,14 +8,12 @@ import type {
   OrganizationScope,
   ReadScope,
 } from '../../domain/organization-scope.js';
+import type {
+  RecordedWebhook,
+  WebhookInboxRepository,
+} from '../../domain/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
-
-export interface RecordedWebhook {
-  readonly entry: WebhookInboxEntry;
-  /** True when a row with the same gateway and dedupe key already existed. */
-  readonly duplicate: boolean;
-}
 
 function toEntry(row: WebhookInboxRow): WebhookInboxEntry {
   return {
@@ -27,7 +25,7 @@ function toEntry(row: WebhookInboxRow): WebhookInboxEntry {
 }
 
 /** Verified gateway callbacks, stored before processing. */
-export class PrismaWebhookInboxRepository {
+export class PrismaWebhookInboxRepository implements WebhookInboxRepository {
   constructor(private readonly ctx: DbContext) {}
 
   /**

@@ -6,7 +6,7 @@ import {
 } from '../../domain/organization-scope.js';
 import type { WebhookInboxEntry } from '../../domain/records.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/transaction-runner.js';
 import type {
   CallbackResult,
   HandledCallback,

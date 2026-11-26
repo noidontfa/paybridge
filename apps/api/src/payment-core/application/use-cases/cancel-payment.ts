@@ -8,7 +8,7 @@ import type { Payment } from '../../domain/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
-import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../domain/transaction-runner.js';
 import {
   BestEffortCancel,
   type CancellableAttempt,
@@ -94,7 +94,10 @@ export class CancelPayment {
   private async canCancel(attempt: CancellableAttempt): Promise<boolean> {
     try {
       return (
-        await this.plugins.forExisting(attempt.organizationId, attempt.gatewayId)
+        await this.plugins.forExisting(
+          attempt.organizationId,
+          attempt.gatewayId,
+        )
       ).capabilities.supportsCancel;
     } catch {
       return false;

@@ -9,7 +9,7 @@ import { PaymentService } from '../../src/payment-core/application/payment.servi
 import { Clock, FakeClock } from '../../src/payment-core/domain/clock.js';
 import type { OutboxEventType } from '../../src/payment-core/domain/records.js';
 import { GatewayManagerModule } from '../../src/payment-core/gateway-manager/gateway-manager.module.js';
-import { TransactionRunner } from '../../src/payment-core/infrastructure/prisma/transaction-runner.js';
+import { TransactionRunner } from '../../src/payment-core/domain/transaction-runner.js';
 import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.constants.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import {
@@ -18,7 +18,7 @@ import {
   OutboxRelay,
   type OutboxJobData,
   type OutboxRelayOptions,
-} from '../../src/payment-core/reliability/outbox-relay.js';
+} from '../../src/payment-core/infrastructure/queue/outbox-relay.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import { defaultScope } from '../setup/organizations.js';

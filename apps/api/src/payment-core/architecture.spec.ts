@@ -59,6 +59,24 @@ export function databaseClientImporters(
     .map((f) => f.path);
 }
 
+/**
+ * Payment Core's application layer hands work to background jobs only through
+ * the `JobDispatcher` port; BullMQ and the queue adapter stay in infrastructure.
+ */
+export function queueImporters(
+  sources: readonly { path: string; text: string }[],
+): string[] {
+  const importsQueue =
+    /from\s+['"](bullmq|@nestjs\/bullmq)['"]|from\s+['"][^'"]*infrastructure\/queue\//;
+  return sources
+    .filter(
+      (f) =>
+        f.path.startsWith('payment-core/application/') &&
+        importsQueue.test(f.text),
+    )
+    .map((f) => f.path);
+}
+
 describe('transaction boundary', () => {
   it('only the transaction runner calls $transaction', () => {
     expect(transactionOpeners(files)).toEqual([]);
@@ -92,6 +110,34 @@ describe('transaction boundary', () => {
         },
       ]),
     ).toEqual(['identity/application/use-cases/x.ts']);
+  });
+});
+
+describe('application hands work to the queue through the port', () => {
+  it('no Core application file imports BullMQ or the queue adapter', () => {
+    expect(queueImporters(files)).toEqual([]);
+  });
+
+  it('flags an application service that imports BullMQ or the queue', () => {
+    expect(
+      queueImporters([
+        {
+          path: 'payment-core/application/use-cases/x.ts',
+          text: "import type { Queue } from 'bullmq';",
+        },
+        {
+          path: 'payment-core/application/sweeps/y.ts',
+          text: "import { QUEUES } from '../../infrastructure/queue/queue.constants.js';",
+        },
+        {
+          path: 'payment-core/infrastructure/queue/z.ts',
+          text: "import type { Queue } from 'bullmq';",
+        },
+      ]),
+    ).toEqual([
+      'payment-core/application/use-cases/x.ts',
+      'payment-core/application/sweeps/y.ts',
+    ]);
   });
 });
 
@@ -138,33 +184,87 @@ describe('repositories hide the database client', () => {
   });
 });
 
-/** Application files that import from the HTTP layer. */
-export function applicationImportsOfHttp(
+/**
+ * Files that import from a layer that must not be a dependency: `domain/`
+ * imports neither `application/` nor `infrastructure/`, and `application/`
+ * never imports `infrastructure/`. Contracts the application needs (the
+ * transaction runner, repositories, the job dispatcher, the credential cipher)
+ * live in `domain/`; infrastructure implements them.
+ */
+export function layerViolations(
   sources: readonly { path: string; text: string }[],
 ): string[] {
-  const importsHttp = /from\s+['"](?:\.\.?\/)+http\/[^'"]*['"]/;
+  const importsInfrastructure = /from\s+['"][^'"]*\/infrastructure\/[^'"]*['"]/;
+  const importsApplication = /from\s+['"][^'"]*\/application\/[^'"]*['"]/;
   return sources
-    .filter(
-      (f) =>
-        f.path.startsWith('payment-core/application/') &&
-        importsHttp.test(f.text),
-    )
+    .filter((f) => {
+      if (f.path.startsWith('payment-core/application/')) {
+        return importsInfrastructure.test(f.text);
+      }
+      if (f.path.startsWith('payment-core/domain/')) {
+        return (
+          importsInfrastructure.test(f.text) || importsApplication.test(f.text)
+        );
+      }
+      return false;
+    })
     .map((f) => f.path);
 }
 
-describe('application does not depend on http', () => {
-  it('no application module imports from payment-core/http', () => {
-    expect(applicationImportsOfHttp(files)).toEqual([]);
+describe('layers depend inward', () => {
+  it('domain and application import nothing from infrastructure, and domain nothing from application', () => {
+    expect(layerViolations(files)).toEqual([]);
   });
 
-  it('flags an application file that imports the HTTP layer', () => {
+  it('flags an application file that imports infrastructure', () => {
     expect(
-      applicationImportsOfHttp([
+      layerViolations([
         {
           path: 'payment-core/application/use-cases/x.ts',
-          text: "import { y } from '../../http/y.js';",
+          text: "import { T } from '../../infrastructure/prisma/transaction-runner.js';",
+        },
+        {
+          path: 'payment-core/application/use-cases/console/y.ts',
+          text: "import { R } from '../../../infrastructure/http/y.js';",
         },
       ]),
-    ).toEqual(['payment-core/application/use-cases/x.ts']);
+    ).toEqual([
+      'payment-core/application/use-cases/x.ts',
+      'payment-core/application/use-cases/console/y.ts',
+    ]);
+  });
+
+  it('flags a domain file that imports application or infrastructure', () => {
+    expect(
+      layerViolations([
+        {
+          path: 'payment-core/domain/a.ts',
+          text: "import { x } from '../application/x.js';",
+        },
+        {
+          path: 'payment-core/domain/b.ts',
+          text: "import { y } from '../infrastructure/y.js';",
+        },
+      ]),
+    ).toEqual(['payment-core/domain/a.ts', 'payment-core/domain/b.ts']);
+  });
+
+  it('accepts infrastructure that implements domain contracts and calls use cases', () => {
+    expect(
+      layerViolations([
+        {
+          path: 'payment-core/infrastructure/prisma/transaction-runner.ts',
+          text: "import { TransactionRunner } from '../../domain/transaction-runner.js';",
+        },
+        {
+          path: 'payment-core/infrastructure/http/payments.controller.ts',
+          text: "import { PaymentService } from '../../application/payment.service.js';",
+        },
+        {
+          path: 'payment-core/application/use-cases/x.ts',
+          text: "import { Clock } from '../../domain/clock.js';",
+        },
+      ]),
+    ).toEqual([]);
   });
 });

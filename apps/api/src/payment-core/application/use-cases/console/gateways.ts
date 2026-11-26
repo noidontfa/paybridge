@@ -5,7 +5,7 @@ import { GatewayManager } from '../../../gateway-manager/gateway-manager.js';
 import {
   GatewaysReadRepository,
   type CallbackStatus,
-} from '../../../infrastructure/prisma/console-read/gateways-read.repository.js';
+} from '../../../domain/console-read/gateways-read.repository.js';
 
 /** Public origin of the API (`PUBLIC_BASE_URL`, no trailing slash). */
 export const PUBLIC_BASE_URL = Symbol('PUBLIC_BASE_URL');
@@ -92,7 +92,10 @@ export class GatewaysOverview {
    * Organizations (or none is connected) there is no single connection, so it
    * shows the URL without one.
    */
-  private callbackUrl(id: string, connectionIds: readonly string[] = []): string {
+  private callbackUrl(
+    id: string,
+    connectionIds: readonly string[] = [],
+  ): string {
     const base = `${this.baseUrl}/api/webhooks/${encodeURIComponent(id)}`;
     return connectionIds.length === 1
       ? `${base}/${encodeURIComponent(connectionIds[0]!)}`

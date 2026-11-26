@@ -4,6 +4,7 @@ import type {
   OrganizationScope,
   ReadScope,
 } from '../../domain/organization-scope.js';
+import type { OutboxRepository } from '../../domain/repositories.js';
 import type { DbContext } from './db.js';
 import { scopeWhere } from './scope.js';
 
@@ -12,7 +13,7 @@ import { scopeWhere } from './scope.js';
  * transaction-bound repositories so the event exists if and only if the state
  * change committed. The row id is also the BullMQ job id.
  */
-export class PrismaOutboxRepository {
+export class PrismaOutboxRepository implements OutboxRepository {
   constructor(private readonly ctx: DbContext) {}
 
   async add(

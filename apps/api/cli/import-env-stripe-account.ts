@@ -6,7 +6,7 @@ import {
 } from '../src/config/env.schema.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { ImportEnvStripeAccount } from '../src/payment-core/application/use-cases/import-env-stripe-account.js';
-import { CredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
+import { AesCredentialCipher } from '../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { PrismaTransactionRunner } from '../src/payment-core/infrastructure/prisma/transaction-runner.js';
 
 // `pnpm gateway:import-stripe`
@@ -32,7 +32,7 @@ const MESSAGES = {
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is not set.');
-  const cipher = CredentialCipher.fromConfig(
+  const cipher = AesCredentialCipher.fromConfig(
     resolveCredentialKeys({
       GATEWAY_CREDENTIAL_KEYS: process.env.GATEWAY_CREDENTIAL_KEYS || undefined,
     }),

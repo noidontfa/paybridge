@@ -3,7 +3,7 @@ import type { ReadScope } from '../../../domain/organization-scope.js';
 import {
   PaymentDetailReadRepository,
   type PaymentDetailRow,
-} from '../../../infrastructure/prisma/console-read/payment-detail-read.repository.js';
+} from '../../../domain/console-read/payment-detail-read.repository.js';
 
 /**
  * The operator Payment detail (`GET /internal/payments/:id`). Read only: no

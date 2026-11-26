@@ -1,12 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
-import {
-  REVIEW_REASONS,
-  type AttemptStatus,
-  type PaymentStatus,
-  type ReviewReason,
-} from '../../../domain/statuses.js';
+import { REVIEW_REASONS, type ReviewReason } from '../../../domain/statuses.js';
 import { decimalToString } from '../mappers.js';
 import type { ReadScope } from '../../../domain/organization-scope.js';
 import { scopeWhere } from '../scope.js';
@@ -15,49 +10,12 @@ import {
   providerReportedAmount,
   uuidNeedle,
 } from './read-helpers.js';
-
-export type ReviewState = 'open' | 'closed';
-
-export interface ReviewListFilters {
-  readonly reason?: ReviewReason;
-  readonly gatewayId?: string;
-  /** Payment id or Attempt Key (exact, any case) or part of the Upstream Reference. */
-  readonly q?: string;
-  readonly state: ReviewState;
-}
-
-export interface ReviewListQuery {
-  readonly filters: ReviewListFilters;
-  readonly order: 'asc' | 'desc';
-  /** Opening time (ISO) and Attempt Key of the last row of the previous page. */
-  readonly after?: { readonly value: string; readonly id: string };
-  readonly limit: number;
-}
-
-export interface ReviewRow {
-  /** The Attempt Key. */
-  readonly id: string;
-  readonly reason: ReviewReason;
-  readonly state: ReviewState;
-  readonly gatewayId: string;
-  readonly transactionStatus: AttemptStatus;
-  readonly refundRequired: boolean;
-  readonly reviewOpenedAt: Date;
-  readonly providerReportedAmount: string | null;
-  readonly payment: {
-    readonly id: string;
-    readonly upstreamReference: string;
-    readonly amount: string;
-    readonly currency: string;
-    readonly status: PaymentStatus;
-  };
-}
-
-export interface ReviewCounts {
-  readonly open: number;
-  readonly total: number;
-  readonly byReason: Record<ReviewReason, number>;
-}
+import {
+  ReviewsReadRepository,
+  type ReviewListQuery,
+  type ReviewRow,
+  type ReviewCounts,
+} from '../../../domain/console-read/reviews-read.repository.js';
 
 /**
  * Read model behind the operator Reviews (ADR 0005). A Review is a
@@ -65,7 +23,7 @@ export interface ReviewCounts {
  * `REQUIRES_REVIEW`, closed once it has left that status. Read only.
  */
 @Injectable()
-export class ReviewsReadRepository {
+export class PrismaReviewsReadRepository implements ReviewsReadRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   /** Up to `limit + 1` rows, so the caller can tell whether another page exists. */
