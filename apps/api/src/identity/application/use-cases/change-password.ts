@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   InvalidCurrentPasswordError,
+  OrganizationSuspendedError,
   UserDeactivatedError,
 } from '../../domain/errors.js';
 import { assertStrongPassword } from '../../domain/user.js';
@@ -20,7 +21,7 @@ export interface ChangePasswordInput {
 /**
  * A signed-in User changes their own password by giving the current one. A
  * sensitive write: the User is re-read from the database, so a deactivation
- * since sign-in is honoured at once.
+ * or an Organization suspension since sign-in is honoured at once.
  */
 @Injectable()
 export class ChangePassword {
@@ -33,6 +34,14 @@ export class ChangePassword {
   async execute(input: ChangePasswordInput): Promise<void> {
     const user = await this.runner.repositories.users.findById(input.userId);
     if (!user?.active) throw new UserDeactivatedError();
+    if (user.organizationId) {
+      const organization = await this.runner.repositories.organizations.findById(
+        user.organizationId,
+      );
+      if (organization?.status !== 'ACTIVE') {
+        throw new OrganizationSuspendedError();
+      }
+    }
     if (!(await this.hasher.verify(input.currentPassword, user.passwordHash))) {
       throw new InvalidCurrentPasswordError();
     }

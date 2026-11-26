@@ -8,7 +8,6 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  Put,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
@@ -71,7 +70,8 @@ export class GatewayConnectionsController {
     return this.connections.create(scope, body);
   }
 
-  @Put(':id/credentials')
+  @Post(':id/credentials')
+  @HttpCode(200)
   @RequireSensitivePermission('gateway-connections:manage')
   @ApiOperation({ summary: 'Replace a Gateway Connection’s credentials' })
   replaceCredentials(

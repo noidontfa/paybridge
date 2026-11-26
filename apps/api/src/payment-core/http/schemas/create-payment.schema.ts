@@ -33,7 +33,7 @@ export class CreatePaymentBodyDto {
 
   @ApiProperty({
     example: 'order-2026-0001',
-    description: 'Upstream Reference. Unique across PayBridge, immutable.',
+    description: 'Upstream Reference. Unique within the Organization, immutable.',
     maxLength: 255,
   })
   upstreamReference: string;

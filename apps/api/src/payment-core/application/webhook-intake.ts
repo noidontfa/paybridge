@@ -127,7 +127,7 @@ export class WebhookIntake {
     if (!('connectionId' in target)) {
       return {
         organizationId: target.organizationId,
-        plugin: await this.plugins.forExisting(
+        plugin: await this.plugins.forLegacyCallback(
           target.organizationId,
           callback.gatewayId,
         ),

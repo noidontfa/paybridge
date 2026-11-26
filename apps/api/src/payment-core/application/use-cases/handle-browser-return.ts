@@ -3,7 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 import { validate as isUuid } from 'uuid';
 import { PaymentNotFoundError } from '../../domain/errors.js';
-import type { OrganizationScope } from '../../domain/organization-scope.js';
+import type { ReadScope } from '../../domain/organization-scope.js';
 import type { Payment } from '../../domain/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
@@ -54,7 +54,7 @@ export class HandleBrowserReturn {
   ) {}
 
   async execute(
-    scope: OrganizationScope,
+    scope: ReadScope,
     input: BrowserReturnInput,
   ): Promise<Payment> {
     const payment = isUuid(input.paymentId)

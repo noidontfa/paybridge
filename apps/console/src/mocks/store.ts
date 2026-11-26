@@ -8,6 +8,7 @@
  * `./handlers.ts`. Mutating handlers push to / edit these arrays directly.
  */
 import type { CallbackStatus } from '@/lib/api/callbacks';
+import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
 import type { MockUser } from './users';
 import type { OrganizationSummary } from '@/lib/api/organizations';
 import type {
@@ -72,12 +73,12 @@ export interface MockGateway {
   callbackUrl: string;
 }
 
-const mockUser = (id: string, name: string, role: 'OPERATOR' | 'ORGANIZATION_ADMIN', active = true): MockUser => ({
+const mockUser = (id: string, name: string, role: ManagedRole, active = true): MockUser => ({
   id,
   email: `${id}@example.test`,
   name,
   role,
-  roleLabel: role === 'OPERATOR' ? 'Operator' : 'Organization Admin',
+  roleLabel: ROLE_LABELS[role],
   active,
   createdAt: '2026-01-05T09:00:00.000Z',
 });
@@ -85,6 +86,12 @@ const mockUser = (id: string, name: string, role: 'OPERATOR' | 'ORGANIZATION_ADM
 export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
   readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+
+  /** Pending Invitations, for the Invitations page. */
+  readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
+
+  /** The Organization's Gateway Connections (none until it connects one). */
+  readonly gatewayConnections: import('@/lib/api/gateway-connections').GatewayConnection[] = [];
 
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [

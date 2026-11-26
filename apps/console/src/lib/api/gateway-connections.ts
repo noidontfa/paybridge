@@ -42,7 +42,7 @@ export function createGatewayConnection(body: { gatewayId: string; credentials?:
 
 export function replaceGatewayCredentials(id: string, credentials: Record<string, string>) {
   return request(`${BASE}/${encodeURIComponent(id)}/credentials`, gatewayConnectionSchema, {
-    method: 'PUT',
+    method: 'POST',
     body: { credentials },
   });
 }

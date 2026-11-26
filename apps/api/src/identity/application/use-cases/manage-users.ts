@@ -3,12 +3,10 @@ import {
   LastOrganizationAdminError,
   UserNotFoundError,
 } from '../../domain/errors.js';
-import type { User, UserRole } from '../../domain/user.js';
+import type { ManagedRole, User, UserRole } from '../../domain/user.js';
 import { TransactionRunner } from '../../infrastructure/prisma/transaction-runner.js';
 import { IdentityClock } from '../../port/clock.js';
 
-/** The Roles an Organization's own Users can be moved between. */
-export type ManagedRole = Extract<UserRole, 'OPERATOR' | 'ORGANIZATION_ADMIN'>;
 
 /**
  * An Organization's people: list, change Role, deactivate, reactivate. Every
@@ -36,7 +34,7 @@ export class ManageUsers {
   ): Promise<void> {
     return this.change(organizationId, userId, (user) => ({
       changes: { role },
-      losesAdmin: user.role === 'ORGANIZATION_ADMIN' && role !== user.role,
+      removesActiveAdmin: user.role === 'ORGANIZATION_ADMIN' && role !== user.role,
       revoke: role !== user.role,
     }));
   }
@@ -44,7 +42,7 @@ export class ManageUsers {
   deactivate(organizationId: string, userId: string): Promise<void> {
     return this.change(organizationId, userId, (user) => ({
       changes: { active: false },
-      losesAdmin: user.role === 'ORGANIZATION_ADMIN' && user.active,
+      removesActiveAdmin: user.role === 'ORGANIZATION_ADMIN' && user.active,
       revoke: true,
     }));
   }
@@ -52,7 +50,7 @@ export class ManageUsers {
   reactivate(organizationId: string, userId: string): Promise<void> {
     return this.change(organizationId, userId, () => ({
       changes: { active: true },
-      losesAdmin: false,
+      removesActiveAdmin: false,
       revoke: false,
     }));
   }
@@ -62,7 +60,7 @@ export class ManageUsers {
     userId: string,
     decide: (user: User) => {
       changes: { role?: UserRole; active?: boolean };
-      losesAdmin: boolean;
+      removesActiveAdmin: boolean;
       revoke: boolean;
     },
   ): Promise<void> {
@@ -74,9 +72,9 @@ export class ManageUsers {
       const user = await repos.users.findById(userId);
       if (user?.organizationId !== organizationId)
         throw new UserNotFoundError();
-      const { changes, losesAdmin, revoke } = decide(user);
+      const { changes, removesActiveAdmin, revoke } = decide(user);
       if (
-        losesAdmin &&
+        removesActiveAdmin &&
         (await repos.users.countActiveAdmins(organizationId, userId)) === 0
       ) {
         throw new LastOrganizationAdminError();

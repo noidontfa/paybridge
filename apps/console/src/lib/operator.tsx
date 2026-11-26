@@ -7,6 +7,7 @@
  * User from the access token: the browser never sends who it is.
  */
 import { createContext, useContext } from 'react';
+import { ROLE_LABELS, type UserRole } from './roles';
 
 export interface Operator {
   id: string;
@@ -20,16 +21,11 @@ export interface Operator {
   permissions?: string[];
 }
 
-export const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: 'Super Admin',
-  ORGANIZATION_ADMIN: 'Organization Admin',
-  OPERATOR: 'Operator',
-};
 
 /** "Operator · Acme Retail", or just the Role for a Super Admin. */
 export function describeOperator(operator: Operator): string | null {
   if (!operator.role) return null;
-  const role = ROLE_LABELS[operator.role] ?? operator.role;
+  const role = ROLE_LABELS[operator.role as UserRole] ?? operator.role;
   return operator.organization ? `${role} · ${operator.organization}` : role;
 }
 
@@ -47,6 +43,12 @@ export function OperatorProvider({ operator, children }: { operator: Operator; c
 export function useCan(permission: string): boolean {
   const permissions = useContext(OperatorContext)?.permissions;
   return permissions === undefined || permissions.includes(permission);
+}
+
+/** Like `useCan`, for a list of items that each name a Permission. */
+export function useCanFn(): (permission: string) => boolean {
+  const permissions = useContext(OperatorContext)?.permissions;
+  return (permission) => permissions === undefined || permissions.includes(permission);
 }
 
 export function useCurrentOperator(): Operator {

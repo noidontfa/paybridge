@@ -158,7 +158,7 @@ describe('Console sidebar', () => {
   });
 
   describe('the Organization switcher', () => {
-    const superAdmin: Operator = { id: 'sa', name: 'Sam Super', role: 'SUPER_ADMIN', organization: null };
+    const superAdmin: Operator = { id: 'sa', name: 'Sam Super', role: 'SUPER_ADMIN', organization: null, permissions: ['payments:view', 'organizations:manage'] };
     const organizations = { items: [{ id: '6f1f3f0e-3b8e-4c43-9a5c-1f2d3e4f5a6b', name: 'Acme Retail', status: 'ACTIVE' as const }] };
 
     it('is offered to a Super Admin, with All Organizations and each Organization', () => {
@@ -179,8 +179,28 @@ describe('Console sidebar', () => {
     });
 
     it('is not offered to anyone else', () => {
-      renderShell('/', null, { id: 'u', name: 'Una', role: 'ORGANIZATION_ADMIN', organization: 'Acme Retail' }, organizations);
+      renderShell('/', null, { id: 'u', name: 'Una', role: 'ORGANIZATION_ADMIN', organization: 'Acme Retail', permissions: ['payments:view', 'users:manage'] }, organizations);
       expect(screen.queryByRole('combobox', { name: 'Organization' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Settings items', () => {
+    const names = ['Users', 'Invitations', 'API Keys', 'Gateway Connections'];
+
+    it('hides what the User has no Permission for', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'reviews:resolve'] });
+      for (const name of names) expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+    });
+
+    it('shows them with the Permissions', () => {
+      renderShell('/', null, {
+        id: 'u',
+        name: 'Ana',
+        role: 'ORGANIZATION_ADMIN',
+        permissions: ['payments:view', 'users:manage', 'api-keys:manage', 'gateway-connections:manage'],
+      });
+      for (const name of names) expect(screen.getByRole('link', { name })).toBeInTheDocument();
     });
   });
 });

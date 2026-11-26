@@ -1,19 +1,20 @@
 /**
  * The Organization's Users: `GET /internal/users`, and the sensitive writes
  * that change a Role, deactivate or reactivate a User. Needs the Permission to
- * manage Users. The BFF forwards GET and POST only, so a Role change is a POST.
+ * manage Users. The BFF forwards GET, HEAD, POST and DELETE only, so a Role change is a POST.
  */
 import { z } from 'zod';
+import { MANAGED_ROLES, USER_ROLES, type ManagedRole } from '../roles';
 import { request } from './client';
 
-export const managedRoleSchema = z.enum(['OPERATOR', 'ORGANIZATION_ADMIN']);
-export type ManagedRole = z.infer<typeof managedRoleSchema>;
+export const managedRoleSchema = z.enum(MANAGED_ROLES);
+export type { ManagedRole };
 
 export const managedUserSchema = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string(),
-  role: z.enum(['SUPER_ADMIN', 'ORGANIZATION_ADMIN', 'OPERATOR']),
+  role: z.enum(USER_ROLES),
   roleLabel: z.string(),
   active: z.boolean(),
   createdAt: z.string(),

@@ -9,13 +9,12 @@ import {
   ORGANIZATION_HEADER,
   type Principal,
 } from '../../common/principal/principal.js';
-import { GLOBAL_PREFIX, INTERNAL_PREFIX } from '../../constants.js';
+import { INTERNAL_PREFIX } from '../../constants.js';
 import { AccessTokenService } from '../port/access-token.service.js';
 import { IdentityClock } from '../port/clock.js';
 import { PrincipalResolver } from '../port/principal-resolver.js';
 import { AuthenticateApiKey } from '../application/use-cases/api-keys.js';
 import { InvalidApiKeyError } from '../domain/api-key.js';
-import { StubPrincipalResolver } from './stub-principal.resolver.js';
 
 interface RequestLike {
   readonly path?: string;
@@ -49,15 +48,13 @@ function superAdminScope(
  * Who is calling. An operator route (`/internal/...`) needs the access token
  * of a User, verified with the public key only: a missing, malformed, forged
  * or expired token is refused. Every other route is the public payments API,
- * still on the stub until API Keys arrive (ticket 09).
+ * scoped by the API Key it carries.
  */
 @Injectable()
 export class HttpPrincipalResolver extends PrincipalResolver {
   constructor(
     @Inject(AccessTokenService) private readonly tokens: AccessTokenService,
     @Inject(IdentityClock) private readonly clock: IdentityClock,
-    @Inject(StubPrincipalResolver)
-    private readonly publicApi: StubPrincipalResolver,
     @Inject(AuthenticateApiKey)
     private readonly apiKeys: AuthenticateApiKey,
   ) {
@@ -94,17 +91,14 @@ export class HttpPrincipalResolver extends PrincipalResolver {
   }
 
   /**
-   * The public payments API takes the Organization from the API Key. Two
-   * routes carry no key and stay on the stub until their own tickets: the
-   * customer's browser return, and gateway Callbacks (signature-verified).
+   * The public payments API takes the Organization from the API Key. The two
+   * routes that carry no key (the customer's browser return, and gateway
+   * Callbacks) are `@Public()` and never reach the resolver.
    */
   private async resolvePublic(
     path: string,
     authorization: string | string[] | undefined,
   ): Promise<Principal> {
-    if (NO_KEY_ROUTES.some((route) => route.test(path))) {
-      return this.publicApi.resolve();
-    }
     const match =
       typeof authorization === 'string'
         ? /^Bearer (\S+)$/.exec(authorization)
@@ -124,8 +118,3 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     }
   }
 }
-
-const NO_KEY_ROUTES: readonly RegExp[] = [
-  new RegExp(`^/${GLOBAL_PREFIX}/payments/[^/]+/return/?$`),
-  new RegExp(`^/${GLOBAL_PREFIX}/webhooks/`),
-];

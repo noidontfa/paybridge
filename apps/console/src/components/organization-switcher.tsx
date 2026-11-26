@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentOperator } from '@/lib/operator';
+import { useCan } from '@/lib/operator';
 import { useOrganizationList } from '@/lib/queries/organizations';
 
 /** Must match the BFF's `ORGANIZATION_COOKIE`: it forwards the choice to the API. */
@@ -18,13 +18,13 @@ function readChoice(): string {
 /**
  * A Super Admin works in one Organization at a time, or reads across all of
  * them. Writes need one chosen Organization; the API refuses them otherwise.
- * Shown to Super Admins only.
+ * Shown only with the Permission to manage Organizations.
  */
 export function OrganizationSwitcher() {
-  const operator = useCurrentOperator();
-  const isSuperAdmin = operator.role === 'SUPER_ADMIN';
-  const { data } = useOrganizationList(isSuperAdmin);
-  if (!isSuperAdmin) return null;
+  // Only whoever may manage Organizations works across them.
+  const canSwitch = useCan('organizations:manage');
+  const { data } = useOrganizationList(canSwitch);
+  if (!canSwitch) return null;
   const choice = typeof document === 'undefined' ? ALL : readChoice();
   return (
     <label className="flex flex-col gap-1 px-2 text-xs text-sidebar-foreground/70">

@@ -3,10 +3,11 @@
  * Permission to manage Users and is re-checked by the API in the database.
  */
 import { z } from 'zod';
+import { USER_ROLES, type UserRole } from '../roles';
 import { request } from './client';
 
-export const INVITABLE_ROLES = ['OPERATOR', 'ORGANIZATION_ADMIN', 'SUPER_ADMIN'] as const;
-export type InvitableRole = (typeof INVITABLE_ROLES)[number];
+export const INVITABLE_ROLES = USER_ROLES;
+export type InvitableRole = UserRole;
 
 export const invitationSchema = z.object({
   id: z.string(),
