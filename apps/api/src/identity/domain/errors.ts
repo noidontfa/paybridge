@@ -100,6 +100,14 @@ export class UserNotFoundError extends Error {
   }
 }
 
+/** The platform must always keep one active Super Admin. */
+export class LastSuperAdminError extends Error {
+  constructor() {
+    super('The platform must keep at least one active Super Admin');
+    this.name = 'LastSuperAdminError';
+  }
+}
+
 /** An Organization must always keep one active Organization Admin. */
 export class LastOrganizationAdminError extends Error {
   constructor() {

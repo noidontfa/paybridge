@@ -68,9 +68,19 @@ const id = (name: string): string => v5(name, NAMESPACE);
  * migration; it holds the original scenarios) and a second one, so the
  * isolation between Organizations is visible in the Console.
  */
-const ORGANIZATIONS: Record<OrganizationKey, { id: string; name: string }> = {
+type SeedOrganizationKey = OrganizationKey | 'dormant';
+const ORGANIZATIONS: Record<
+  SeedOrganizationKey,
+  { id: string; name: string; status?: 'SUSPENDED' }
+> = {
   primary: { id: DEFAULT_ORGANIZATION_ID, name: 'Default Organization' },
   acme: { id: id('organization:acme-retail'), name: 'Acme Retail' },
+  /** Suspended: its Users cannot sign in until the Platform area reactivates it. */
+  dormant: {
+    id: id('organization:dormant-goods'),
+    name: 'Dormant Goods',
+    status: 'SUSPENDED',
+  },
 };
 
 /** The one password every seeded User has. Development only: the seed refuses production. */
@@ -83,7 +93,7 @@ interface SeedUser {
   readonly email: string;
   readonly name: string;
   readonly role: UserRole;
-  readonly organization: OrganizationKey | null;
+  readonly organization: SeedOrganizationKey | null;
   /** Default true. A deactivated User cannot sign in. */
   readonly active?: boolean;
 }
@@ -124,6 +134,13 @@ export const SEED_USERS: readonly SeedUser[] = [
     name: 'Omar Operator (Acme)',
     role: 'OPERATOR',
     organization: 'acme',
+  },
+  {
+    key: 'admin-dormant',
+    email: 'admin@dormant.paybridge.dev',
+    name: 'Dee Admin (Dormant)',
+    role: 'ORGANIZATION_ADMIN',
+    organization: 'dormant',
   },
   {
     key: 'former-operator-primary',
@@ -213,7 +230,8 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
         for (const organization of Object.values(ORGANIZATIONS)) {
           await tx.organization.upsert({
             where: { id: organization.id },
-            update: {},
+            // Only the seed's own suspended Organization is reset on a re-run.
+            update: organization.status ? { status: organization.status } : {},
             create: organization,
           });
         }

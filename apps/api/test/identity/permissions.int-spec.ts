@@ -378,7 +378,11 @@ describe('GET /internal/organizations (manage Organizations)', () => {
     const res = await superAdmin.get('/internal/organizations').expect(200);
     expect(res.body.items).toEqual(
       expect.arrayContaining([
-        { id: other, name: 'Listed Organization', status: 'ACTIVE' },
+        expect.objectContaining({
+          id: other,
+          name: 'Listed Organization',
+          status: 'ACTIVE',
+        }),
       ]),
     );
 

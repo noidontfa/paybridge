@@ -9,6 +9,7 @@
  */
 import type { CallbackStatus } from '@/lib/api/callbacks';
 import type { MockUser } from './users';
+import type { OrganizationSummary } from '@/lib/api/organizations';
 import type {
   AttemptStatus,
   NextAction,
@@ -90,6 +91,19 @@ export class MockStore {
     mockUser('dana', 'Dana Admin', 'ORGANIZATION_ADMIN'),
     mockUser('olu', 'Olu Operator', 'OPERATOR'),
     mockUser('pat', 'Pat Former', 'OPERATOR', false),
+  ];
+
+  /** Every Organization, for the Platform area. */
+  readonly organizations: OrganizationSummary[] = [
+    { id: 'org-default', name: 'Default Organization', status: 'ACTIVE', createdAt: '2026-01-01T09:00:00.000Z' },
+    { id: 'org-acme', name: 'Acme Retail', status: 'ACTIVE', createdAt: '2026-02-01T09:00:00.000Z' },
+    { id: 'org-dormant', name: 'Dormant Goods', status: 'SUSPENDED', createdAt: '2026-03-01T09:00:00.000Z' },
+  ];
+
+  /** The platform team, for the Platform area. */
+  readonly superAdmins: MockUser[] = [
+    { ...mockUser('sam', 'Sam Super Admin', 'OPERATOR'), role: 'SUPER_ADMIN', roleLabel: 'Super Admin' },
+    { ...mockUser('sue', 'Sue Super Admin', 'OPERATOR'), role: 'SUPER_ADMIN', roleLabel: 'Super Admin' },
   ];
 
   /** Only `stripe` and `fake` exist. Tests replace the contents to model other states. */

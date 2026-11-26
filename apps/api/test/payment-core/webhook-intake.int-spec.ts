@@ -19,6 +19,7 @@ import { QUEUES } from '../../src/payment-core/infrastructure/queue/queue.consta
 import { IdentityModule } from '../../src/identity/identity.module.js';
 import { PaymentCoreModule } from '../../src/payment-core/payment-core.module.js';
 import type { CallbackInput } from '../../src/payment-core/port/index.js';
+import { DEFAULT_ORGANIZATION_ID } from '../setup/organizations.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 
@@ -182,6 +183,23 @@ describe('a valid callback', () => {
 
     const [row] = await inboxRows();
     expect(row!.attemptKey).toBeNull();
+  });
+
+  it('is still stored and dispatched when the Organization is suspended', async () => {
+    await prisma.organization.update({
+      where: { id: DEFAULT_ORGANIZATION_ID },
+      data: { status: 'SUSPENDED' },
+    });
+    try {
+      await post(fake.signedCallback(payload())).expect(200);
+      expect(await inboxRows()).toHaveLength(1);
+      expect(queue.added).toHaveLength(1);
+    } finally {
+      await prisma.organization.update({
+        where: { id: DEFAULT_ORGANIZATION_ID },
+        data: { status: 'ACTIVE' },
+      });
+    }
   });
 
   it('stores an attempt key Core does not know (no foreign key)', async () => {
