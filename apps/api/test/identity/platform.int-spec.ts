@@ -274,7 +274,15 @@ describe('managing Super Admins', () => {
       a.post(`/internal/super-admins/${b.user.id}/deactivate`),
       b.post(`/internal/super-admins/${a.user.id}/deactivate`),
     ]);
-    expect(results.map((r) => r.status).sort()).toEqual([204, 409]);
+    // The loser is refused: 409 if it ran its check after the winner's lock,
+    // 403 if the winner's deactivation was already visible to its recheck.
+    const statuses = results.map((r) => r.status);
+    expect(statuses.filter((s) => s === 204)).toHaveLength(1);
+    expect(statuses.filter((s) => s === 409 || s === 403)).toHaveLength(1);
+    const active = await prisma.user.count({
+      where: { id: { in: [a.user.id, b.user.id] }, active: true },
+    });
+    expect(active).toBe(1);
   });
 
   it('cannot change a Super Admin Role', async () => {
