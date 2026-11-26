@@ -95,7 +95,7 @@ function withOrg(call: request.Test, organization: string): request.Test {
 
 describe('Role to Permission map', () => {
   it.each([
-    ['OPERATOR', ['payments:view', 'reviews:resolve']],
+    ['OPERATOR', ['payments:view', 'reviews:resolve', 'pricing:view']],
     [
       'ORGANIZATION_ADMIN',
       [
@@ -104,6 +104,8 @@ describe('Role to Permission map', () => {
         'users:manage',
         'api-keys:manage',
         'gateway-connections:manage',
+        'pricing:view',
+        'pricing:manage',
       ],
     ],
     [
@@ -116,6 +118,8 @@ describe('Role to Permission map', () => {
         'gateway-connections:manage',
         'organizations:manage',
         'super-admins:manage',
+        'pricing:view',
+        'pricing:manage',
       ],
     ],
   ] as const)('%s holds exactly its Permissions', async (role, expected) => {
