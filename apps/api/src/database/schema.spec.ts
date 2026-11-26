@@ -66,6 +66,7 @@ describe('schema ownership', () => {
       'iam_invitations',
       'iam_organizations',
       'iam_password_resets',
+      'iam_publishable_keys',
       'iam_refresh_tokens',
       'iam_users',
     ]);

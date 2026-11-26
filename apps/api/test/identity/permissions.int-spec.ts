@@ -104,6 +104,7 @@ describe('Role to Permission map', () => {
         'users:manage',
         'api-keys:manage',
         'gateway-connections:manage',
+        'publishable-keys:manage',
       ],
     ],
     [
@@ -116,6 +117,7 @@ describe('Role to Permission map', () => {
         'gateway-connections:manage',
         'organizations:manage',
         'super-admins:manage',
+        'publishable-keys:manage',
       ],
     ],
   ] as const)('%s holds exactly its Permissions', async (role, expected) => {

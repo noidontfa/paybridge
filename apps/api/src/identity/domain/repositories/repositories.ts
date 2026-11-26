@@ -2,6 +2,7 @@ import type { ApiKeyRepository } from './api-key.repository.js';
 import type { InvitationRepository } from './invitation.repository.js';
 import type { OrganizationRepository } from './organization.repository.js';
 import type { PasswordResetRepository } from './password-reset.repository.js';
+import type { PublishableKeyRepository } from './publishable-key.repository.js';
 import type { RefreshTokenRepository } from './refresh-token.repository.js';
 import type { UserRepository } from './user.repository.js';
 
@@ -13,4 +14,5 @@ export interface Repositories {
   readonly passwordResets: PasswordResetRepository;
   readonly invitations: InvitationRepository;
   readonly apiKeys: ApiKeyRepository;
+  readonly publishableKeys: PublishableKeyRepository;
 }
