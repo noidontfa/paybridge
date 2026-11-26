@@ -2,20 +2,21 @@ import QRCode from 'qrcode';
 import type { CheckoutAttempt, NextAction } from '../shared/api.js';
 import { h } from '../shared/dom.js';
 import type { Strings } from '../shared/i18n.js';
+import { clientSdkView } from './stripe.js';
 
 // How the checkout page shows each NextAction kind. Adding a kind means adding
 // one view here:
 // - QR_CODE: drawn here; the page polls the Payment until it ends.
 // - REDIRECT: a link that takes the whole tab to the gateway's page. The
 //   return page it comes back to is ticket 10's.
-// - CLIENT_SDK (Stripe.js, ADR 0003): ticket 11 mounts the provider's form.
+// - CLIENT_SDK (Stripe.js, ADR 0003): the Payment Element, in `stripe.ts`.
 
 export interface NextActionContext {
   readonly attempt: CheckoutAttempt;
   readonly t: Strings;
 }
 
-type View = (action: NextAction, context: NextActionContext) => HTMLElement;
+export type View = (action: NextAction, context: NextActionContext) => HTMLElement;
 
 const qrCode: View = (action, { t }) => {
   const payload = (action as Extract<NextAction, { type: 'QR_CODE' }>).payload;
@@ -51,7 +52,7 @@ const unsupported: View = (action, { t }) =>
 const VIEWS: Record<string, View> = {
   QR_CODE: qrCode,
   REDIRECT: redirect,
-  // CLIENT_SDK: ticket 11.
+  CLIENT_SDK: clientSdkView(),
 };
 
 export function nextActionView(action: NextAction, context: NextActionContext): HTMLElement {
