@@ -4,7 +4,7 @@
 
 **Blocked by:** 07, 08
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `apps/checkout` is a new public app, separate from the Console (ADR 0004). It calls only the API's public checkout endpoints and is wired into the workspace, docker-compose and CI like the other apps.
 - [ ] The SDK is served under a major-version path, with exact-version paths for pinning. It reads `data-key`, `data-table`, `data-customer-ref`, `data-success-url` and `data-cancel-url`.
