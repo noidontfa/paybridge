@@ -6,6 +6,7 @@ import { applyGlobalPrefix } from '../../src/http-prefix.js';
 import { RecordingEmailSender } from '../../src/identity/infrastructure/email/recording-email-sender.js';
 import { IdentityClock } from '../../src/identity/port/clock.js';
 import { EmailSender } from '../../src/identity/port/email-sender.js';
+import { createOrganization } from '../setup/organizations.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
 import {
   createUser,
@@ -326,5 +327,24 @@ describe('changing the password while signed in', () => {
       currentPassword: TEST_PASSWORD,
       newPassword: NEW_PASSWORD,
     }).expect(403);
+  });
+
+  it('is refused for a User of an Organization suspended since signing in', async () => {
+    const organizationId = await createOrganization(prisma, 'Soon suspended');
+    const user = await createUser(prisma, { organizationId });
+    const here = await signInOk(app, user);
+    await prisma.organization.update({
+      where: { id: organizationId },
+      data: { status: 'SUSPENDED' },
+    });
+
+    const res = await changePassword(here.accessToken, {
+      currentPassword: TEST_PASSWORD,
+      newPassword: NEW_PASSWORD,
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('ORGANIZATION_SUSPENDED');
+    await signIn(app, user).expect(403);
   });
 });
