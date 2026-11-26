@@ -39,8 +39,28 @@ export interface StartCheckoutPaymentInput {
   readonly customerEmail?: string;
 }
 
-export interface StartedCheckoutPayment {
+/**
+ * Where the Customer goes after paying or giving up, as the Pricing Plan
+ * sets it (null: not set). The checkout app's return page prefers the
+ * snippet's URLs and falls back to the host page.
+ */
+export interface CheckoutReturnUrls {
+  readonly successUrl: string | null;
+  readonly cancelUrl: string | null;
+}
+
+/** A checkout Payment with its Pricing Plan's return URLs. */
+export interface CheckoutPaymentWithReturnUrls {
   readonly payment: CheckoutPaymentView;
+  readonly returnUrls: CheckoutReturnUrls;
+}
+
+const returnUrlsOf = (plan: PricingPlan): CheckoutReturnUrls => ({
+  successUrl: plan.successUrl,
+  cancelUrl: plan.cancelUrl,
+});
+
+export interface StartedCheckoutPayment extends CheckoutPaymentWithReturnUrls {
   /** True when an open Payment of the same session was returned. */
   readonly resumed: boolean;
 }
@@ -93,7 +113,8 @@ export class CheckoutPaymentFlow {
     };
 
     const open = await this.openPayment(scope, key);
-    if (open) return { payment: open, resumed: true };
+    const returnUrls = returnUrlsOf(plan);
+    if (open) return { payment: open, returnUrls, resumed: true };
 
     const now = this.clock.now();
     const payment = await this.payments.create(scope, {
@@ -115,7 +136,7 @@ export class CheckoutPaymentFlow {
       createdAt: now,
     };
     await this.repos.checkoutSessions.create(scope, session);
-    return { payment, resumed: false };
+    return { payment, returnUrls, resumed: false };
   }
 
   /**
@@ -127,27 +148,29 @@ export class CheckoutPaymentFlow {
     scope: OrganizationScope,
     paymentId: string,
     request: CheckoutAttemptRequest,
-  ): Promise<{ payment: CheckoutPaymentView; attempt: CheckoutAttemptView }> {
+  ): Promise<CheckoutPaymentWithReturnUrls & { attempt: CheckoutAttemptView }> {
     const { payment, plan } = await this.checkoutPayment(scope, paymentId);
     assertGatewaySellable(
       plan,
       await this.payments.enabledGatewayIds(scope),
       request.gatewayId,
     );
-    return this.payments.startAttempt(scope, {
+    const started = await this.payments.startAttempt(scope, {
       paymentId: payment.id,
       gatewayId: request.gatewayId,
       returnUrl: request.returnUrl,
       description: payment.checkoutOrigin?.pricingPlanName ?? plan.name,
     });
+    return { ...started, returnUrls: returnUrlsOf(plan) };
   }
 
   /** A checkout Payment of the Organization; any other Payment is not found. */
   async get(
     scope: OrganizationScope,
     paymentId: string,
-  ): Promise<CheckoutPaymentView> {
-    return (await this.checkoutPayment(scope, paymentId)).payment;
+  ): Promise<CheckoutPaymentWithReturnUrls> {
+    const { payment, plan } = await this.checkoutPayment(scope, paymentId);
+    return { payment, returnUrls: returnUrlsOf(plan) };
   }
 
   private async checkoutPayment(
