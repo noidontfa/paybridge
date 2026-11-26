@@ -3,6 +3,7 @@ import {
   CreditCardIcon,
   FileClockIcon,
   GaugeIcon,
+  KeyRoundIcon,
   LandmarkIcon,
   OctagonAlertIcon,
   ReceiptIcon,
@@ -58,6 +59,7 @@ export const mainNav: NavSection[] = [
 
 export const secondaryNav: NavItem[] = [
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
+  { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon },
   { title: 'Docs', url: '/docs', icon: BookOpenIcon },
 ];
 

@@ -71,6 +71,9 @@ export interface MockGateway {
 }
 
 export class MockStore {
+  /** The Organization's API Keys (the mock has one Organization). */
+  readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+
   /** Only `stripe` and `fake` exist. Tests replace the contents to model other states. */
   readonly gateways: MockGateway[] = [
     { id: 'stripe', registered: true, configured: true, mode: 'test', callbackUrl: 'https://pay.example.test/webhooks/stripe' },

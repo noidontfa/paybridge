@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { hashApiKey } from '../../src/identity/application/api-key-secret.js';
 import { runSeed, SeedRefusedError } from '../../seed/seed.js';
 import { testDatabaseUrl } from '../setup/test-database.js';
 import { resetDatabase } from '../setup/reset-db.js';
@@ -311,6 +312,23 @@ describe('seed organizations', () => {
     const before = await prisma.organization.count();
     await seed();
     expect(await prisma.organization.count()).toBe(before);
+  });
+});
+
+describe('seed API Keys', () => {
+  it('creates working, revoked and per-Organization keys, kept across re-runs', async () => {
+    const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    const keys = await prisma.apiKey.findMany({ orderBy: { label: 'asc' } });
+    expect(keys.length).toBe(first.apiKeys.length);
+    expect(new Set(keys.map((k) => k.organizationId)).size).toBeGreaterThanOrEqual(2);
+    expect(keys.some((k) => k.revokedAt)).toBe(true);
+    for (const issued of first.apiKeys) {
+      const row = keys.find((k) => k.label === issued.label)!;
+      expect(row.keyHash).toBe(hashApiKey(issued.key));
+      expect(issued.key.startsWith(row.prefix)).toBe(true);
+    }
   });
 });
 
