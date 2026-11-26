@@ -107,7 +107,10 @@ export class PrismaWebhookDeliveryRepository extends WebhookDeliveryRepository {
     return this.ctx.db.webhookDelivery.findMany({
       where: { ...organizationOf(scope), ...dueAndFree(now, staleBefore) },
       select: { id: true, attempts: true },
-      orderBy: [{ nextAttemptAt: { sort: 'asc', nulls: 'first' } }, { id: 'asc' }],
+      orderBy: [
+        { nextAttemptAt: { sort: 'asc', nulls: 'first' } },
+        { id: 'asc' },
+      ],
       take: limit,
     });
   }

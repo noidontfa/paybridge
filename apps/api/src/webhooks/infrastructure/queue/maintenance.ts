@@ -81,6 +81,8 @@ export class WebhookMaintenanceProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job | undefined, error: Error): void {
-    this.logger.error(`${job?.name ?? 'Webhook upkeep'} failed: ${error.message}`);
+    this.logger.error(
+      `${job?.name ?? 'Webhook upkeep'} failed: ${error.message}`,
+    );
   }
 }

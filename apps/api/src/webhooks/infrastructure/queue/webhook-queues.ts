@@ -74,7 +74,11 @@ export class BullDeliveryDispatcher extends DeliveryDispatcher {
         await job!.promote();
         continue;
       }
-      if (state === 'waiting' || state === 'active' || state === 'prioritized') {
+      if (
+        state === 'waiting' ||
+        state === 'active' ||
+        state === 'prioritized'
+      ) {
         continue;
       }
       // Lost from Redis, or it ended without recording the attempt (it

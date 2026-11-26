@@ -70,5 +70,8 @@ export abstract class WebhookDeliveryRepository {
    * Deletes finished (succeeded or failed) deliveries created before
    * `before`, with their attempts. Returns how many deliveries went.
    */
-  abstract deleteFinishedBefore(scope: ReadScope, before: Date): Promise<number>;
+  abstract deleteFinishedBefore(
+    scope: ReadScope,
+    before: Date,
+  ): Promise<number>;
 }

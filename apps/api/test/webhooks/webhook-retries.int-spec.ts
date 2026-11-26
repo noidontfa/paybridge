@@ -4,11 +4,16 @@ import {
   type Server,
   type ServerResponse,
 } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import {
+  createServer as createNetServer,
+  Socket,
+  type AddressInfo,
+  type Server as NetServer,
+} from 'node:net';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import type { Queue } from 'bullmq';
+import { Queue } from 'bullmq';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { applyGlobalPrefix } from '../../src/http-prefix.js';
@@ -16,16 +21,23 @@ import { newId } from '../../src/payment-core/domain/ids.js';
 import { FakeClock } from '../../src/payment-core/domain/services/clock.js';
 import { OutboxRelay } from '../../src/payment-core/infrastructure/queue/outbox-relay.js';
 import { WebhookDeliverySweep } from '../../src/webhooks/application/sweeps/webhook-delivery-sweep.js';
+import { WebhookRetention } from '../../src/webhooks/application/sweeps/webhook-retention.js';
 import { DeliverWebhook } from '../../src/webhooks/application/workers/deliver-webhook.js';
+import { WebhooksTransactionRunner } from '../../src/webhooks/domain/repositories/transaction-runner.js';
 import {
   RetryJitter,
+  SecretCipher,
   WebhooksClock,
+  WebhookSender,
 } from '../../src/webhooks/domain/services/ports.js';
 import {
   WEBHOOK_DELIVERY_OPTIONS,
   type WebhookDeliveryOptions,
 } from '../../src/webhooks/infrastructure/config/delivery-options.js';
-import { WEBHOOK_QUEUES } from '../../src/webhooks/infrastructure/queue/webhook-queues.js';
+import {
+  BullDeliveryDispatcher,
+  WEBHOOK_QUEUES,
+} from '../../src/webhooks/infrastructure/queue/webhook-queues.js';
 import { bearer, createApiKey } from '../setup/api-keys.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
@@ -141,9 +153,11 @@ async function deliveryAfter(attempts: number) {
   await expect
     .poll(
       async () =>
-        (await prisma.webhookDelivery.findFirst({
-          where: { lockedAt: null },
-        }))?.attempts,
+        (
+          await prisma.webhookDelivery.findFirst({
+            where: { lockedAt: null },
+          })
+        )?.attempts,
       { timeout: 10_000 },
     )
     .toBe(attempts);
@@ -267,10 +281,169 @@ describe('retrying a delivery', () => {
 
     expect(await deliver.execute(id)).toBe('skipped'); // not due yet
     clock.advance(MIN);
-    const results = await Promise.all([deliver.execute(id), deliver.execute(id)]);
+    const results = await Promise.all([
+      deliver.execute(id),
+      deliver.execute(id),
+    ]);
 
     expect(results.sort()).toEqual(['skipped', 'succeeded']);
     expect(received).toHaveLength(2);
     expect(await prisma.webhookDeliveryAttempt.count()).toBe(2);
   });
 });
+
+describe('a Redis outage', () => {
+  it('loses no delivery: PostgreSQL keeps it due and the sweep queues it once Redis is back', async () => {
+    await registerEndpoint('/hook');
+    answer = status(500);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+
+    // This instance reaches Redis through a proxy the test can cut.
+    const proxy = await startRedisProxy();
+    const flaky = new Queue(WEBHOOK_QUEUES.delivery, {
+      connection: {
+        host: '127.0.0.1',
+        port: proxy.port,
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => 50,
+      },
+      prefix: process.env.QUEUE_PREFIX,
+    });
+    const offline = new BullDeliveryDispatcher(flaky, clock);
+    const deliverOffline = new DeliverWebhook(
+      moduleRef.get(WebhooksTransactionRunner),
+      moduleRef.get(SecretCipher),
+      moduleRef.get(WebhookSender),
+      clock,
+      offline,
+      moduleRef.get(RetryJitter),
+    );
+    const sweepOffline = new WebhookDeliverySweep(
+      moduleRef.get(WebhooksTransactionRunner),
+      clock,
+      offline,
+    );
+    try {
+      await flaky.waitUntilReady();
+      // Redis loses every queued job, then goes away.
+      await deliveryQueue.obliterate({ force: true });
+      await proxy.cut();
+
+      // The retry falls due in the outage: the attempt is made and recorded,
+      // but the job of the next one cannot be queued.
+      clock.advance(MIN);
+      expect(await deliverOffline.execute(id)).toBe('retrying');
+      expect(
+        await prisma.webhookDelivery.findFirstOrThrow({ where: { id } }),
+      ).toMatchObject({
+        status: 'PENDING',
+        attempts: 2,
+        nextAttemptAt: new Date(START.getTime() + MIN + 3 * MIN),
+        lockedAt: null,
+      });
+      clock.advance(3 * MIN);
+      await expect(sweepOffline.run()).rejects.toThrow();
+
+      await proxy.restore();
+      answer = ok;
+      await expect
+        .poll(
+          () =>
+            sweepOffline.run().then(
+              () => true,
+              () => false,
+            ),
+          { timeout: 5_000, interval: 100 },
+        )
+        .toBe(true);
+      const delivered = await deliveryAfter(3);
+
+      expect(delivered.status).toBe('SUCCEEDED');
+      expect(delivered.attemptRows.map((a) => a.httpStatus)).toEqual([
+        500, 500, 200,
+      ]);
+    } finally {
+      await flaky.close();
+      await proxy.close();
+    }
+  });
+});
+
+describe('retention', () => {
+  it('prunes finished deliveries after the retention period and keeps those still retrying', async () => {
+    await registerEndpoint('/ok');
+    await registerEndpoint('/down');
+    answer = (n, p, res) => (p === '/down' ? status(500) : ok)(n, p, res);
+    await paymentEvent();
+    await expect
+      .poll(() =>
+        prisma.webhookDelivery.count({
+          where: { attempts: 1, lockedAt: null },
+        }),
+      )
+      .toBe(2);
+    const retention = moduleRef.get(WebhookRetention);
+
+    // Kept for 7 days (WEBHOOK_DELIVERY_RETENTION_DAYS' default).
+    clock.advance(6 * 24 * HOUR);
+    expect(await retention.run()).toEqual({ deliveries: 0 });
+    clock.advance(24 * HOUR + MIN);
+    expect(await retention.run()).toEqual({ deliveries: 1 });
+
+    const left = await prisma.webhookDelivery.findMany({
+      include: { endpoint: true, attemptRows: true },
+    });
+    expect(left.map((d) => [d.endpoint.url, d.status])).toEqual([
+      [`${receiverUrl}/down`, 'PENDING'],
+    ]);
+    expect(await prisma.webhookDeliveryAttempt.count()).toBe(1);
+  });
+});
+
+/** A TCP proxy to the compose Redis that can be cut (outage) and restored. */
+async function startRedisProxy() {
+  const target = new URL(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  const sockets = new Set<Socket>();
+  let server: NetServer | undefined;
+  let port = 0;
+
+  const listen = () =>
+    new Promise<void>((resolve) => {
+      server = createNetServer((client) => {
+        const upstream = new Socket();
+        upstream.connect(Number(target.port || 6379), target.hostname);
+        for (const s of [client, upstream]) {
+          sockets.add(s);
+          s.on('close', () => sockets.delete(s));
+          s.on('error', () => s.destroy());
+        }
+        client.pipe(upstream).pipe(client);
+      });
+      server.listen(port, '127.0.0.1', () => {
+        const address = server!.address();
+        if (address && typeof address === 'object') port = address.port;
+        resolve();
+      });
+    });
+
+  const cut = async () => {
+    const closed = new Promise<void>((resolve) => {
+      if (server) server.close(() => resolve());
+      else resolve();
+    });
+    for (const s of sockets) s.destroy();
+    await closed;
+    server = undefined;
+  };
+
+  await listen();
+  return {
+    get port() {
+      return port;
+    },
+    cut,
+    restore: listen,
+    close: cut,
+  };
+}
