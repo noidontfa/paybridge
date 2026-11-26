@@ -33,8 +33,10 @@ import { PAYMENT_EVENT_KINDS } from '../../domain/entities/event-kinds.js';
 import {
   actorLabel,
   InvalidWebhookUrlError,
+  SECRET_OVERLAPS,
   WebhookEndpointNotFoundError,
   type Actor,
+  type SecretOverlap,
   type WebhookEndpoint,
 } from '../../domain/entities/webhook-endpoint.js';
 
@@ -46,7 +48,13 @@ const updateSchema = z
   .refine((b) => b.url !== undefined || b.eventKinds !== undefined, {
     message: 'Change the URL, the event kinds, or both',
   });
+const rollSchema = z.object({
+  previousSecretValidFor: z.enum(
+    Object.keys(SECRET_OVERLAPS) as [SecretOverlap, ...SecretOverlap[]],
+  ),
+});
 type CreateBody = z.output<typeof createSchema>;
+type RollBody = z.output<typeof rollSchema>;
 type UpdateBody = z.output<typeof updateSchema>;
 
 /** What the Console sees of an endpoint: never the secret, only its prefix. */
@@ -56,6 +64,9 @@ const view = (endpoint: WebhookEndpoint) => ({
   eventKinds: endpoint.eventKinds,
   status: endpoint.status,
   secretPrefix: endpoint.secretPrefix,
+  /** While set, Webhooks are signed with the previous secret too. */
+  previousSecretExpiresAt:
+    endpoint.previousSecret?.expiresAt.toISOString() ?? null,
   createdAt: endpoint.createdAt.toISOString(),
   updatedAt: endpoint.updatedAt.toISOString(),
   updatedBy: {
@@ -183,6 +194,61 @@ export class WebhookEndpointsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return this.setStatus(request, id, 'ENABLED');
+  }
+
+  @Post(':id/roll-secret')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Replace the signing secret, keeping the old one valid for a while; the new secret is returned only in this response',
+  })
+  async rollSecret(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(rollSchema)) body: RollBody,
+  ) {
+    const { scope, actor } = callerOf(request);
+    try {
+      const { endpoint, secret } = await this.endpoints.rollSecret(
+        scope,
+        id,
+        body.previousSecretValidFor,
+        actor,
+      );
+      return { ...view(endpoint), secret };
+    } catch (error) {
+      mapError(error);
+    }
+  }
+
+  @Get(':id/secret-rolls')
+  @ApiOperation({
+    summary: "Audit log of an endpoint's secret rolls, newest first",
+  })
+  async secretRolls(
+    @Req() request: Record<string, unknown>,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    try {
+      const rolls = await this.endpoints.secretRolls(
+        callerOf(request).scope,
+        id,
+      );
+      return {
+        items: rolls.map((roll) => ({
+          rolledAt: roll.rolledAt.toISOString(),
+          previousSecretExpiresAt:
+            roll.previousSecretExpiresAt?.toISOString() ?? null,
+          rolledBy: {
+            name: roll.rolledBy.name,
+            role: roll.rolledBy.role,
+            label: actorLabel(roll.rolledBy),
+          },
+        })),
+      };
+    } catch (error) {
+      mapError(error);
+    }
   }
 
   @Delete(':id')
