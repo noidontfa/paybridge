@@ -95,7 +95,16 @@ function withOrg(call: request.Test, organization: string): request.Test {
 
 describe('Role to Permission map', () => {
   it.each([
-    ['OPERATOR', ['payments:view', 'reviews:resolve', 'pricing:view']],
+    [
+      'OPERATOR',
+      [
+        'payments:view',
+        'reviews:resolve',
+        'pricing:view',
+        'webhook-deliveries:view',
+        'webhook-deliveries:resend',
+      ],
+    ],
     [
       'ORGANIZATION_ADMIN',
       [
@@ -108,6 +117,8 @@ describe('Role to Permission map', () => {
         'pricing:manage',
         'webhook-endpoints:manage',
         'publishable-keys:manage',
+        'webhook-deliveries:view',
+        'webhook-deliveries:resend',
       ],
     ],
     [
@@ -124,6 +135,8 @@ describe('Role to Permission map', () => {
         'pricing:view',
         'pricing:manage',
         'publishable-keys:manage',
+        'webhook-deliveries:view',
+        'webhook-deliveries:resend',
       ],
     ],
   ] as const)('%s holds exactly its Permissions', async (role, expected) => {

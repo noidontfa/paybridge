@@ -616,6 +616,7 @@ model WebhookDelivery {
   @@unique([eventId, endpointId], map: "wh_deliveries_event_endpoint_uq")
   @@index([organizationId, createdAt], map: "wh_deliveries_organization_created_idx")
   @@index([endpointId], map: "wh_deliveries_endpoint_id_idx")
+  @@index([organizationId, paymentId], map: "wh_deliveries_organization_payment_idx")
   @@map("wh_deliveries")
 }
 
@@ -631,6 +632,11 @@ model WebhookDeliveryAttempt {
   durationMs     Int      @map("duration_ms")
   responseBody   String?  @map("response_body")
   error          String?
+  /// Who asked for this attempt (a resend or a test send); null when automatic.
+  /// It is the webhooks audit log: a Super Admin shows as the platform.
+  triggeredByUserId String? @map("triggered_by_user_id") @db.Uuid
+  triggeredByRole   String? @map("triggered_by_role")
+  triggeredByName   String? @map("triggered_by_name")
 
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   delivery     WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict, onUpdate: Restrict)

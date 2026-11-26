@@ -3,10 +3,16 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resolveCredentialKeys, type Env } from '../config/env.schema.js';
 import { AesCredentialCipher } from '../payment-core/port/credential-cipher.js';
+import { AttemptDelivery } from './application/attempt-delivery.js';
+import {
+  ReadWebhookDeliveries,
+  SendWebhooksByHand,
+} from './application/use-cases/webhook-deliveries.js';
 import { ManageWebhookEndpoints } from './application/use-cases/webhook-endpoints.js';
 import { DeliverWebhook } from './application/workers/deliver-webhook.js';
 import { FanOutPaymentEvent } from './application/workers/fan-out-payment-event.js';
 import { WebhooksTransactionRunner } from './domain/repositories/transaction-runner.js';
+import { WebhookDeliveriesReadRepository } from './domain/repositories/webhook-deliveries-read.repository.js';
 import {
   DeliveryDispatcher,
   SecretCipher,
@@ -20,7 +26,10 @@ import {
   HttpWebhookSender,
   PolicyWebhookUrlGuard,
 } from './infrastructure/delivery/http-webhook-sender.js';
+import { WebhookDeliveriesController } from './infrastructure/http/webhook-deliveries.controller.js';
+import { WebhookEndpointTestsController } from './infrastructure/http/webhook-endpoint-tests.controller.js';
 import { WebhookEndpointsController } from './infrastructure/http/webhook-endpoints.controller.js';
+import { PrismaWebhookDeliveriesReadRepository } from './infrastructure/prisma/webhook-deliveries-read.repository.js';
 import { PrismaWebhooksTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
 import {
   PaymentEventProcessor,
@@ -43,7 +52,11 @@ import {
       ...Object.values(WEBHOOK_QUEUES).map((name) => ({ name })),
     ),
   ],
-  controllers: [WebhookEndpointsController],
+  controllers: [
+    WebhookEndpointsController,
+    WebhookEndpointTestsController,
+    WebhookDeliveriesController,
+  ],
   providers: [
     {
       provide: WebhooksTransactionRunner,
@@ -68,6 +81,13 @@ import {
         ),
     },
     webhookDeliveryOptionsProvider,
+    {
+      provide: WebhookDeliveriesReadRepository,
+      useClass: PrismaWebhookDeliveriesReadRepository,
+    },
+    AttemptDelivery,
+    ReadWebhookDeliveries,
+    SendWebhooksByHand,
     DeliverWebhook,
     FanOutPaymentEvent,
     ManageWebhookEndpoints,
