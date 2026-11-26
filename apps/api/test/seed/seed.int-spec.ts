@@ -359,6 +359,19 @@ describe('seed API Keys', () => {
   });
 });
 
+describe('seed Pricing Plans', () => {
+  it('creates Pricing Plans in two Organizations, one archived, kept across re-runs', async () => {
+    const first = await seed();
+    await seed();
+
+    const plans = await prisma.pricingPlan.findMany();
+    expect(plans).toHaveLength(first.pricingPlans);
+    expect(new Set(plans.map((p) => p.organizationId)).size).toBe(2);
+    expect(plans.filter((p) => p.status === 'ARCHIVED')).toHaveLength(1);
+    expect(plans.some((p) => p.allowedGatewayIds.length === 0)).toBe(true);
+  });
+});
+
 describe('seed users', () => {
   it('includes a deactivated User next to active ones', async () => {
     await seed();
