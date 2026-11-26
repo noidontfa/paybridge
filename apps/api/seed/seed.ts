@@ -76,6 +76,8 @@ interface SeedUser {
   readonly name: string;
   readonly role: UserRole;
   readonly organization: OrganizationKey | null;
+  /** Default true. A deactivated User cannot sign in. */
+  readonly active?: boolean;
 }
 
 /** A Super Admin, plus an Organization Admin and an Operator in each Organization. */
@@ -114,6 +116,14 @@ export const SEED_USERS: readonly SeedUser[] = [
     name: 'Omar Operator (Acme)',
     role: 'OPERATOR',
     organization: 'acme',
+  },
+  {
+    key: 'former-operator-primary',
+    email: 'former.operator@default.paybridge.dev',
+    name: 'Fran Former (Default)',
+    role: 'OPERATOR',
+    organization: 'primary',
+    active: false,
   },
 ];
 
@@ -169,7 +179,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
             organizationId: user.organization
               ? ORGANIZATIONS[user.organization].id
               : null,
-            active: true,
+            active: user.active ?? true,
           };
           await tx.user.upsert({
             where: { id: id(`user:${user.key}`) },

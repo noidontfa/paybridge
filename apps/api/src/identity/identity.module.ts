@@ -19,6 +19,8 @@ import {
   SendInvitation,
 } from './application/use-cases/manage-invitations.js';
 import { InvitationsController } from './http/invitations.controller.js';
+import { ManageUsers } from './application/use-cases/manage-users.js';
+import { UsersController } from './http/users.controller.js';
 import { AccessGuard } from './http/access.guard.js';
 import { AuthController, JwksController } from './http/auth.controller.js';
 import { HttpPrincipalResolver } from './http/http-principal.resolver.js';
@@ -51,6 +53,7 @@ import { UserRepository } from './port/user.repository.js';
     JwksController,
     OrganizationsController,
     InvitationsController,
+    UsersController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: PrincipalGuard },
@@ -94,6 +97,7 @@ import { UserRepository } from './port/user.repository.js';
     RevokeInvitation,
     ListPendingInvitations,
     AcceptInvitation,
+    ManageUsers,
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })
