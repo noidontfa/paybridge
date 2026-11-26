@@ -11,9 +11,10 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { ListStatusTransitions } from './status-transitions.js';
+import { StatusTransitionsReadRepository } from '../../infrastructure/prisma/console-read/status-transitions-read.repository.js';
 import {
   type StatusTransitionsListQuery,
+  statusTransitionsCursor,
   statusTransitionsListQuerySchema,
 } from './status-transitions.query.js';
 
@@ -25,8 +26,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/status-transitions`)
 export class StatusTransitionsController {
   constructor(
-    @Inject(ListStatusTransitions)
-    private readonly listTransitions: ListStatusTransitions,
+    @Inject(StatusTransitionsReadRepository)
+    private readonly transitions: StatusTransitionsReadRepository,
   ) {}
 
   @Get()
@@ -46,7 +47,10 @@ export class StatusTransitionsController {
     @Query(new ZodValidationPipe(statusTransitionsListQuerySchema))
     query: StatusTransitionsListQuery,
   ) {
-    const page = await this.listTransitions.execute(scope, query);
+    const page = statusTransitionsCursor.page(
+      await this.transitions.list(scope, query),
+      query.limit,
+    );
     return {
       items: page.items.map((row) => ({
         id: row.id,

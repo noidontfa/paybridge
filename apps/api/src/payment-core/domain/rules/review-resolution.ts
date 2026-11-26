@@ -27,6 +27,14 @@ export type ReviewResolutionDecision =
   | { readonly kind: 'succeed' };
 
 /**
+ * When an Operator may first set a status on a Review that opened at
+ * `openedAt`: once the automatic re-query window has passed.
+ */
+export function reviewResolvableAt(openedAt: Date): Date {
+  return new Date(openedAt.getTime() + REVIEW_REQUERY_WINDOW_MS);
+}
+
+/**
  * Operator resolution rules (spec: Payment states and rules, review exit).
  * Throws a domain error when the request would create an invalid state.
  *
@@ -66,9 +74,7 @@ export function decideReviewResolution(
   }
 
   const opened = attempt.reviewOpenedAt;
-  const eligibleAt = new Date(
-    (opened?.getTime() ?? now.getTime()) + REVIEW_REQUERY_WINDOW_MS,
-  );
+  const eligibleAt = reviewResolvableAt(opened ?? now);
   if (!opened || now.getTime() < eligibleAt.getTime()) {
     throw new ReviewWindowOpenError(attempt.id, eligibleAt);
   }

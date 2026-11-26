@@ -1,14 +1,25 @@
 import { z } from 'zod';
 import { PAYMENT_STATUSES } from '../../domain/statuses.js';
-import {
-  dayParam,
-  optionalParam,
-  pagingShape,
-  isIsoTime,
-  parseKeysetCursor,
-} from '../shared/list-query.js';
+import type {
+  PaymentListRow,
+  PaymentSortColumn,
+} from '../../infrastructure/prisma/console-read/payments-read.repository.js';
+import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
+import { dayParam, optionalParam, pagingShape } from '../shared/list-query.js';
 
 const DECIMAL = /^\d+(\.\d+)?$/;
+
+/** A cursor only continues the sort and order it was made for. */
+export function paymentsCursor(sort: PaymentSortColumn, order: 'asc' | 'desc') {
+  return keysetCursor<PaymentListRow>({
+    tag: `${sort}:${order}`,
+    valueOf: (row) =>
+      sort === 'amount' ? row.amount : row.createdAt.toISOString(),
+    isValue: sort === 'amount' ? (v) => DECIMAL.test(v) : isIsoTime,
+    invalidMessage: 'is not valid for this list, sort and order',
+  });
+}
+
 export const paymentsListQuerySchema = z
   .object({
     ...pagingShape,
@@ -23,7 +34,7 @@ export const paymentsListQuerySchema = z
   .transform((query, ctx) => {
     const sort = query.sort ?? 'createdAt';
     const order = query.order ?? 'desc';
-    const after = parseKeysetCursor(ctx, query.cursor, `${sort}:${order}`, sort === 'amount' ? (v) => DECIMAL.test(v) : isIsoTime, 'is not valid for this list, sort and order');
+    const after = paymentsCursor(sort, order).parse(ctx, query.cursor);
     if (after === null) {
       return z.NEVER;
     }

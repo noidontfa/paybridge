@@ -62,8 +62,10 @@ export class PaymentEventsReadRepository {
     scope: ReadScope,
     id: string,
   ): Promise<PaymentEventDetailRow | null> {
+    const key = uuidNeedle(id);
+    if (!key) return null;
     const row = await this.prisma.outboxEvent.findUnique({
-      where: { id, ...scopeWhere(scope) },
+      where: { id: key, ...scopeWhere(scope) },
     });
     if (!row) return null;
     return {

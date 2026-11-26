@@ -19,12 +19,10 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import {
-  GetPaymentEvent,
-  ListPaymentEvents,
-} from './payment-events.js';
+import { PaymentEventsReadRepository } from '../../infrastructure/prisma/console-read/payment-events-read.repository.js';
 import {
   type PaymentEventsListQuery,
+  paymentEventsCursor,
   paymentEventsListQuerySchema,
 } from './payment-events.query.js';
 
@@ -38,8 +36,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/payment-events`)
 export class PaymentEventsController {
   constructor(
-    @Inject(ListPaymentEvents) private readonly listEvents: ListPaymentEvents,
-    @Inject(GetPaymentEvent) private readonly getEvent: GetPaymentEvent,
+    @Inject(PaymentEventsReadRepository)
+    private readonly events: PaymentEventsReadRepository,
   ) {}
 
   @Get()
@@ -58,7 +56,10 @@ export class PaymentEventsController {
     @Query(new ZodValidationPipe(paymentEventsListQuerySchema))
     query: PaymentEventsListQuery,
   ) {
-    const page = await this.listEvents.execute(scope, query);
+    const page = paymentEventsCursor.page(
+      await this.events.list(scope, query),
+      query.limit,
+    );
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -76,7 +77,7 @@ export class PaymentEventsController {
   @ApiOkResponse({ description: 'The Payment Event' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
-    const row = await this.getEvent.execute(scope, id);
+    const row = await this.events.findById(scope, id);
     if (!row) throw new NotFoundException(`Payment Event ${id} not found`);
     return {
       id: row.id,

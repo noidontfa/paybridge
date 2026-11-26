@@ -79,8 +79,10 @@ export class CallbacksReadRepository {
     scope: ReadScope,
     id: string,
   ): Promise<CallbackDetailRow | null> {
+    const key = uuidNeedle(id);
+    if (!key) return null;
     const row = await this.prisma.webhookInbox.findUnique({
-      where: { id, ...scopeWhere(scope) },
+      where: { id: key, ...scopeWhere(scope) },
     });
     if (!row) return null;
     // No foreign key on the Attempt Key: a Callback may name an unknown attempt.

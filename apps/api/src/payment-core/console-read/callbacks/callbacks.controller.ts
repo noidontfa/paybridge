@@ -19,12 +19,10 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import {
-  GetCallback,
-  ListCallbacks,
-} from './callbacks.js';
+import { CallbacksReadRepository } from '../../infrastructure/prisma/console-read/callbacks-read.repository.js';
 import {
   type CallbacksListQuery,
+  callbacksCursor,
   callbacksListQuerySchema,
 } from './callbacks.query.js';
 
@@ -38,8 +36,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/callbacks`)
 export class CallbacksController {
   constructor(
-    @Inject(ListCallbacks) private readonly listCallbacks: ListCallbacks,
-    @Inject(GetCallback) private readonly getCallback: GetCallback,
+    @Inject(CallbacksReadRepository)
+    private readonly callbacks: CallbacksReadRepository,
   ) {}
 
   @Get()
@@ -58,7 +56,10 @@ export class CallbacksController {
     @Query(new ZodValidationPipe(callbacksListQuerySchema))
     query: CallbacksListQuery,
   ) {
-    const page = await this.listCallbacks.execute(scope, query);
+    const page = callbacksCursor.page(
+      await this.callbacks.list(scope, query),
+      query.limit,
+    );
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -82,7 +83,7 @@ export class CallbacksController {
   @ApiOkResponse({ description: 'The Callback' })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async get(@CurrentReadScope() scope: ReadScope, @Param('id') id: string) {
-    const row = await this.getCallback.execute(scope, id);
+    const row = await this.callbacks.findById(scope, id);
     if (!row) throw new NotFoundException(`Callback ${id} not found`);
     return {
       id: row.id,

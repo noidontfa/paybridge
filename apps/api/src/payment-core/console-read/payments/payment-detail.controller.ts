@@ -16,7 +16,7 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { GetPaymentDetail } from './get-payment-detail.js';
+import { PaymentDetailReadRepository } from '../../infrastructure/prisma/console-read/payment-detail-read.repository.js';
 
 /**
  * Operator endpoint (no authentication in Phase 1; keep `/internal` off the
@@ -27,7 +27,8 @@ import { GetPaymentDetail } from './get-payment-detail.js';
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentDetailController {
   constructor(
-    @Inject(GetPaymentDetail) private readonly getPayment: GetPaymentDetail,
+    @Inject(PaymentDetailReadRepository)
+    private readonly payments: PaymentDetailReadRepository,
   ) {}
 
   @Get(':id')
@@ -41,7 +42,7 @@ export class PaymentDetailController {
     @CurrentReadScope() scope: ReadScope,
     @Param('id') id: string,
   ) {
-    const p = await this.getPayment.execute(scope, id);
+    const p = await this.payments.find(scope, id);
     if (!p) throw new NotFoundException(`Payment "${id}" not found`);
     return {
       id: p.id,

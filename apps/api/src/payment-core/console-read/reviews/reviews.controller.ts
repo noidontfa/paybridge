@@ -11,10 +11,11 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { GetReviewSummary } from './get-review-summary.js';
-import { ListReviews } from './list-reviews.js';
+import { reviewResolvableAt } from '../../domain/rules/review-resolution.js';
+import { ReviewsReadRepository } from '../../infrastructure/prisma/console-read/reviews-read.repository.js';
 import {
   type ReviewsListQuery,
+  reviewsCursor,
   reviewsListQuerySchema,
 } from './reviews-list.query.js';
 
@@ -28,9 +29,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/reviews`)
 export class ReviewsController {
   constructor(
-    @Inject(ListReviews) private readonly listReviews: ListReviews,
-    @Inject(GetReviewSummary)
-    private readonly getReviewSummary: GetReviewSummary,
+    @Inject(ReviewsReadRepository)
+    private readonly reviews: ReviewsReadRepository,
   ) {}
 
   @Get()
@@ -50,7 +50,10 @@ export class ReviewsController {
     @Query(new ZodValidationPipe(reviewsListQuerySchema))
     query: ReviewsListQuery,
   ) {
-    const page = await this.listReviews.execute(scope, query);
+    const page = reviewsCursor(query.order).page(
+      await this.reviews.list(scope, query),
+      query.limit,
+    );
     return {
       items: page.items.map((row) => ({
         id: row.id,
@@ -60,7 +63,7 @@ export class ReviewsController {
         transactionStatus: row.transactionStatus,
         refundRequired: row.refundRequired,
         reviewOpenedAt: row.reviewOpenedAt.toISOString(),
-        resolvableAt: row.resolvableAt.toISOString(),
+        resolvableAt: reviewResolvableAt(row.reviewOpenedAt).toISOString(),
         providerReportedAmount: row.providerReportedAmount,
         payment: row.payment,
       })),
@@ -74,6 +77,6 @@ export class ReviewsController {
   })
   @ApiOkResponse({ description: '`{ open, total, byReason }`' })
   summary(@CurrentReadScope() scope: ReadScope) {
-    return this.getReviewSummary.execute(scope);
+    return this.reviews.counts(scope);
   }
 }

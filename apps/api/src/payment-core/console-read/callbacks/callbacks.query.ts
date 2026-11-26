@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import type { CallbackListRow } from '../../infrastructure/prisma/console-read/callbacks-read.repository.js';
 import { CALLBACK_STATUSES } from '../shared/developer-views.vocab.js';
-import {
-  isIsoTime,
-  optionalParam,
-  pagingShape,
-  parseKeysetCursor,
-} from '../shared/list-query.js';
+import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
+import { optionalParam, pagingShape } from '../shared/list-query.js';
+
+/** Newest first by `receivedAt`. */
+export const callbacksCursor = keysetCursor<CallbackListRow>({
+  tag: 'callbacks',
+  valueOf: (row) => row.receivedAt.toISOString(),
+  isValue: isIsoTime,
+});
 
 export const callbacksListQuerySchema = z
   .object({
@@ -15,7 +19,7 @@ export const callbacksListQuerySchema = z
     q: optionalParam(z.string().trim().max(200)),
   })
   .transform((query, ctx) => {
-    const after = parseKeysetCursor(ctx, query.cursor, 'callbacks', isIsoTime);
+    const after = callbacksCursor.parse(ctx, query.cursor);
     if (after === null) {
       return z.NEVER;
     }

@@ -1,11 +1,15 @@
 import { z } from 'zod';
+import type { PaymentEventSummaryRow } from '../../infrastructure/prisma/console-read/payment-events-read.repository.js';
 import { OUTBOX_EVENT_TYPES } from '../shared/developer-views.vocab.js';
-import {
-  isIsoTime,
-  optionalParam,
-  pagingShape,
-  parseKeysetCursor,
-} from '../shared/list-query.js';
+import { isIsoTime, keysetCursor } from '../shared/keyset-cursor.js';
+import { optionalParam, pagingShape } from '../shared/list-query.js';
+
+/** Newest first by `createdAt`. */
+export const paymentEventsCursor = keysetCursor<PaymentEventSummaryRow>({
+  tag: 'payment-events',
+  valueOf: (row) => row.createdAt.toISOString(),
+  isValue: isIsoTime,
+});
 
 export const paymentEventsListQuerySchema = z
   .object({
@@ -15,7 +19,7 @@ export const paymentEventsListQuerySchema = z
     q: optionalParam(z.string().trim().max(200)),
   })
   .transform((query, ctx) => {
-    const after = parseKeysetCursor(ctx, query.cursor, 'payment-events', isIsoTime);
+    const after = paymentEventsCursor.parse(ctx, query.cursor);
     if (after === null) {
       return z.NEVER;
     }

@@ -11,9 +11,10 @@ import { CurrentReadScope } from '../../http/current-scope.decorator.js';
 import type { ReadScope } from '../../domain/organization-scope.js';
 import { RequirePermission } from '../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
-import { ListPayments } from './list-payments.js';
+import { PaymentsReadRepository } from '../../infrastructure/prisma/console-read/payments-read.repository.js';
 import {
   type PaymentsListQuery,
+  paymentsCursor,
   paymentsListQuerySchema,
 } from './payments-list.query.js';
 
@@ -26,7 +27,8 @@ import {
 @Controller(`${INTERNAL_PREFIX}/payments`)
 export class PaymentsListController {
   constructor(
-    @Inject(ListPayments) private readonly listPayments: ListPayments,
+    @Inject(PaymentsReadRepository)
+    private readonly payments: PaymentsReadRepository,
   ) {}
 
   @Get()
@@ -45,7 +47,10 @@ export class PaymentsListController {
     @Query(new ZodValidationPipe(paymentsListQuerySchema))
     query: PaymentsListQuery,
   ) {
-    const page = await this.listPayments.execute(scope, query);
+    const page = paymentsCursor(query.sort, query.order).page(
+      await this.payments.list(scope, query),
+      query.limit,
+    );
     return {
       items: page.items.map((row) => ({
         id: row.id,
