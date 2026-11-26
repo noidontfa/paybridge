@@ -32,8 +32,32 @@ _Avoid_: Redirect URL, Payment Link
 The money a Payment asks to collect, expressed as a decimal amount in the currency's major unit (for VND, whole dong) together with its currency. In Phase 1 the currency is always VND.
 _Avoid_: Price, Total
 
+**Customer**:
+The person who pays a Payment. A Customer is never a User and has no sign-in in PayBridge.
+_Avoid_: User, Buyer, Payer, End user
+
+**Pricing Plan**:
+A named offer an Organization sells for a fixed Amount, set up in the Console with a description and a list of what it includes to show Customers. A Payment created from a Pricing Plan copies its Amount at that moment, so later changes to the Pricing Plan never touch Payments already created. A Pricing Plan that has Payments is archived, never deleted. A Pricing Plan sets the Payment Expiry of Payments started from it, and may limit which of the Organization's enabled PaymentGateways a Customer can choose. For now a Pricing Plan is paid once; it is not a subscription.
+_Avoid_: Product, Package, Price, Subscription
+
+**Publishable Key**:
+The public key an Organization puts in its web pages so that Customers' browsers can start Payments for that Organization's Pricing Plans. Unlike an API Key it is not secret, so it can do nothing else.
+_Avoid_: Public API Key, Client key, Embed token
+
+**Embedded Checkout**:
+The checkout an Organization puts on its own web page by pasting a snippet from the Console. It shows a Pricing Table and lets a Customer pay for one of its Pricing Plans in a window served by PayBridge, so the host page never sees the payment details.
+_Avoid_: Embed file, Widget, Payment button, Hosted checkout
+
+**Pricing Table**:
+An ordered set of one to three Pricing Plans, with its look, that an Embedded Checkout shows side by side. One of its Pricing Plans may be marked as recommended. Changing a Pricing Table in the Console changes every page that embeds it. A Pricing Table holds no money, so it can be deleted; pages that embed it then show that it is unavailable.
+_Avoid_: Pricing page, Widget, Plan group
+
+**Customer Reference**:
+An identifier of the Customer that the Organization passes to an Embedded Checkout (such as its own user id), or the email the Customer types in. It is carried on the Payment and its Webhooks so the Organization knows whom a purchase is for. It comes from the browser, so it is never proof of anything.
+_Avoid_: Customer ID, User ID, Buyer
+
 **Upstream Reference**:
-The identifier that the calling system assigns to the order or obligation a Payment settles. It is unique within an Organization and never changes after the Payment is created.
+The identifier of the order or obligation a Payment settles. The Organization's system assigns it when it creates the Payment with an API Key; PayBridge assigns it when a Customer starts the Payment from an Embedded Checkout. It is unique within an Organization and never changes after the Payment is created.
 _Avoid_: Order ID, Merchant Reference
 
 **Attempt Key**:
@@ -101,11 +125,11 @@ A User who runs the PayBridge platform itself and belongs to no Organization. A 
 _Avoid_: Root, System admin, Platform owner
 
 **Organization Admin**:
-A User who manages one Organization: its Users, API Keys and Gateway Connections, on top of everything an Operator does. An Organization always has at least one active Organization Admin.
+A User who manages one Organization: its Users, API Keys, Gateway Connections, Pricing Plans, Publishable Keys and Webhook Endpoints, on top of everything an Operator does. An Organization always has at least one active Organization Admin.
 _Avoid_: Owner, Org manager, Admin
 
 **Operator**:
-A User of an Organization who monitors that Organization's Payments and resolves its Reviews. Every status change an Operator makes is recorded with their identity and a note.
+A User of an Organization who monitors that Organization's Payments and Webhooks, resends failed Webhooks, and resolves its Reviews. An Operator can see Pricing Plans but not change them. Every status change an Operator makes is recorded with their identity and a note.
 _Avoid_: Admin, Administrator, Support agent
 
 **Review**:
@@ -117,5 +141,9 @@ A record that Core emits when a Payment or PaymentTransaction reaches a status o
 _Avoid_: Outbox message, Notification
 
 **Webhook**:
-The delivery of a Payment Event to the Organization's system. Not built yet; inbound notifications from a PaymentGateway are Callbacks, not Webhooks.
+The delivery of a Payment Event to one of the Organization's Webhook Endpoints, signed so the Organization can trust it. A Payment Event may be delivered more than once and in any order, and failed deliveries are retried for a few days. Inbound notifications from a PaymentGateway are Callbacks, not Webhooks.
 _Avoid_: Callback, Notification
+
+**Webhook Endpoint**:
+A URL of the Organization's system that receives Webhooks, with its own signing secret and the kinds of Payment Event it wants. An Organization can have several.
+_Avoid_: Webhook URL, Subscription, Listener
