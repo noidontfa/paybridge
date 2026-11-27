@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overviewSchema } from '@/lib/api/overview-schema';
+import { overviewSchema } from '@/features/overview/api';
 import { computeOverview } from './overview';
 import { createSeededStore } from './seed';
 import { MockStore, type MockAttempt, type MockPayment } from './store';

@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { useState } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import type { OverviewRange } from '@/lib/overview-range';
+import type { OverviewRange } from '@/features/overview/utils/overview-range';
 import { createHandlers } from '@/mocks/handlers';
 import { computeOverview } from '@/mocks/overview';
 import { MockStore, type MockAttempt, type MockPayment } from '@/mocks/store';

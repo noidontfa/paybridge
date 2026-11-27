@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/utils/cn';
-import { OVERVIEW_RANGES, RANGE_LABELS, type OverviewRange } from '@/lib/overview-range';
+import { OVERVIEW_RANGES, RANGE_LABELS, type OverviewRange } from '@/features/overview/utils/overview-range';
 
 /** Segmented control for the Overview range; the page keeps the choice in the URL. */
 export function RangeSelector({ value, onChange }: { value: OverviewRange; onChange: (range: OverviewRange) => void }) {

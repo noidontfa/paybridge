@@ -3,8 +3,8 @@
 import { InboxIcon } from 'lucide-react';
 import { ErrorState } from '@/components/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RANGE_LABELS, type OverviewRange } from '@/lib/overview-range';
-import { useOverview } from '@/lib/queries/overview';
+import { RANGE_LABELS, type OverviewRange } from '@/features/overview/utils/overview-range';
+import { useOverview } from '@/features/overview/hooks/queries';
 import { StatusChart, VolumeChart } from './overview-charts';
 import { Figures, GatewayBreakdown, RecentPayments } from './overview-panels';
 import { RangeSelector } from './range-selector';

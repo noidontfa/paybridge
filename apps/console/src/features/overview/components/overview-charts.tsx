@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Area, AreaChart, Bar, BarChart, Cell, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import type { Overview } from '@/lib/api/overview-schema';
+import type { Overview } from '@/features/overview/api';
 import { formatMoney } from '@/utils/format';
 import { statusBadge } from '@/components/status-badges';
 

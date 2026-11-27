@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { overviewHref, type OverviewRange } from '@/lib/overview-range';
+import { overviewHref, type OverviewRange } from '@/features/overview/utils/overview-range';
 import { OverviewScreen } from './overview-screen';
 
 /** Keeps the range in the URL: the server reads it on load, a change replaces the URL. */

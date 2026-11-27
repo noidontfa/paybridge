@@ -10,8 +10,10 @@
  * the PaymentGateway of the Payment's latest PaymentTransaction.
  */
 import { z } from 'zod';
-import { OVERVIEW_RANGES } from '@/lib/overview-range';
-import { decimalStringSchema, paymentStatusSchema } from './schemas';
+import { INTERNAL, request } from '@/services/client';
+import type { OverviewRange } from './utils/overview-range';
+import { OVERVIEW_RANGES } from '@/features/overview/utils/overview-range';
+import { decimalStringSchema, paymentStatusSchema } from '@/lib/api/schemas';
 
 const rateSchema = z.number().min(0).max(1).nullable();
 
@@ -49,3 +51,8 @@ export const overviewSchema = z.object({
   ),
 });
 export type Overview = z.infer<typeof overviewSchema>;
+
+/** `GET /internal/overview?range=`: figures, chart data, gateway breakdown and recent Payments. */
+export function getOverview(range: OverviewRange, signal?: AbortSignal): Promise<Overview> {
+  return request(`${INTERNAL}/overview`, overviewSchema, { query: { range }, signal });
+}

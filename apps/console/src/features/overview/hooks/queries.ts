@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getOverview } from '@/services/client';
-import type { OverviewRange } from '@/lib/overview-range';
+import { getOverview } from '../api';
+import type { OverviewRange } from '@/features/overview/utils/overview-range';
 
 /** The review-resolution mutation (ticket 06) invalidates `overviewKeys.all`. */
 export const overviewKeys = {
