@@ -69,6 +69,24 @@ describe('messages from the SDK, read by the checkout page', () => {
     });
   });
 
+  it('carries the return targets: snippet URLs and the host page the Customer is on', () => {
+    const message = fromSdk({
+      type: 'init',
+      tableId: 't-1',
+      planId: 'plan-1',
+      language: 'en',
+      successUrl: `${SHOP}/thanks`,
+      cancelUrl: `${SHOP}/pricing`,
+      hostPageUrl: `${SHOP}/pricing?plan=pro`,
+    });
+
+    expect(readSdkMessage(event(message, SHOP, parent), expected)).toMatchObject({
+      successUrl: `${SHOP}/thanks`,
+      cancelUrl: `${SHOP}/pricing`,
+      hostPageUrl: `${SHOP}/pricing?plan=pro`,
+    });
+  });
+
   it('carries the ask for an email, and refuses a non-boolean one', () => {
     const message = fromSdk({ type: 'init', tableId: 't', planId: 'p', language: 'en', askEmail: true });
 

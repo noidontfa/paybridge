@@ -126,11 +126,21 @@ test('resumes the same open Payment when the checkout is reopened', async ({ pag
 });
 
 test('lets the Customer switch PaymentGateway after abandoning an attempt', async ({ page }) => {
+  await page.route('https://fake-gateway.test/**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Fake gateway</title>' }),
+  );
   const first = await buyBasicByQr(page);
-  const frame = checkoutFrame(page);
+  let frame = checkoutFrame(page);
 
+  // Off to the redirect gateway's page, then straight back with the browser.
   await frame.getByTestId('switch-gateway').click();
   await frame.getByRole('button', { name: 'Fake gateway' }).click();
+  await page.waitForURL(/^https:\/\/fake-gateway\.test\//);
+  await page.goBack();
+  await card(page, SEED.plans.basic).getByRole('button', { name: 'Mua ngay' }).click();
+  frame = checkoutFrame(page);
+
+  // The resumed redirect attempt waits for the Customer instead of leaving again.
   await expect(frame.getByRole('link', { name: 'Tiếp tục đến trang thanh toán' })).toBeVisible();
   await frame.getByTestId('switch-gateway').click();
   await frame.getByRole('button', { name: 'Fake QR' }).click();

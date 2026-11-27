@@ -9,8 +9,10 @@ import {
 // Plain HTML host pages, like an Organization's landing page, served on two
 // origins: one the seed's Publishable Key allows and one it does not.
 //
-//   /             the snippet; ?table=, ?key=, ?customerRef=, ?askEmail=, ?lang= override it
+//   /             the snippet; ?table=, ?key=, ?customerRef=, ?askEmail=, ?lang= override it,
+//                 ?successUrl= and ?cancelUrl= set data-success-url / data-cancel-url
 //   /raw-iframe   frames the checkout page directly, without the SDK
+//   /thanks, /sorry  plain pages to be sent back to
 
 const escape = (value: string) =>
   value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -22,6 +24,8 @@ function snippetPage(params: URLSearchParams): string {
     'data-table': params.get('table') ?? SEED.pricingTableId,
     'data-customer-ref': params.get('customerRef') ?? undefined,
     'data-ask-email': params.get('askEmail') ?? undefined,
+    'data-success-url': params.get('successUrl') ?? undefined,
+    'data-cancel-url': params.get('cancelUrl') ?? undefined,
     'data-on-success': 'onPaid',
     'data-on-cancel': 'onCancelled',
     'data-on-error': 'onCheckoutError',
@@ -76,6 +80,9 @@ for (const port of [ALLOWED_HOST_PORT, DISALLOWED_HOST_PORT]) {
     if (url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(snippetPage(url.searchParams));
+    } else if (url.pathname === '/thanks' || url.pathname === '/sorry') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><title>Shop</title><h1>Shop ${url.pathname.slice(1)}</h1>`);
     } else if (url.pathname === '/raw-iframe') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(rawIframePage(origin, url.searchParams));

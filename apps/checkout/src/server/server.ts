@@ -1,6 +1,6 @@
 import { createServer, type Server, type ServerResponse } from 'node:http';
 import { checkoutApi } from '../shared/api.js';
-import { checkoutPageHtml } from './html.js';
+import { checkoutPageHtml, returnPageHtml } from './html.js';
 
 export interface CheckoutServerConfig {
   /** Where this app is reached by browsers, e.g. `https://checkout.paybridge.vn`. */
@@ -12,7 +12,7 @@ export interface CheckoutServerConfig {
   /** The SDK's exact version, served at `/v<version>/paybridge.js`. */
   readonly version: string;
   /** The built browser bundles. */
-  readonly assets: { readonly sdk: string; readonly page: string };
+  readonly assets: { readonly sdk: string; readonly page: string; readonly returnPage: string };
 }
 
 /** The free identifier the SDK bundle reads its configuration from. */
@@ -85,6 +85,22 @@ export function createCheckoutServer(config: CheckoutServerConfig): Server {
         'Cache-Control': SHORT_CACHE,
       });
     }
+    if (url.pathname === '/assets/return.js') {
+      return send(res, 200, 'text/javascript; charset=utf-8', config.assets.returnPage, {
+        'Cache-Control': SHORT_CACHE,
+      });
+    }
+    // Where redirect gateways send the Customer back (ticket 10). The page
+    // reads the Payment's status from the API itself; whatever the gateway
+    // added to the URL is not trusted.
+    if (url.pathname === '/return') {
+      return send(res, 200, 'text/html; charset=utf-8', returnPageHtml(publicConfig), {
+        'Content-Security-Policy': returnPagePolicy(apiUrl),
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+      });
+    }
     if (url.pathname === '/checkout') {
       const key = url.searchParams.get('key');
       const hostOrigin = url.searchParams.get('hostOrigin');
@@ -124,6 +140,20 @@ export function checkoutPagePolicy(frameAncestors: readonly string[], apiUrl: st
     `frame-src https://js.stripe.com https://hooks.stripe.com`,
     `connect-src ${apiUrl} https://api.stripe.com`,
     `frame-ancestors ${frameAncestors.length > 0 ? frameAncestors.join(' ') : "'none'"}`,
+    `base-uri 'none'`,
+    `form-action 'none'`,
+  ].join('; ');
+}
+
+/** The return page's policy: top level only, scripts from this app, requests to the API. */
+export function returnPagePolicy(apiUrl: string): string {
+  return [
+    `default-src 'self'`,
+    `script-src 'self'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data:`,
+    `connect-src ${apiUrl}`,
+    `frame-ancestors 'none'`,
     `base-uri 'none'`,
     `form-action 'none'`,
   ].join('; ');

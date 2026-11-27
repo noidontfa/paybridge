@@ -5,6 +5,7 @@ import * as esbuild from 'esbuild';
 // Builds the checkout app into dist/:
 //   dist/public/paybridge.js  the SDK (served at /v1/paybridge.js and /v<version>/paybridge.js)
 //   dist/public/checkout.js   the checkout page's script
+//   dist/public/return.js     the return page's script (after a redirect gateway)
 //   dist/server.js            the Node server
 // `--watch` rebuilds on change and restarts the server (pnpm dev).
 
@@ -24,7 +25,7 @@ const browser: esbuild.BuildOptions = {
 
 let server: ChildProcess | undefined;
 let restart: NodeJS.Timeout | undefined;
-let pending = 3;
+let pending = 4;
 // Restarts once every bundle exists, and after each later rebuild (debounced).
 const restartServer: esbuild.Plugin = {
   name: 'restart-server',
@@ -48,6 +49,7 @@ const restartServer: esbuild.Plugin = {
 const builds: esbuild.BuildOptions[] = [
   { ...browser, entryPoints: ['src/sdk/index.ts'], outfile: 'dist/public/paybridge.js' },
   { ...browser, entryPoints: ['src/page/main.ts'], outfile: 'dist/public/checkout.js' },
+  { ...browser, entryPoints: ['src/return/main.ts'], outfile: 'dist/public/return.js' },
   {
     entryPoints: ['src/server/main.ts'],
     outfile: 'dist/server.js',

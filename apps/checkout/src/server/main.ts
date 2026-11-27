@@ -23,7 +23,11 @@ const server = createCheckoutServer({
   apiUrl: process.env.PAYBRIDGE_API_URL || 'http://localhost:9999',
   internalApiUrl: process.env.PAYBRIDGE_INTERNAL_API_URL || undefined,
   version: __PAYBRIDGE_VERSION__,
-  assets: { sdk: asset('paybridge.js'), page: asset('checkout.js') },
+  assets: {
+    sdk: asset('paybridge.js'),
+    page: asset('checkout.js'),
+    returnPage: asset('return.js'),
+  },
 });
 
 server.listen(port, host, () => {

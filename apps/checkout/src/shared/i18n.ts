@@ -31,6 +31,15 @@ const STRINGS = {
     continue: 'Continue',
     payNow: 'Pay',
     processing: 'Processing your payment…',
+    // The return page, after a redirect gateway (ticket 10).
+    redirectingToGateway: 'Taking you to the payment page…',
+    notCompleted: 'Payment not completed',
+    notCompletedBody: 'The payment was not completed. You have not been charged.',
+    returnProcessing: 'Your payment is being processed',
+    processingBody: 'This can take a moment. Please keep this page open.',
+    processingTooLong: 'We have not received the result yet. You will be notified once the payment is confirmed.',
+    forwarding: 'Taking you back…',
+    backToShop: 'Back to the shop',
   },
   vi: {
     unavailable: 'Hiện chưa thể thanh toán',
@@ -60,6 +69,15 @@ const STRINGS = {
     continue: 'Tiếp tục',
     payNow: 'Thanh toán',
     processing: 'Đang xử lý thanh toán…',
+    // The return page, after a redirect gateway (ticket 10).
+    redirectingToGateway: 'Đang chuyển đến trang thanh toán…',
+    notCompleted: 'Thanh toán chưa hoàn tất',
+    notCompletedBody: 'Thanh toán chưa được hoàn tất. Bạn chưa bị trừ tiền.',
+    returnProcessing: 'Thanh toán đang được xử lý',
+    processingBody: 'Việc này có thể mất một chút thời gian. Vui lòng không đóng trang.',
+    processingTooLong: 'Chúng tôi chưa nhận được kết quả. Bạn sẽ được thông báo khi thanh toán được xác nhận.',
+    forwarding: 'Đang quay lại…',
+    backToShop: 'Quay lại cửa hàng',
   },
 } as const satisfies Record<Language, Record<string, string>>;
 

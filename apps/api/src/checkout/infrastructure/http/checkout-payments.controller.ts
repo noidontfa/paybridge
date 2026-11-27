@@ -20,11 +20,11 @@ import {
   type CheckoutCaller,
 } from '../../../identity/port/index.js';
 import { organizationScope } from '../../../payment-core/port/organization-scope.js';
-import type {
-  CheckoutAttemptView,
-  CheckoutPaymentView,
-} from '../../../payment-core/port/payments.js';
-import { CheckoutPaymentFlow } from '../../application/use-cases/checkout-payments.js';
+import type { CheckoutAttemptView } from '../../../payment-core/port/payments.js';
+import {
+  CheckoutPaymentFlow,
+  type CheckoutPaymentWithReturnUrls,
+} from '../../application/use-cases/checkout-payments.js';
 import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
 import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 
@@ -55,8 +55,11 @@ const attemptView = (attempt: CheckoutAttemptView) => ({
   nextAction: attempt.nextAction,
 });
 
-/** What the checkout page may know of a Payment: no Customer data echoed back. */
-const paymentView = (payment: CheckoutPaymentView) => {
+/**
+ * What the checkout page may know of a Payment: no Customer data echoed
+ * back. `returnUrls` are the Pricing Plan's, for the return page.
+ */
+const paymentView = ({ payment, returnUrls }: CheckoutPaymentWithReturnUrls) => {
   const latest = payment.attempts.at(-1);
   return {
     id: payment.id,
@@ -70,6 +73,7 @@ const paymentView = (payment: CheckoutPaymentView) => {
           name: payment.checkoutOrigin.pricingPlanName,
         }
       : null,
+    returnUrls,
     attempt: latest ? attemptView(latest) : null,
   };
 };
@@ -114,7 +118,7 @@ export class CheckoutPaymentsController {
       body,
     );
     response.status(result.resumed ? HttpStatus.OK : HttpStatus.CREATED);
-    return { ...paymentView(result.payment), resumed: result.resumed };
+    return { ...paymentView(result), resumed: result.resumed };
   }
 
   @Get(':paymentId')
@@ -146,7 +150,7 @@ export class CheckoutPaymentsController {
     );
     return {
       attempt: attemptView(result.attempt),
-      payment: paymentView(result.payment),
+      payment: paymentView(result),
     };
   }
 }

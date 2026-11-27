@@ -473,12 +473,32 @@ describe("reading a checkout Payment's status", () => {
       currency: 'VND',
       expiresAt: payment.body.expiresAt,
       pricingPlan: { id: planId, name: 'Pro' },
+      returnUrls: { successUrl: null, cancelUrl: null },
       attempt: {
         id: attempt.body.attempt.id,
         gatewayId: 'fake',
         status: 'PENDING',
         nextAction: attempt.body.attempt.nextAction,
       },
+    });
+  });
+
+  it("carries the Pricing Plan's success and cancel URLs, for the return page", async () => {
+    const planId = await createPricingPlan(prisma, DEFAULT_ORGANIZATION_ID, {
+      successUrl: 'https://shop.example.com/thanks',
+      cancelUrl: 'https://shop.example.com/pricing',
+    });
+    const payment = await start({ pricingPlanId: planId, sessionToken: SESSION });
+    expect(payment.body.returnUrls).toEqual({
+      successUrl: 'https://shop.example.com/thanks',
+      cancelUrl: 'https://shop.example.com/pricing',
+    });
+
+    const res = await status(payment.body.id).expect(200);
+
+    expect(res.body.returnUrls).toEqual({
+      successUrl: 'https://shop.example.com/thanks',
+      cancelUrl: 'https://shop.example.com/pricing',
     });
   });
 

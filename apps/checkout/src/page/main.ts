@@ -16,6 +16,7 @@ import {
   type CheckoutMessage,
   type SdkMessage,
 } from '../shared/messages.js';
+import { returnPageUrl } from '../return/return-context.js';
 import { readEmail } from './email.js';
 import { nextActionView } from './next-actions.js';
 import { checkoutSessionToken } from './session-token.js';
@@ -46,6 +47,13 @@ function validOrigin(value: string | null): string | null {
   return value && URL.canParse(value) && new URL(value).origin === value ? value : null;
 }
 
+/** The host page the SDK named, if it is on the host origin; else that origin's home page. */
+function hostPageUrl(named: string | undefined): string {
+  return named && URL.canParse(named) && new URL(named).origin === hostOrigin
+    ? named
+    : `${hostOrigin}/`;
+}
+
 function show(...children: (Node | false | null | undefined)[]): void {
   app.replaceChildren(...children.filter((c): c is Node => Boolean(c)));
 }
@@ -61,12 +69,6 @@ function applyTheme(table: Pick<PricingTable, 'theme' | 'mainColor' | 'language'
   if (/^#[0-9a-fA-F]{6}$/.test(table.mainColor)) root.style.setProperty('--pb-main', table.mainColor);
 }
 
-/** Where a gateway sends the Customer back after a redirect (ticket 10's page). */
-function returnUrlFor(paymentId: string): string {
-  const url = new URL('/return', config.checkoutUrl);
-  url.searchParams.set('paymentId', paymentId);
-  return url.toString();
-}
 
 class Checkout {
   private language: Language;
@@ -213,7 +215,7 @@ class Checkout {
     try {
       const { attempt, payment } = await this.api.startAttempt(this.payment!.id, {
         gatewayId,
-        returnUrl: returnUrlFor(this.payment!.id),
+        returnUrl: this.returnUrl(),
       });
       this.payment = payment;
       if (this.settle(payment)) return;
@@ -221,7 +223,7 @@ class Checkout {
         this.showChoice(this.t.attemptFailed);
         return;
       }
-      this.showAttempt(attempt);
+      this.showAttempt(attempt, true);
     } catch (error) {
       if (error instanceof CheckoutUnavailableError) return this.fail(error);
       console.warn(`${LOG_PREFIX} Could not start the attempt.`, error);
@@ -229,7 +231,25 @@ class Checkout {
     }
   }
 
-  private showAttempt(attempt: CheckoutAttempt): void {
+  /**
+   * Where a redirect gateway sends the Customer back: the checkout app's
+   * return page, with what it needs to forward them afterwards (the snippet's
+   * URLs and the host page they started from).
+   */
+  private returnUrl(): string {
+    const { successUrl, cancelUrl } = this.init;
+    return returnPageUrl(config.checkoutUrl, {
+      paymentId: this.payment!.id,
+      publishableKey: key!,
+      hostPageUrl: hostPageUrl(this.init.hostPageUrl),
+      language: this.language,
+      ...(successUrl ? { successUrl } : {}),
+      ...(cancelUrl ? { cancelUrl } : {}),
+    });
+  }
+
+  /** `fresh`: the Customer just chose this gateway (a redirect then leaves at once). */
+  private showAttempt(attempt: CheckoutAttempt, fresh = false): void {
     this.shownAttemptId = attempt.id;
     const other = h('button', { type: 'button', 'data-testid': 'switch-gateway' }, this.t.otherMethod);
     other.addEventListener('click', () => this.showChoice());
@@ -240,7 +260,7 @@ class Checkout {
         { class: 'muted', 'data-testid': 'gateway' },
         gatewayName(attempt.gatewayId),
       ),
-      nextActionView(attempt.nextAction!, { attempt, t: this.t }),
+      nextActionView(attempt.nextAction!, { attempt, t: this.t, fresh }),
       other,
     );
   }

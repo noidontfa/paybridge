@@ -18,9 +18,11 @@ export type SdkMessage = {
   readonly customerReference?: string;
   /** `data-ask-email`: ask the Customer for an email before starting the Payment. */
   readonly askEmail?: boolean;
-  /** Snippet URLs (`data-success-url`, `data-cancel-url`); ticket 10 uses them. */
+  /** Snippet URLs (`data-success-url`, `data-cancel-url`), for the return page. */
   readonly successUrl?: string;
   readonly cancelUrl?: string;
+  /** The host page the Customer started from; the return page's last resort. */
+  readonly hostPageUrl?: string;
 };
 
 /** Checkout page -> SDK. */
@@ -105,6 +107,7 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
     !isOptionalString(m.customerReference) ||
     !isOptionalString(m.successUrl) ||
     !isOptionalString(m.cancelUrl) ||
+    !isOptionalString(m.hostPageUrl) ||
     (m.askEmail !== undefined && typeof m.askEmail !== 'boolean')
   ) {
     return null;
@@ -118,5 +121,6 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
     ...(m.askEmail ? { askEmail: true } : {}),
     ...(m.successUrl ? { successUrl: m.successUrl } : {}),
     ...(m.cancelUrl ? { cancelUrl: m.cancelUrl } : {}),
+    ...(m.hostPageUrl ? { hostPageUrl: m.hostPageUrl } : {}),
   };
 }

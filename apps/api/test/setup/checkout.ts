@@ -35,6 +35,8 @@ export interface TestPricingPlan {
   readonly allowedGatewayIds?: string[];
   readonly expiryMinutes?: number;
   readonly status?: 'ACTIVE' | 'ARCHIVED';
+  readonly successUrl?: string;
+  readonly cancelUrl?: string;
 }
 
 /** Inserts a Pricing Plan and returns its id. */
@@ -56,6 +58,8 @@ export async function createPricingPlan(
       allowedGatewayIds: plan.allowedGatewayIds ?? [],
       expiryMinutes: plan.expiryMinutes ?? 60,
       status: plan.status ?? 'ACTIVE',
+      successUrl: plan.successUrl ?? null,
+      cancelUrl: plan.cancelUrl ?? null,
       updatedByUserId: randomUUID(),
       updatedByRole: 'ORGANIZATION_ADMIN',
       updatedByName: 'Test Admin',
