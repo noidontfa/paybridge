@@ -500,6 +500,22 @@ async function seedWebhookEndpoint(
 type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
 
 async function deleteSeedRows(tx: Tx): Promise<void> {
+  // Lock the seed's Payments and attempts first. A running app (its expiry,
+  // requery and webhook workers) may be writing outbox rows, transitions or
+  // raw responses for them; each of those writes takes a key-share lock on
+  // the row it references, so after this it waits for the seed to commit,
+  // and the deletes below see every row a worker committed before. Without
+  // it, a worker's outbox row can land between the two DELETEs and the
+  // Payment's DELETE fails on the RESTRICT foreign key.
+  await tx.$queryRaw`
+    SELECT p.id FROM core_payments p
+      WHERE starts_with(p.merchant_order_id, ${SEED_PREFIX})
+      FOR UPDATE`;
+  await tx.$queryRaw`
+    SELECT t.id FROM core_payment_transactions t
+      JOIN core_payments p ON p.id = t.payment_id
+      WHERE starts_with(p.merchant_order_id, ${SEED_PREFIX})
+      FOR UPDATE OF t`;
   await tx.$executeRaw`
     DELETE FROM core_status_transitions WHERE entity_id IN (
       SELECT id FROM core_payments WHERE starts_with(merchant_order_id, ${SEED_PREFIX})
