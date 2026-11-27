@@ -19,8 +19,10 @@ const LIST_SELECT = {
   eventKind: true,
   paymentId: true,
   status: true,
-  attempts: true,
   createdAt: true,
+  // Every attempt, automatic or by hand (the `attempts` column counts only
+  // the automatic ones, the retry budget).
+  _count: { select: { attemptRows: true } },
   endpoint: { select: { id: true, url: true } },
   attemptRows: {
     select: { attemptedAt: true, httpStatus: true },
@@ -42,7 +44,7 @@ function toListRow(row: ListRecord): WebhookDeliveryListRow {
     eventKind: row.eventKind,
     paymentId: row.paymentId,
     status: row.status,
-    attempts: row.attempts,
+    attempts: row._count.attemptRows,
     lastAttemptAt: last?.attemptedAt ?? null,
     lastHttpStatus: last?.httpStatus ?? null,
     createdAt: row.createdAt,

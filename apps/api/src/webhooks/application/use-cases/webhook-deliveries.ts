@@ -31,12 +31,24 @@ import {
 } from '../../domain/services/endpoint-health.js';
 import { newWebhookId, WebhooksClock } from '../../domain/services/ports.js';
 import { AttemptDelivery, refused } from '../attempt-delivery.js';
+import { WEBHOOK_DELIVERY_LOCK_TIMEOUT_MS } from '../workers/deliver-webhook.js';
 
 export class WebhookDeliveryNotFoundError extends Error {
   override readonly name = 'WebhookDeliveryNotFoundError';
 
   constructor(readonly deliveryId: string) {
     super(`Webhook delivery ${deliveryId} not found`);
+  }
+}
+
+/** An automatic attempt (or another resend) is sending it right now. */
+export class WebhookDeliveryBusyError extends Error {
+  override readonly name = 'WebhookDeliveryBusyError';
+
+  constructor(readonly deliveryId: string) {
+    super(
+      `Webhook delivery ${deliveryId} is being sent right now; try again in a moment`,
+    );
   }
 }
 
@@ -102,8 +114,10 @@ export class SendWebhooksByHand {
   ) {}
 
   /**
-   * A new attempt of the same delivery, with the same event id. A disabled
-   * or deleted endpoint gets nothing; the attempt records why.
+   * A new attempt of the same delivery, with the same event id. It holds the
+   * delivery's lock, so it never runs alongside an automatic attempt, and it
+   * does not use up the automatic retries. A disabled or deleted endpoint
+   * gets nothing; the attempt records why.
    */
   async resend(
     scope: OrganizationScope,
@@ -111,25 +125,44 @@ export class SendWebhooksByHand {
     actor: Actor,
   ): Promise<void> {
     const repos = this.runner.repositories;
-    const delivery = await repos.deliveries.findById(scope, deliveryId);
-    if (!delivery) throw new WebhookDeliveryNotFoundError(deliveryId);
-    const endpoint = await repos.endpoints.findById(scope, delivery.endpointId);
-    const at = this.clock.now();
-    const result = !endpoint
-      ? refused(at, 'The Webhook Endpoint was deleted')
-      : endpoint.status === 'DISABLED'
-        ? refused(at, 'The Webhook Endpoint is disabled')
-        : await this.attempt.post(delivery, endpoint, at);
-    const recorded = await this.runner.run((tx) =>
-      tx.manualAttempts.recordResend(
-        scope,
-        deliveryId,
-        newWebhookId(),
-        result,
-        actor,
-      ),
+    const now = this.clock.now();
+    const held = await repos.manualAttempts.hold(
+      scope,
+      deliveryId,
+      now,
+      new Date(now.getTime() - WEBHOOK_DELIVERY_LOCK_TIMEOUT_MS),
     );
-    if (!recorded) throw new WebhookDeliveryNotFoundError(deliveryId);
+    if (!held) {
+      throw (await repos.deliveries.findById(scope, deliveryId))
+        ? new WebhookDeliveryBusyError(deliveryId)
+        : new WebhookDeliveryNotFoundError(deliveryId);
+    }
+    try {
+      const delivery = await repos.deliveries.findById(scope, deliveryId);
+      if (!delivery) throw new WebhookDeliveryNotFoundError(deliveryId);
+      const endpoint = await repos.endpoints.findById(
+        scope,
+        delivery.endpointId,
+      );
+      const at = this.clock.now();
+      const result = !endpoint
+        ? refused(at, 'The Webhook Endpoint was deleted')
+        : endpoint.status === 'DISABLED'
+          ? refused(at, 'The Webhook Endpoint is disabled')
+          : await this.attempt.post(delivery, endpoint, at);
+      await this.runner.run((tx) =>
+        tx.manualAttempts.recordResend(
+          scope,
+          deliveryId,
+          newWebhookId(),
+          result,
+          actor,
+        ),
+      );
+    } catch (error) {
+      await repos.manualAttempts.release(scope, deliveryId);
+      throw error;
+    }
   }
 
   /**

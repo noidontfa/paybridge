@@ -23,7 +23,7 @@ export type DeliverWebhookResult =
   | 'succeeded'
   /** Failed; the next attempt is scheduled. */
   | 'retrying'
-  /** Failed for good: the last attempt, or the endpoint was deleted. */
+  /** Failed for good: the last attempt, or the endpoint was disabled or deleted. */
   | 'failed'
   /** Not waiting for an attempt now (done, not due, or held by a worker). */
   | 'skipped';
@@ -75,10 +75,11 @@ export class DeliverWebhook {
               : 'The Webhook Endpoint was deleted',
           );
 
-    // A disabled endpoint may be enabled again; a deleted one may not.
+    // Disabling an endpoint stops its deliveries, like deleting it: no POST,
+    // no retry. A User may still resend one by hand.
     const attempt = delivery.attempts + 1;
     const delay =
-      result.succeeded || !endpoint
+      result.succeeded || !endpoint || endpoint.status !== 'ENABLED'
         ? null
         : retryDelayMs(attempt, this.jitter.next());
     const nextAttemptAt =

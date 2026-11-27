@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Controller,
   Get,
   HttpCode,
@@ -28,6 +29,7 @@ import {
   ReadWebhookDeliveries,
   SendWebhooksByHand,
   webhookDeliveriesCursor,
+  WebhookDeliveryBusyError,
   WebhookDeliveryNotFoundError,
 } from '../../application/use-cases/webhook-deliveries.js';
 import { DELIVERY_KINDS } from '../../domain/entities/test-event.js';
@@ -101,6 +103,12 @@ export function mapDeliveryError(error: unknown): never {
     throw new NotFoundException({
       message: error.message,
       code: 'WEBHOOK_DELIVERY_NOT_FOUND',
+    });
+  }
+  if (error instanceof WebhookDeliveryBusyError) {
+    throw new ConflictException({
+      message: error.message,
+      code: 'WEBHOOK_DELIVERY_BUSY',
     });
   }
   throw error;

@@ -318,6 +318,126 @@ describe('retrying a delivery', () => {
   });
 });
 
+describe('a resend by hand (ticket 03) and automatic retries', () => {
+  const resend = async (deliveryId: string) =>
+    (await signedInHttp(app, prisma, { role: 'OPERATOR' }))
+      .post(`/internal/webhook-deliveries/${deliveryId}/resend`)
+      .send({});
+
+  it('never runs while an automatic attempt holds the delivery', async () => {
+    await registerEndpoint('/hook');
+    answer = status(500);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+    clock.advance(MIN);
+    let release = () => {};
+    answer = (n, p, res) => {
+      release = () => ok(n, p, res);
+    };
+    const automatic = moduleRef.get(DeliverWebhook).execute(id);
+    await expect.poll(() => received.length).toBe(2);
+
+    const res = await resend(id);
+
+    expect(res.status, JSON.stringify(res.body)).toBe(409);
+    expect((res.body as { code: string }).code).toBe('WEBHOOK_DELIVERY_BUSY');
+    release();
+    expect(await automatic).toBe('succeeded');
+    expect(received).toHaveLength(2);
+  });
+
+  it('holds the delivery, so an automatic attempt due meanwhile is skipped', async () => {
+    await registerEndpoint('/hook');
+    answer = status(500);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+    clock.advance(MIN);
+    let release = () => {};
+    answer = (n, p, res) => {
+      release = () => ok(n, p, res);
+    };
+    const manual = resend(id).then((r) => r);
+    await expect.poll(() => received.length).toBe(2);
+
+    expect(await moduleRef.get(DeliverWebhook).execute(id)).toBe('skipped');
+    release();
+    const res = await manual;
+
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect((res.body as { status: string }).status).toBe('SUCCEEDED');
+    expect(received).toHaveLength(2);
+  });
+
+  it('does not use up the automatic retries', async () => {
+    await registerEndpoint('/down');
+    answer = status(503);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+    // As if ten automatic attempts had failed: two are left.
+    await prisma.webhookDelivery.update({
+      where: { id },
+      data: { attempts: 10 },
+    });
+
+    expect((await resend(id)).status).toBe(200);
+    const after = await prisma.webhookDelivery.findUniqueOrThrow({
+      where: { id },
+    });
+    expect(after.attempts).toBe(10);
+    expect(after.status).toBe('PENDING');
+
+    clock.set(after.nextAttemptAt!);
+    expect(await moduleRef.get(DeliverWebhook).execute(id)).toBe('retrying');
+    expect(
+      (await prisma.webhookDelivery.findUniqueOrThrow({ where: { id } }))
+        .attempts,
+    ).toBe(11);
+  });
+});
+
+describe('an endpoint the Organization Admin disabled', () => {
+  it('stops its deliveries: no POST, no retries, a clear reason, and a resend still works later', async () => {
+    const { id: endpointId } = await registerEndpoint('/hook');
+    answer = status(500);
+    await paymentEvent();
+    const { id } = await deliveryAfter(1);
+    const admin = await signedInHttp(app, prisma, {
+      role: 'ORGANIZATION_ADMIN',
+    });
+    await admin
+      .post(`/internal/webhook-endpoints/${endpointId}/disable`)
+      .send({})
+      .expect(200);
+
+    clock.advance(MIN);
+    await sweep();
+    const ended = await deliveryAfter(2);
+
+    expect(ended.status).toBe('FAILED');
+    expect(ended.nextAttemptAt).toBeNull();
+    expect(ended.attemptRows[1]).toMatchObject({
+      succeeded: false,
+      httpStatus: null,
+      error: 'The Webhook Endpoint is disabled',
+    });
+    expect(received).toHaveLength(1);
+    clock.advance(24 * HOUR);
+    expect((await sweep()).dispatched).toBe(0);
+
+    await admin
+      .post(`/internal/webhook-endpoints/${endpointId}/enable`)
+      .send({})
+      .expect(200);
+    answer = ok;
+    const res = await admin
+      .post(`/internal/webhook-deliveries/${id}/resend`)
+      .send({})
+      .expect(200);
+    expect((res.body as { status: string }).status).toBe('SUCCEEDED');
+    expect(received).toHaveLength(2);
+  });
+});
+
 describe('a Redis outage', () => {
   it('loses no delivery: PostgreSQL keeps it due and the sweep queues it once Redis is back', async () => {
     await registerEndpoint('/hook');

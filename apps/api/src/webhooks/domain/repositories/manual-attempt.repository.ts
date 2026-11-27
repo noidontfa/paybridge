@@ -11,11 +11,28 @@ import type { Actor } from '../entities/webhook-endpoint.js';
  */
 export abstract class ManualAttemptRepository {
   /**
-   * Records a resend of an existing delivery. A success delivers it (and
-   * cancels any retry still due); a failure leaves its status and retry
-   * schedule as they were, so an earlier success stays visible and automatic
-   * retries go on. A resend is its own attempt, sent at once: it does not
-   * claim the delivery. False when the Organization has no such delivery.
+   * Takes the delivery's lock for a resend, whatever its status, unless a
+   * worker (or another resend) holds it since `staleBefore` or later. While
+   * held, no automatic attempt claims it. False when the Organization has no
+   * such delivery or it is held.
+   */
+  abstract hold(
+    scope: OrganizationScope,
+    deliveryId: string,
+    now: Date,
+    staleBefore: Date,
+  ): Promise<boolean>;
+
+  /** Gives the lock back without recording anything. */
+  abstract release(scope: OrganizationScope, deliveryId: string): Promise<void>;
+
+  /**
+   * Records a resend of a delivery this caller holds, and releases it. A
+   * success delivers it (and cancels any retry still due); a failure leaves
+   * its status and retry schedule as they were, so an earlier success stays
+   * visible and automatic retries go on. A resend does not count against the
+   * automatic retries (`attempts` counts only those). False when the
+   * Organization has no such delivery.
    */
   abstract recordResend(
     scope: OrganizationScope,

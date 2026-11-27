@@ -37,6 +37,31 @@ export class PrismaManualAttemptRepository extends ManualAttemptRepository {
     super();
   }
 
+  async hold(
+    scope: OrganizationScope,
+    deliveryId: string,
+    now: Date,
+    staleBefore: Date,
+  ): Promise<boolean> {
+    // The same lock a worker's claim takes, so the two never overlap.
+    const { count } = await this.ctx.db.webhookDelivery.updateMany({
+      where: {
+        id: deliveryId,
+        organizationId: scope.organizationId,
+        OR: [{ lockedAt: null }, { lockedAt: { lt: staleBefore } }],
+      },
+      data: { lockedAt: now },
+    });
+    return count > 0;
+  }
+
+  async release(scope: OrganizationScope, deliveryId: string): Promise<void> {
+    await this.ctx.db.webhookDelivery.updateMany({
+      where: { id: deliveryId, organizationId: scope.organizationId },
+      data: { lockedAt: null },
+    });
+  }
+
   async recordResend(
     scope: OrganizationScope,
     deliveryId: string,
@@ -47,7 +72,7 @@ export class PrismaManualAttemptRepository extends ManualAttemptRepository {
     const { count } = await this.ctx.db.webhookDelivery.updateMany({
       where: { id: deliveryId, organizationId: scope.organizationId },
       data: {
-        attempts: { increment: 1 },
+        lockedAt: null,
         // Delivered: no automatic retry is due any more.
         ...(result.succeeded && { status: 'SUCCEEDED', nextAttemptAt: null }),
       },
