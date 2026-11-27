@@ -128,15 +128,17 @@ export function createCheckoutServer(config: CheckoutServerConfig): Server {
 /**
  * The checkout page's Content-Security-Policy: framed only by the key's
  * allowed origins (none when the key or host page is refused), scripts only
- * from this app, and requests only to the API.
+ * from this app and Stripe.js, and requests only to the API and Stripe's
+ * (the CLIENT_SDK NextAction, ADR 0003; the hosts Stripe documents for it).
  */
 export function checkoutPagePolicy(frameAncestors: readonly string[], apiUrl: string): string {
   return [
     `default-src 'self'`,
-    `script-src 'self'`,
+    `script-src 'self' https://js.stripe.com`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data:`,
-    `connect-src ${apiUrl}`,
+    `img-src 'self' data: https://*.stripe.com`,
+    `frame-src https://js.stripe.com https://hooks.stripe.com`,
+    `connect-src ${apiUrl} https://api.stripe.com`,
     `frame-ancestors ${frameAncestors.length > 0 ? frameAncestors.join(' ') : "'none'"}`,
     `base-uri 'none'`,
     `form-action 'none'`,

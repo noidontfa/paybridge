@@ -20,6 +20,12 @@ button:disabled { opacity: .6; cursor: progress; }
 .qr svg { width: 220px; height: 220px; background: #fff; padding: 8px; border-radius: 8px; }
 .result { text-align: center; padding: 24px 0; }
 .notice { padding: 12px; border-radius: 8px; border: 1px solid var(--pb-border); margin: 12px 0; }
+.email { display: grid; gap: 8px; margin: 12px 0; }
+.email label { font-weight: 600; }
+.email input { width: 100%; padding: 12px; border-radius: 8px; font: inherit; color: inherit;
+  background: transparent; border: 1px solid var(--pb-border); }
+.email input[aria-invalid="true"] { border-color: #dc2626; }
+.client-sdk { display: grid; gap: 12px; margin: 12px 0; }
 `;
 
 /** The checkout page's shell; `/assets/checkout.js` renders everything in it. */

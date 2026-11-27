@@ -136,6 +136,17 @@ describe('the checkout page', () => {
     );
     expect(await res.text()).toContain('/assets/checkout.js');
   });
+
+  it("lets Stripe.js load, draw its Payment Element and reach Stripe's API, and nothing else", async () => {
+    const res = await page(`key=${KEY}&hostOrigin=${encodeURIComponent(SHOP)}`);
+    const policy = res.headers.get('content-security-policy') ?? '';
+    const directive = (name: string) =>
+      new RegExp(`(?:^|; )${name} ([^;]+)`).exec(policy)?.[1]?.split(' ');
+
+    expect(directive('script-src')).toEqual(["'self'", 'https://js.stripe.com']);
+    expect(directive('frame-src')).toEqual(['https://js.stripe.com', 'https://hooks.stripe.com']);
+    expect(directive('connect-src')).toEqual(['https://api.paybridge.example', 'https://api.stripe.com']);
+  });
 });
 
 describe('the return page', () => {

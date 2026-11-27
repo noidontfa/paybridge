@@ -114,3 +114,13 @@ Use Stripe test keys and the [Stripe CLI](https://docs.stripe.com/stripe-cli). R
 4. **3-D Secure.** On a new Payment, pay with `4000 0025 0000 3155` and approve on the test authentication page. You land on your `returnUrl` and the Payment reaches `SUCCEEDED`.
 5. **Expiry.** On a new Payment, start an attempt and do not pay. Wait past the Payment Expiry (30 minutes is the minimum; the expiry sweep runs every minute) until the Payment is `EXPIRED` and the PaymentIntent shows `canceled` in the Dashboard. Then press pay: `confirmPayment` returns an error.
 6. **Foreign event.** Create a payment in the Stripe Dashboard, not through PayBridge. The CLI shows the event forwarded and answered 200, and PayBridge stores nothing.
+
+## 7. Embedded Checkout
+
+With the PayBridge snippet you write no frontend: the checkout iframe loads Stripe.js from `js.stripe.com`, mounts the Payment Element with the attempt's `clientParams` and confirms in the iframe. A decline keeps the Customer on the same attempt; 3-D Secure returns through the checkout app's return page when the card needs a redirect.
+
+The automated check against Stripe test mode is `apps/api/test/checkout/checkout-stripe-test-mode.int-spec.ts`. It is skipped unless both test keys are set (live keys are never used):
+
+```bash
+STRIPE_TEST_SECRET_KEY=sk_test_... STRIPE_TEST_PUBLISHABLE_KEY=pk_test_... pnpm --filter @paybridge/api test:int test/checkout/checkout-stripe-test-mode
+```

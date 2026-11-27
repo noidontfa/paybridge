@@ -47,7 +47,8 @@ The Customer sees only "Payment is not available right now", in the Pricing Tabl
 - The SDK and the page talk only through `postMessage`, each accepting messages only from the other's window and origin (`src/shared/messages.ts`).
 - From the iframe, API calls carry the checkout app's origin and `X-PayBridge-Host-Origin`; the API accepts them only from `CHECKOUT_APP_ORIGINS` and checks the host origin against the key.
 - The checkout session token lives in the iframe's `localStorage`, so reopening resumes the same open Payment. Without storage, every opening starts a new Payment.
-- NextAction views are in `src/page/next-actions.ts`: QR codes are drawn there; redirects take the whole tab to the gateway; client SDKs such as Stripe.js are ticket 11.
+- NextAction views are in `src/page/next-actions.ts`: QR codes are drawn there; redirects take the whole tab to the gateway (then the return page, below); the client SDK kind mounts Stripe's Payment Element (`src/page/stripe.ts`, Stripe.js loaded from js.stripe.com, which the page's CSP allows).
+- `data-ask-email` makes the checkout page ask for an email (`src/page/email.ts`, the API's rule) before it starts the Payment; it is sent as the Customer Reference's email.
 
 ## Running it
 

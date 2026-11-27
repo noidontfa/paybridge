@@ -17,6 +17,7 @@ import {
   type SdkMessage,
 } from '../shared/messages.js';
 import { returnPageUrl } from '../return/return-context.js';
+import { readEmail } from './email.js';
 import { nextActionView } from './next-actions.js';
 import { checkoutSessionToken } from './session-token.js';
 
@@ -101,35 +102,91 @@ class Checkout {
         throw new CheckoutUnavailableError(plan.unavailableReason ?? 'PRICING_PLAN_UNAVAILABLE');
       }
       this.plan = plan;
-      const payment = await this.api.startPayment({
-        pricingPlanId: plan.id,
-        sessionToken: checkoutSessionToken(() => window.localStorage),
-        ...(this.init.customerReference ? { customerReference: this.init.customerReference } : {}),
-      });
-      this.payment = payment;
-      post({ type: 'payment', paymentId: payment.id });
-      const attempt = payment.attempt;
-      if (attempt && OPEN_ATTEMPT.has(attempt.status) && attempt.nextAction) {
-        this.showAttempt(attempt);
-      } else {
-        this.showChoice();
+      if (this.init.askEmail) {
+        this.askEmail();
+        return;
       }
-      this.schedulePoll();
+      await this.startPayment();
     } catch (error) {
       this.fail(error);
     }
   }
 
+  /** `data-ask-email`: the Customer's email comes first; nothing is started without a valid one. */
+  private askEmail(notice?: string, typed = ''): void {
+    const t = this.t;
+    const input = h('input', {
+      id: 'customer-email',
+      type: 'email',
+      name: 'email',
+      autocomplete: 'email',
+      inputmode: 'email',
+      required: true,
+      maxlength: '254',
+      'aria-invalid': notice ? 'true' : undefined,
+      'aria-describedby': notice ? 'customer-email-error' : undefined,
+    });
+    input.value = typed;
+    const submit = h('button', { type: 'submit', class: 'primary' }, t.continue);
+    // `novalidate`: the page checks with the API's own rule and says why in the page's language.
+    const form = h(
+      'form',
+      { class: 'email', novalidate: true },
+      h('label', { for: 'customer-email' }, t.emailLabel),
+      input,
+      notice ? h('p', { class: 'notice', role: 'alert', id: 'customer-email-error' }, notice) : null,
+      submit,
+    );
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = readEmail(input.value);
+      if (!email) {
+        this.askEmail(t.emailInvalid, input.value);
+        return;
+      }
+      submit.disabled = true;
+      void this.startPayment(email).catch((error: unknown) => {
+        if (error instanceof CheckoutRequestError && error.status === 400) {
+          this.askEmail(t.emailInvalid, input.value);
+        } else {
+          this.fail(error);
+        }
+      });
+    });
+    show(this.header(), h('p', {}, t.emailPrompt), form);
+    input.focus();
+  }
+
+  private async startPayment(customerEmail?: string): Promise<void> {
+    const payment = await this.api.startPayment({
+      pricingPlanId: this.plan!.id,
+      sessionToken: checkoutSessionToken(() => window.localStorage),
+      ...(this.init.customerReference ? { customerReference: this.init.customerReference } : {}),
+      ...(customerEmail ? { customerEmail } : {}),
+    });
+    this.payment = payment;
+    post({ type: 'payment', paymentId: payment.id });
+    const attempt = payment.attempt;
+    if (attempt && OPEN_ATTEMPT.has(attempt.status) && attempt.nextAction) {
+      this.showAttempt(attempt);
+    } else {
+      this.showChoice();
+    }
+    this.schedulePoll();
+  }
+
+  /** The Pricing Plan and its Amount: the Payment's once started, the plan's before. */
   private header(): HTMLElement {
-    const payment = this.payment!;
+    const payment = this.payment;
+    const plan = this.plan!;
     return h(
       'header',
       {},
-      h('h1', { 'data-testid': 'plan-name' }, payment.pricingPlan?.name ?? this.plan!.name),
+      h('h1', { 'data-testid': 'plan-name' }, payment?.pricingPlan?.name ?? plan.name),
       h(
         'p',
         { class: 'amount', 'data-testid': 'amount' },
-        formatAmount(payment.amount, payment.currency, this.language),
+        formatAmount(payment?.amount ?? plan.amount, payment?.currency ?? plan.currency, this.language),
       ),
     );
   }

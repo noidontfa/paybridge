@@ -114,7 +114,7 @@ class ReturnPage {
       h(
         'section',
         { class: 'result', 'data-result': 'PROCESSING' },
-        h('h1', {}, this.t.processing),
+        h('h1', {}, this.t.returnProcessing),
         h('p', { class: 'muted' }, gaveUp ? this.t.processingTooLong : this.t.processingBody),
         gaveUp && back ? link(back, this.t.backToShop) : null,
       ),

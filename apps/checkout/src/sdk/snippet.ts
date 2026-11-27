@@ -3,6 +3,7 @@
 //   <script src="https://checkout.paybridge.vn/v1/paybridge.js"
 //           data-key="pb_pk_…" data-table="<Pricing Table id>"
 //           data-customer-ref="user-42"            (optional)
+//           data-ask-email="true"                  (optional: ask the Customer for an email)
 //           data-success-url="https://…/thanks"    (optional, overrides the Pricing Plan's)
 //           data-cancel-url="https://…/pricing"    (optional, overrides the Pricing Plan's)
 //           data-on-success="onPaid"               (optional global function names)
@@ -15,7 +16,7 @@ export interface Snippet {
   readonly customerReference?: string;
   readonly successUrl?: string;
   readonly cancelUrl?: string;
-  /** `data-ask-email`; the checkout page asks for an email (ticket 11). */
+  /** `data-ask-email`: the checkout page asks for an email before starting the Payment. */
   readonly askEmail: boolean;
   readonly callbacks: {
     readonly onSuccess?: string;

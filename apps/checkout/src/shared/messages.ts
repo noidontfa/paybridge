@@ -16,6 +16,8 @@ export type SdkMessage = {
   /** The Pricing Table's language, for messages shown before it is read. */
   readonly language: Language;
   readonly customerReference?: string;
+  /** `data-ask-email`: ask the Customer for an email before starting the Payment. */
+  readonly askEmail?: boolean;
   /** Snippet URLs (`data-success-url`, `data-cancel-url`), for the return page. */
   readonly successUrl?: string;
   readonly cancelUrl?: string;
@@ -105,7 +107,8 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
     !isOptionalString(m.customerReference) ||
     !isOptionalString(m.successUrl) ||
     !isOptionalString(m.cancelUrl) ||
-    !isOptionalString(m.hostPageUrl)
+    !isOptionalString(m.hostPageUrl) ||
+    (m.askEmail !== undefined && typeof m.askEmail !== 'boolean')
   ) {
     return null;
   }
@@ -115,6 +118,7 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
     planId: m.planId,
     language: m.language,
     ...(m.customerReference ? { customerReference: m.customerReference } : {}),
+    ...(m.askEmail ? { askEmail: true } : {}),
     ...(m.successUrl ? { successUrl: m.successUrl } : {}),
     ...(m.cancelUrl ? { cancelUrl: m.cancelUrl } : {}),
     ...(m.hostPageUrl ? { hostPageUrl: m.hostPageUrl } : {}),

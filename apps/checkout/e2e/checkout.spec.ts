@@ -153,6 +153,44 @@ test('lets the Customer switch PaymentGateway after abandoning an attempt', asyn
   await expect(frame.getByText('Thanh toán thành công')).toBeVisible({ timeout: 20_000 });
 });
 
+test('asks for an email first when the snippet says so, and sends it with the Customer Reference', async ({ page }) => {
+  await page.goto('/?askEmail=true&customerRef=user-77');
+  const starts: unknown[] = [];
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/checkout/payments') {
+      starts.push(r.postDataJSON());
+    }
+  });
+  await card(page, SEED.plans.basic).getByRole('button', { name: 'Mua ngay' }).click();
+  const frame = checkoutFrame(page);
+  await expect(frame.getByTestId('plan-name')).toHaveText('Basic');
+  const email = frame.getByLabel('Email của bạn');
+
+  await email.fill('not-an-email');
+  await frame.getByRole('button', { name: 'Tiếp tục' }).click();
+  await expect(frame.getByRole('alert')).toHaveText('Vui lòng nhập một email hợp lệ');
+  expect(starts).toHaveLength(0);
+
+  await email.fill('  An@Example.com ');
+  await frame.getByRole('button', { name: 'Tiếp tục' }).click();
+  await frame.getByRole('button', { name: 'Fake QR' }).click();
+  const payload = await frame.locator('[data-qr-payload]').getAttribute('data-qr-payload');
+  expect(starts).toEqual([
+    expect.objectContaining({ customerReference: 'user-77', customerEmail: 'an@example.com' }),
+  ]);
+
+  await payByQr(payload!, '99000');
+  await expect(frame.getByText('Thanh toán thành công')).toBeVisible({ timeout: 20_000 });
+});
+
+test('starts the Payment at once when the snippet does not ask for an email', async ({ page }) => {
+  await card(page, SEED.plans.basic).getByRole('button', { name: 'Mua ngay' }).click();
+  const frame = checkoutFrame(page);
+
+  await expect(frame.getByRole('button', { name: 'Fake QR' })).toBeVisible();
+  await expect(frame.getByLabel('Email của bạn')).toHaveCount(0);
+});
+
 for (const [name, query, reason] of [
   ['a deleted Pricing Table', `table=${randomUUID()}`, 'PRICING_TABLE_NOT_FOUND'],
   ['an unknown or revoked key', 'key=pb_pk_revoked_00000000000000000000000000', 'INVALID_PUBLISHABLE_KEY'],
