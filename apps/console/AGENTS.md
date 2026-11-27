@@ -15,7 +15,7 @@ All app code lives in `src/`, and `@/*` maps to `./src/*`. The app root holds on
 - `app/`: routing only (pages, layouts, route handlers). No route groups. Pages import screens from `features/`.
 - `features/<name>/`: one folder per product feature. Create only what has content:
   - `api.ts`: zod schemas, `z.infer` types and the endpoint functions (a feature with several API files uses `api/<name>.ts`)
-  - `hooks/`: query keys and TanStack Query hooks (`hooks/queries.ts`)
+  - `hooks/`: query keys and TanStack Query hooks (e.g. `hooks/queries.ts`)
   - `components/`: screens, columns, panels; tests sit next to their subject
   - `utils/`: pure rules and helpers
   - There is no `types.ts`; types come from the zod schemas.

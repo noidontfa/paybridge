@@ -9,7 +9,7 @@ apps/
   api/                      NestJS application (@paybridge/api)
     prisma/schema.prisma    Prisma schema: Payment Core `core_*` tables (migrations in prisma/migrations)
     prisma.config.ts        Prisma CLI config (loads the same .env files as Nest)
-    src/
+    src/                    app code (@/* points here)
       config/               env loading + zod validation (fails fast on bad env)
       logger/               pino logging (pretty in dev, JSON in prod)
       common/filters/       global exception filter + error response shape
