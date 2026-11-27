@@ -20,7 +20,7 @@ apps/
     src/                    all app code (@/* points here)
       app/                  routing only: pages, layouts, route handlers (incl. the BFF)
       features/<name>/      one folder per feature: api.ts, hooks/, components/, utils/
-      components/           shared UI: ui/ (shadcn), layout/ (app shell), data-table/, flat shared blocks
+      components/           shared UI: ui/ (shadcn), layout/ (app shell), shared/ (data-table, reusable blocks)
       services/             browser-to-BFF client: request, errors, pagination
       server/               server-only BFF code (ADR 0004)
       lib/                  environment only

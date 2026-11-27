@@ -1,6 +1,6 @@
 'use client';
 
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { reviewActions } from '@/features/reviews/utils/review-resolution-rules';
 import { useCan } from '@/features/auth/hooks/use-operator';

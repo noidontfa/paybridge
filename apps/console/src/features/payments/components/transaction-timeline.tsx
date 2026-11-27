@@ -1,6 +1,6 @@
-import { CopyButton } from '@/components/copy-button';
-import { StatusBadge } from '@/components/status-badge';
-import { TimeText } from '@/components/time-text';
+import { CopyButton } from '@/components/shared/copy-button';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TimeText } from '@/components/shared/time-text';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { humanizeCode } from '@/utils/format';
 import { ReviewPanel } from '@/features/reviews/components/review-panel';

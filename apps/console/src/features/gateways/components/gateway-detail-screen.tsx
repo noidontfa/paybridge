@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ErrorState, NotFoundState } from '@/components/data-states';
-import { StatusBadge } from '@/components/status-badge';
-import { TimeText } from '@/components/time-text';
+import { ErrorState, NotFoundState } from '@/components/shared/data-states';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TimeText } from '@/components/shared/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
 import { CALLBACK_STATUSES } from '@/features/callbacks/api';

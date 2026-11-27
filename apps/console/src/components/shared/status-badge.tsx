@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/utils/cn';
-import { statusBadge, TONE_CLASSES, type BadgeKind } from '@/components/status-badges';
+import { statusBadge, TONE_CLASSES, type BadgeKind } from '@/components/shared/status-badges';
 
 /** The one way to show a status: label, tone and icon come from `./status-badges`. */
 export function StatusBadge({ kind, value, className }: { kind: BadgeKind; value: string; className?: string }) {

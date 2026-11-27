@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { Overview } from '@/features/overview/api';
 import { formatMoney } from '@/utils/format';
-import { statusBadge } from '@/components/status-badges';
+import { statusBadge } from '@/components/shared/status-badges';
 
 const COMPACT = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 });
 

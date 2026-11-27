@@ -1,7 +1,7 @@
 'use client';
 
 import { InboxIcon } from 'lucide-react';
-import { ErrorState } from '@/components/data-states';
+import { ErrorState } from '@/components/shared/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RANGE_LABELS, type OverviewRange } from '@/features/overview/utils/overview-range';
 import { useOverview } from '@/features/overview/hooks/queries';

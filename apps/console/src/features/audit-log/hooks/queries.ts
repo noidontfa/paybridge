@@ -3,7 +3,7 @@
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { statusTransitionEntityTypeSchema } from '@/features/payments/schemas';
 import { listStatusTransitions, type AuditEntry, type AuditListQuery } from '@/features/payments/status-transitions';
-import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
+import type { TableUrlConfig, TableUrlState } from '@/components/shared/data-table/url-state/table-url-state';
 
 /** The audit log is always newest first, so there is nothing to sort in the URL. */
 export const AUDIT_URL_CONFIG: TableUrlConfig = {

@@ -2,13 +2,13 @@
 
 import { SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
+import { DataTable } from '@/components/shared/data-table/data-table';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/shared/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_EVENT_TYPES } from '@/features/payments/schemas';
 import { PAYMENT_EVENT_URL_CONFIG, usePaymentEventList } from '@/features/payment-events/hooks/queries';
-import { statusBadge } from '@/components/status-badges';
-import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
+import { statusBadge } from '@/components/shared/status-badges';
+import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { eventColumns, eventHref } from './events-columns';
 
 const TYPE_OPTIONS = PAYMENT_EVENT_TYPES.map((type) => ({ value: type, label: statusBadge('event', type).label }));

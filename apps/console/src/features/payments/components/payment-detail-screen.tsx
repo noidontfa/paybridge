@@ -1,6 +1,6 @@
 'use client';
 
-import { NotFoundState, ErrorState } from '@/components/data-states';
+import { NotFoundState, ErrorState } from '@/components/shared/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
 import { usePayment } from '@/features/payments/hooks/payments';

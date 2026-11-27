@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ArrowRightIcon } from 'lucide-react';
-import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
-import { StatusBadge } from '@/components/status-badge';
-import { TimeText } from '@/components/time-text';
+import { createDataTableColumnHelper, type DataTableColumns } from '@/components/shared/data-table/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TimeText } from '@/components/shared/time-text';
 import type { StatusTransitionEntityType } from '@/features/payments/schemas';
 import type { AuditEntry } from '@/features/payments/status-transitions';
 import { actorText } from '@/features/auth/utils/actor';

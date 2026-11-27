@@ -1,6 +1,6 @@
-import { StatusBadge } from '@/components/status-badge';
-import { TimeText } from '@/components/time-text';
-import type { BadgeKind } from '@/components/status-badges';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TimeText } from '@/components/shared/time-text';
+import type { BadgeKind } from '@/components/shared/status-badges';
 import type { StatusTransition } from '@/features/payments/schemas';
 import { actorText } from '@/features/auth/utils/actor';
 

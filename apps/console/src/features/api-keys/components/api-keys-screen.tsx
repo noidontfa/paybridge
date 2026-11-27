@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { CopyButton } from '@/components/copy-button';
-import { ErrorState } from '@/components/data-states';
+import { CopyButton } from '@/components/shared/copy-button';
+import { ErrorState } from '@/components/shared/data-states';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { TimeText } from '@/components/time-text';
+import { TimeText } from '@/components/shared/time-text';
 import type { PaymentEvent } from '@/features/payments/schemas';
 
 /** The Payment Events Core emitted for this Payment, oldest first. */

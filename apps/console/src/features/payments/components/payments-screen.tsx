@@ -2,14 +2,14 @@
 
 import { SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import { ClearFiltersButton, DataTableToolbar, DateFilter, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
-import { DataTable } from '@/components/data-table/data-table';
+import { ClearFiltersButton, DataTableToolbar, DateFilter, FilterSelect, SearchInput } from '@/components/shared/data-table/toolbar';
+import { DataTable } from '@/components/shared/data-table/data-table';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_STATUSES } from '@/features/payments/schemas';
-import { statusBadge } from '@/components/status-badges';
+import { statusBadge } from '@/components/shared/status-badges';
 import { useGatewayOptions } from '@/features/gateways/hooks/queries';
 import { PAYMENT_LIST_URL_CONFIG, usePaymentList } from '@/features/payments/hooks/payments-list';
-import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
+import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { paymentColumns, paymentHref } from './payments-columns';
 
 const STATUS_OPTIONS = PAYMENT_STATUSES.map((status) => ({ value: status, label: statusBadge('payment', status).label }));

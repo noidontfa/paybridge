@@ -2,12 +2,12 @@
 
 import { SearchXIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
+import { DataTable } from '@/components/shared/data-table/data-table';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/shared/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { STATUS_TRANSITION_ENTITY_TYPES } from '@/features/payments/schemas';
 import { AUDIT_ACTORS, AUDIT_TRIGGERS, AUDIT_URL_CONFIG, useAuditList } from '@/features/audit-log/hooks/queries';
-import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
+import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { auditColumns, auditPaymentHref, ENTITY_TYPE_LABELS } from './audit-columns';
 
 const ENTITY_OPTIONS = STATUS_TRANSITION_ENTITY_TYPES.map((type) => ({ value: type, label: ENTITY_TYPE_LABELS[type] }));

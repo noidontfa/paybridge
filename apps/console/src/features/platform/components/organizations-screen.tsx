@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorState } from '@/components/data-states';
+import { ErrorState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
