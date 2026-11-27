@@ -5,7 +5,7 @@
  * the Attempt Key (null when the key matches no PaymentTransaction).
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { CALLBACK_STATUSES, type CallbackDetail, type CallbackListItem } from '@/lib/api/callbacks';
+import { CALLBACK_STATUSES, type CallbackDetail, type CallbackListItem } from '@/features/callbacks/api';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockCallback, MockStore } from './store';
 

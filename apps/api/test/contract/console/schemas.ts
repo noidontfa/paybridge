@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/schemas.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/payments/schemas.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // Tickets 03-07: do not edit this copy; add your own file next to it.
 /**
  * Response types copied from the API (no shared contract package: ADR 0004 and

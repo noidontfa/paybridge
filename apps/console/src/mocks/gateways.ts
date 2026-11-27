@@ -5,7 +5,7 @@
  * Callback's last error (the real API classifies it server side).
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { GatewayDetail, GatewaySummary } from '@/lib/api/gateways';
+import type { GatewayDetail, GatewaySummary } from '@/features/gateways/api';
 import type { MockStore } from './store';
 
 const DAY_MS = 24 * 3_600_000;

@@ -9,13 +9,25 @@ apps/
   api/                      NestJS application (@paybridge/api)
     prisma/schema.prisma    Prisma schema: Payment Core `core_*` tables (migrations in prisma/migrations)
     prisma.config.ts        Prisma CLI config (loads the same .env files as Nest)
-    src/
+    src/                    app code (@/* points here)
       config/               env loading + zod validation (fails fast on bad env)
       logger/               pino logging (pretty in dev, JSON in prod)
       common/filters/       global exception filter + error response shape
       database/             PrismaModule / PrismaService (driver adapter: pg)
       health/               GET /api/health, GET /api/health/ready
       swagger.ts            OpenAPI setup
+  console/                  Next.js Operator Console (@paybridge/console)
+    src/                    all app code (@/* points here)
+      app/                  routing only: pages, layouts, route handlers (incl. the BFF)
+      features/<name>/      one folder per feature: api.ts, hooks/, components/, utils/
+      components/           shared UI: ui/ (shadcn), layout/ (app shell), shared/ (data-table, reusable blocks)
+      services/             browser-to-BFF client: request, errors, pagination
+      server/               server-only BFF code (ADR 0004)
+      lib/                  environment only
+      utils/                pure helpers: cn, format, decimal
+      hooks/                shared React hooks
+      mocks/                MSW mock API and seed data
+      test/                 unit-test helpers
 packages/
   typescript-config/        shared tsconfig presets
 docker-compose.yml          PostgreSQL 18 + Redis 7 for local development

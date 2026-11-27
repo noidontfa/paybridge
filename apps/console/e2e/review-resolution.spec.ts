@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { ReviewItem, ReviewSummary } from '../src/lib/api/reviews';
+import type { ReviewItem, ReviewSummary } from '@/features/reviews/api';
 
 // This spec changes the mock store, so it runs in its own project, after every other spec (see the config).
 // It picks its Review from the live mock API, so it also works when the dev server is reused.

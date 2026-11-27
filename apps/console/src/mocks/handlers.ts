@@ -19,7 +19,7 @@ import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
 import { platformHandlers } from './platform';
 import { usersHandlers } from './users';
-import { OVERVIEW_RANGES } from '@/lib/overview-range';
+import { OVERVIEW_RANGES } from '@/features/overview/utils/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
 

@@ -1,4 +1,4 @@
-import { PlaceholderPage } from '@/components/placeholder-page';
+import { PlaceholderPage } from '@/components/shared/placeholder-page';
 
 export const metadata = { title: 'Docs' };
 

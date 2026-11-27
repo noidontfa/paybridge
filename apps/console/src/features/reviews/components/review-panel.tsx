@@ -1,0 +1,61 @@
+'use client';
+
+import { StatusBadge } from '@/components/shared/status-badge';
+import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
+import { reviewActions } from '@/features/reviews/utils/review-resolution-rules';
+import { useCan } from '@/features/auth/hooks/use-operator';
+import { ResolutionForm } from './resolution-form';
+import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/features/reviews/api';
+import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/utils/format';
+
+const HOUR = 3_600_000;
+
+/** When a Review opened at `openedAt` may be resolved, or null once that time has passed. */
+export function resolvableFrom(openedAt: string, now: Date = new Date()): Date | null {
+  const at = new Date(Date.parse(openedAt) + REVIEW_RESOLVABLE_AFTER_HOURS * HOUR);
+  return at.getTime() > now.getTime() ? at : null;
+}
+
+/**
+ * The Review panel: a PaymentTransaction's review reason, how long the Review
+ * has been open, whether a refund is required, the provider-reported amount
+ * when known, and (while the Review is under 72 hours old) when it becomes
+ * resolvable. One component for the Exceptions sheet and the Payment detail
+ * timeline. Read-only for now; ticket 06 adds the resolution actions here.
+ */
+export function ReviewPanel({
+  attempt,
+  payment,
+}: {
+  attempt: OperatorAttempt;
+  payment: Pick<OperatorPayment, 'id' | 'status' | 'amount' | 'currency'>;
+}) {
+  const canResolve = useCan('reviews:resolve');
+  if (!attempt.reviewReason) return null;
+  const open = attempt.status === 'REQUIRES_REVIEW';
+  const resolvable = open && attempt.reviewOpenedAt ? resolvableFrom(attempt.reviewOpenedAt) : null;
+  const actions = reviewActions(
+    { reason: attempt.reviewReason, attemptStatus: attempt.status, reviewOpenedAt: attempt.reviewOpenedAt, paymentStatus: payment.status },
+    new Date(),
+  );
+  return (
+    <div role="group" aria-label="Review" className="flex flex-col gap-2 rounded-lg bg-amber-500/10 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <StatusBadge kind="review" value={attempt.reviewReason} />
+        {attempt.reviewOpenedAt && <span>{open ? 'Open for' : 'Opened'} {formatOpenFor(attempt.reviewOpenedAt)}{open ? '' : ' ago'}</span>}
+        <span>Refund required: {attempt.refundRequired ? 'Yes' : 'No'}</span>
+        {attempt.providerReportedAmount && <span>Provider reported {formatMoney(attempt.providerReportedAmount)}</span>}
+      </div>
+      {resolvable && (
+        <p className="text-muted-foreground">
+          Resolvable from <time dateTime={resolvable.toISOString()}>{formatAbsoluteTime(resolvable.toISOString())}</time>. Automatic
+          re-query runs first.
+        </p>
+      )}
+      {open && canResolve && <ResolutionForm attempt={attempt} payment={payment} actions={actions} />}
+      {open && !canResolve && (
+        <p className="text-muted-foreground">You do not have permission to resolve Reviews.</p>
+      )}
+    </div>
+  );
+}

@@ -1,16 +1,16 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from 'next-themes';
-import { AppSidebar } from '@/components/app-sidebar';
-import { MockBanner } from '@/components/mock-banner';
-import { Providers } from '@/components/providers';
-import { OperatorProvider } from '@/lib/operator';
+import { AppSidebar } from '@/components/layout/app-sidebar';
+import { MockBanner } from '@/components/layout/mock-banner';
+import { Providers } from '@/components/layout/providers';
+import { OperatorProvider } from '@/features/auth/components/operator-provider';
 import { getSessionOperator } from '@/server/session-user';
 import { Toaster } from '@/components/ui/sonner';
-import { DensityEffect } from '@/components/settings-panel';
+import { DensityEffect } from '@/components/layout/settings-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getEnvironment } from '@/lib/environment';
-import { PRODUCT_NAME } from '@/lib/navigation';
+import { PRODUCT_NAME } from '@/components/layout/navigation';
 import './globals.css';
 
 export const metadata: Metadata = {

@@ -4,7 +4,7 @@
  * resolved. Reuses the list window and error plumbing of the Payments list.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { REVIEW_REASONS } from '@/lib/api/schemas';
+import { REVIEW_REASONS } from '@/features/payments/schemas';
 import {
   REVIEW_RESOLVABLE_AFTER_HOURS,
   REVIEW_SORT_COLUMNS,
@@ -12,7 +12,7 @@ import {
   type ReviewItem,
   type ReviewState,
   type ReviewSummary,
-} from '@/lib/api/reviews';
+} from '@/features/reviews/api';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockAttempt, MockStore } from './store';
 

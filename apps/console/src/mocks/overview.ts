@@ -1,10 +1,10 @@
 /**
  * The mocked Overview endpoint: computed from the fixture store relative to its
- * fixed "now". See `@/lib/api/overview-schema` for the definitions.
+ * fixed "now". See `@/features/overview/api` for the definitions.
  */
-import type { Overview } from '@/lib/api/overview-schema';
-import { PAYMENT_STATUSES, type PaymentStatus } from '@/lib/api/schemas';
-import type { OverviewRange } from '@/lib/overview-range';
+import type { Overview } from '@/features/overview/api';
+import { PAYMENT_STATUSES, type PaymentStatus } from '@/features/payments/schemas';
+import type { OverviewRange } from '@/features/overview/utils/overview-range';
 import type { MockPayment, MockStore } from './store';
 
 const HOUR = 3_600_000;

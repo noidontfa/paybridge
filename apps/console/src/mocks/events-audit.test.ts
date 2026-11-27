@@ -1,6 +1,6 @@
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import type { PaymentEvent, StatusTransition } from '@/lib/api/schemas';
+import type { PaymentEvent, StatusTransition } from '@/features/payments/schemas';
 import { createHandlers } from './handlers';
 import { MockStore, type MockAttempt } from './store';
 
