@@ -27,6 +27,7 @@ apps/
       utils/                pure helpers: cn, format, decimal
       hooks/                shared React hooks
       mocks/                MSW mock API and seed data
+      test/                 unit-test helpers
 packages/
   typescript-config/        shared tsconfig presets
 docker-compose.yml          PostgreSQL 18 + Redis 7 for local development
