@@ -3,7 +3,6 @@ import {
   Body,
   ConflictException,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -20,10 +19,8 @@ import {
   RequirePermission,
   RequireSensitivePermission,
 } from '../../../common/principal/access-policy.js';
-import {
-  PRINCIPAL_REQUEST_KEY,
-  type Principal,
-} from '../../../common/principal/principal.js';
+import { actorLabel, type Actor } from '../../../common/principal/actor.js';
+import { callerOf } from '../../../common/principal/caller.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
@@ -37,7 +34,6 @@ import {
   InvalidPublishableKeyLabelError,
   PublishableKeyNotFoundError,
   PublishableKeyRevokedError,
-  type KeyWriter,
   type PublishableKey,
 } from '../../domain/entities/publishable-key.js';
 
@@ -51,15 +47,10 @@ const originsSchema = z.object({ allowedOrigins: origins });
 type OriginsBody = z.output<typeof originsSchema>;
 
 /** How the Console names a writer; a Super Admin acts for the platform. */
-const PLATFORM_LABEL = 'Super Admin (PayBridge)';
-const writerView = (writer: KeyWriter | null) => ({
-  name: writer?.name ?? null,
+const writerView = (writer: Actor | null) => ({
+  name: writer?.name || null,
   role: writer?.role ?? null,
-  label: !writer
-    ? null
-    : writer.role === 'SUPER_ADMIN'
-      ? PLATFORM_LABEL
-      : writer.name,
+  label: writer ? (actorLabel(writer) ?? (writer.name || null)) : null,
 });
 
 const view = (key: PublishableKey) => ({
@@ -74,26 +65,13 @@ const view = (key: PublishableKey) => ({
   updatedBy: writerView(key.updatedBy),
 });
 
-const principalOf = (request: Record<string, unknown>): Principal =>
-  request[PRINCIPAL_REQUEST_KEY] as Principal;
-
 /** The Organization the caller works in: one is always required. */
-function organizationOf(request: Record<string, unknown>): string {
-  const { organizationId } = principalOf(request);
-  if (!organizationId) {
-    throw new ForbiddenException({
-      message: 'Choose one Organization to work in',
-      code: 'ORGANIZATION_REQUIRED',
-    });
-  }
-  return organizationId;
-}
+const organizationOf = (request: Record<string, unknown>): string =>
+  callerOf(request).scope.organizationId;
 
 /** The signed-in writer; a sensitive write has re-read their name. */
-function writerOf(request: Record<string, unknown>): KeyWriter {
-  const user = principalOf(request).user!;
-  return { userId: user.id, role: user.role, name: user.name ?? null };
-}
+const writerOf = (request: Record<string, unknown>): Actor =>
+  callerOf(request).actor;
 
 function mapError(error: unknown): never {
   if (error instanceof InvalidPublishableKeyLabelError) {
@@ -132,16 +110,20 @@ function mapError(error: unknown): never {
 @Controller(`${INTERNAL_PREFIX}/publishable-keys`)
 export class PublishableKeysController {
   constructor(
-    @Inject(CreatePublishableKey) private readonly createKey: CreatePublishableKey,
+    @Inject(CreatePublishableKey)
+    private readonly createKey: CreatePublishableKey,
     @Inject(ListPublishableKeys) private readonly listKeys: ListPublishableKeys,
     @Inject(SetPublishableKeyOrigins)
     private readonly setOrigins: SetPublishableKeyOrigins,
-    @Inject(RevokePublishableKey) private readonly revokeKey: RevokePublishableKey,
+    @Inject(RevokePublishableKey)
+    private readonly revokeKey: RevokePublishableKey,
   ) {}
 
   @Post()
   @RequireSensitivePermission('publishable-keys:manage')
-  @ApiOperation({ summary: 'Create a Publishable Key with its allowed origins' })
+  @ApiOperation({
+    summary: 'Create a Publishable Key with its allowed origins',
+  })
   async create(
     @Req() request: Record<string, unknown>,
     @Body(new ZodValidationPipe(createSchema)) body: CreateBody,

@@ -3,7 +3,7 @@ import { CheckoutPayments } from '../../../payment-core/port/payments.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
 import type {
   PricingPlan,
-  PricingPlanEditor,
+  Actor,
   PricingPlanFeature,
 } from '../../domain/entities/pricing-plan.js';
 import {
@@ -57,7 +57,7 @@ export class ManagePricingTables {
   create(
     scope: OrganizationScope,
     input: PricingTableInput,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingTable> {
     const terms = definePricingTable(input);
     return this.runner.run(async (repos) => {
@@ -76,7 +76,10 @@ export class ManagePricingTables {
   }
 
   async get(scope: OrganizationScope, id: string): Promise<PricingTable> {
-    const table = await this.runner.repositories.pricingTables.findById(scope, id);
+    const table = await this.runner.repositories.pricingTables.findById(
+      scope,
+      id,
+    );
     if (!table) throw new PricingTableNotFoundError(id);
     return table;
   }
@@ -86,7 +89,7 @@ export class ManagePricingTables {
     scope: OrganizationScope,
     id: string,
     input: PricingTableInput,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingTable> {
     const terms = definePricingTable(input);
     return this.runner.run(async (repos) => {
@@ -128,7 +131,10 @@ export class PricingTablesIncludingPlan extends PricingTablesOfPlan {
     scope: OrganizationScope,
     pricingPlanId: string,
   ): Promise<PricingTableRef[]> {
-    return this.runner.repositories.pricingTables.including(scope, pricingPlanId);
+    return this.runner.repositories.pricingTables.including(
+      scope,
+      pricingPlanId,
+    );
   }
 }
 

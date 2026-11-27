@@ -1,10 +1,8 @@
-/** The three fixed Roles. Access is decided by Permission, never by Role name. */
-export const USER_ROLES = [
-  'SUPER_ADMIN',
-  'ORGANIZATION_ADMIN',
-  'OPERATOR',
-] as const;
-export type UserRole = (typeof USER_ROLES)[number];
+import { ROLES, type Role } from '../../../common/principal/actor.js';
+
+/** The three fixed Roles (one definition for every module, in `common`). */
+export const USER_ROLES = ROLES;
+export type UserRole = Role;
 
 /** The Roles an Organization's own Users can be moved between. */
 export const MANAGED_ROLES = ['OPERATOR', 'ORGANIZATION_ADMIN'] as const;

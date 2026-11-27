@@ -1,3 +1,4 @@
+import { roleOf } from '../../../common/principal/actor.js';
 import type { WebhookEndpoint as Row } from '../../../generated/prisma/client.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
 import type { PaymentEventKind } from '../../domain/entities/event-kinds.js';
@@ -34,7 +35,7 @@ function toEndpoint(row: Row): WebhookEndpoint {
         : null,
     updatedBy: {
       userId: row.updatedByUserId,
-      role: row.updatedByRole,
+      role: roleOf(row.updatedByRole),
       name: row.updatedByName,
     },
     createdAt: row.createdAt,
@@ -168,7 +169,7 @@ export class PrismaWebhookEndpointRepository extends WebhookEndpointRepository {
       previousSecretExpiresAt: row.previousSecretExpiresAt,
       rolledBy: {
         userId: row.rolledByUserId,
-        role: row.rolledByRole,
+        role: roleOf(row.rolledByRole),
         name: row.rolledByName,
       },
     }));

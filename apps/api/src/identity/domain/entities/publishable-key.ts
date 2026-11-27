@@ -1,12 +1,10 @@
+import type { Actor } from '../../../common/principal/actor.js';
 /**
  * Who made a change to a credential: kept on the row so the Console can show
- * it. A Super Admin is shown as the platform.
+ * it (the one Actor shape every module records). A Super Admin is shown as
+ * the platform.
  */
-export interface KeyWriter {
-  readonly userId: string;
-  readonly role: string;
-  readonly name: string | null;
-}
+export type { Actor };
 
 /**
  * An Organization's public key for Customers' browsers (ADR 0009). It works
@@ -23,8 +21,8 @@ export interface PublishableKey {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly revokedAt: Date | null;
-  readonly createdBy: KeyWriter | null;
-  readonly updatedBy: KeyWriter | null;
+  readonly createdBy: Actor | null;
+  readonly updatedBy: Actor | null;
 }
 
 export type NewPublishableKey = Pick<

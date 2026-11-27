@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
+import { roleOf } from '../../../common/principal/actor.js';
 import { PrismaService } from '../../../database/prisma.service.js';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client.js';
 import type { ReadScope } from '../../../payment-core/port/organization-scope.js';
@@ -115,7 +116,7 @@ export class PrismaWebhookDeliveriesReadRepository extends WebhookDeliveriesRead
         triggeredBy: a.triggeredByUserId
           ? {
               userId: a.triggeredByUserId,
-              role: a.triggeredByRole ?? '',
+              role: roleOf(a.triggeredByRole ?? ''),
               name: a.triggeredByName ?? '',
             }
           : null,

@@ -12,7 +12,7 @@ import {
   OriginNotAllowedError,
   PublishableKeyNotFoundError,
   PublishableKeyRevokedError,
-  type KeyWriter,
+  type Actor,
   type PublishableKey,
 } from '../../domain/entities/publishable-key.js';
 import { newIdentityId } from '../../domain/ids.js';
@@ -40,7 +40,7 @@ export class CreatePublishableKey {
       readonly label: string;
       readonly allowedOrigins: readonly string[];
     },
-    by: KeyWriter,
+    by: Actor,
   ): Promise<PublishableKey> {
     const label = normalisePublishableKeyLabel(input.label);
     const allowedOrigins = normaliseAllowedOrigins(
@@ -88,7 +88,7 @@ export class SetPublishableKeyOrigins {
     organizationId: string,
     id: string,
     allowedOrigins: readonly string[],
-    by: KeyWriter,
+    by: Actor,
   ): Promise<PublishableKey> {
     const origins = normaliseAllowedOrigins(allowedOrigins, this.rules);
     const scope = organizationScope(organizationId);
@@ -115,11 +115,7 @@ export class RevokePublishableKey {
     @Inject(IdentityClock) private readonly clock: IdentityClock,
   ) {}
 
-  async execute(
-    organizationId: string,
-    id: string,
-    by: KeyWriter,
-  ): Promise<void> {
+  async execute(organizationId: string, id: string, by: Actor): Promise<void> {
     const scope = organizationScope(organizationId);
     await this.runner.run(async (repos) => {
       const found = await repos.publishableKeys.findById(scope, id);

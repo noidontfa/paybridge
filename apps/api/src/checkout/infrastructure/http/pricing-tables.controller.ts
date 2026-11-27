@@ -17,18 +17,22 @@ import {
   RequirePermission,
   RequireSensitivePermission,
 } from '../../../common/principal/access-policy.js';
+import { actorLabel } from '../../../common/principal/actor.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
 import { ManagePricingTables } from '../../application/use-cases/pricing-tables.js';
-import type { PricingPlanEditor } from '../../domain/entities/pricing-plan.js';
+import type { Actor } from '../../domain/entities/pricing-plan.js';
 import {
   PRICING_TABLE_LANGUAGES,
   PRICING_TABLE_THEMES,
   type PricingTable,
 } from '../../domain/entities/pricing-table.js';
 import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
-import { CheckoutEditor, CheckoutScope } from './current-scope.js';
+import {
+  CurrentActor,
+  CurrentScope,
+} from '../../../common/principal/caller.js';
 
 // Shapes only; the Pricing Table rules (plan count, recommended plan, colour,
 // button text) are checked by the domain so every caller gets the same answers.
@@ -43,9 +47,6 @@ const tableSchema = z.object({
 });
 type TableBody = z.output<typeof tableSchema>;
 
-/** How a Super Admin's change is shown: done by the platform. */
-const PLATFORM_LABEL = 'Super Admin (PayBridge)';
-
 const view = (table: PricingTable) => ({
   id: table.id,
   name: table.name,
@@ -59,7 +60,7 @@ const view = (table: PricingTable) => ({
     userId: table.updatedBy.userId,
     role: table.updatedBy.role,
     name: table.updatedBy.name,
-    label: table.updatedBy.role === 'SUPER_ADMIN' ? PLATFORM_LABEL : null,
+    label: actorLabel(table.updatedBy),
   },
   createdAt: table.createdAt,
   updatedAt: table.updatedAt,
@@ -81,7 +82,7 @@ export class PricingTablesController {
   @Get()
   @RequirePermission('pricing:view')
   @ApiOperation({ summary: "List the Organization's Pricing Tables" })
-  async list(@CheckoutScope() scope: OrganizationScope) {
+  async list(@CurrentScope() scope: OrganizationScope) {
     const items = await this.tables.list(scope);
     return { items: items.map(view) };
   }
@@ -90,7 +91,7 @@ export class PricingTablesController {
   @RequirePermission('pricing:view')
   @ApiOperation({ summary: 'One Pricing Table' })
   async get(
-    @CheckoutScope() scope: OrganizationScope,
+    @CurrentScope() scope: OrganizationScope,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return view(await this.tables.get(scope, id));
@@ -100,8 +101,8 @@ export class PricingTablesController {
   @RequireSensitivePermission('pricing:manage')
   @ApiOperation({ summary: 'Create a Pricing Table' })
   async create(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Body(new ZodValidationPipe(tableSchema)) body: TableBody,
   ) {
     return view(await this.tables.create(scope, body, editor));
@@ -112,8 +113,8 @@ export class PricingTablesController {
   @RequireSensitivePermission('pricing:manage')
   @ApiOperation({ summary: 'Replace every field of a Pricing Table' })
   async update(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(tableSchema)) body: TableBody,
   ) {
@@ -126,7 +127,7 @@ export class PricingTablesController {
     summary: 'Delete a Pricing Table; pages embedding it show unavailable',
   })
   async delete(
-    @CheckoutScope() scope: OrganizationScope,
+    @CurrentScope() scope: OrganizationScope,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     await this.tables.delete(scope, id);

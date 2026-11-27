@@ -17,7 +17,7 @@ import {
   SendWebhooksByHand,
 } from '../../application/use-cases/webhook-deliveries.js';
 import { WebhookEndpointNotFoundError } from '../../domain/entities/webhook-endpoint.js';
-import { callerOf } from './caller.js';
+import { callerOf } from '../../../common/principal/caller.js';
 import { detailView } from './webhook-deliveries.controller.js';
 
 /**

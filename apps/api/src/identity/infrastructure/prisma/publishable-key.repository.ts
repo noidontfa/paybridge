@@ -1,10 +1,11 @@
+import { roleOf } from '../../../common/principal/actor.js';
 import type {
   OrganizationScope,
   ReadScope,
 } from '../../../common/organization-scope.js';
 import type { PublishableKey as PublishableKeyRow } from '../../../generated/prisma/client.js';
 import type {
-  KeyWriter,
+  Actor,
   NewPublishableKey,
   PublishableKey,
 } from '../../domain/entities/publishable-key.js';
@@ -15,7 +16,8 @@ const writer = (
   userId: string | null,
   role: string | null,
   name: string | null,
-): KeyWriter | null => (userId && role ? { userId, role, name } : null);
+): Actor | null =>
+  userId && role ? { userId, role: roleOf(role), name: name ?? '' } : null;
 
 function toEntity(row: PublishableKeyRow): PublishableKey {
   return {
@@ -27,12 +29,20 @@ function toEntity(row: PublishableKeyRow): PublishableKey {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     revokedAt: row.revokedAt,
-    createdBy: writer(row.createdByUserId, row.createdByRole, row.createdByName),
-    updatedBy: writer(row.updatedByUserId, row.updatedByRole, row.updatedByName),
+    createdBy: writer(
+      row.createdByUserId,
+      row.createdByRole,
+      row.createdByName,
+    ),
+    updatedBy: writer(
+      row.updatedByUserId,
+      row.updatedByRole,
+      row.updatedByName,
+    ),
   };
 }
 
-const updatedBy = (by: KeyWriter, at: Date) => ({
+const updatedBy = (by: Actor, at: Date) => ({
   updatedAt: at,
   updatedByUserId: by.userId,
   updatedByRole: by.role,
@@ -106,7 +116,7 @@ export class PrismaPublishableKeyRepository extends PublishableKeyRepository {
     scope: OrganizationScope,
     id: string,
     allowedOrigins: readonly string[],
-    by: KeyWriter,
+    by: Actor,
     at: Date,
   ): Promise<PublishableKey> {
     const where = { id, organizationId: scope.organizationId };
@@ -121,7 +131,7 @@ export class PrismaPublishableKeyRepository extends PublishableKeyRepository {
   async revoke(
     scope: OrganizationScope,
     id: string,
-    by: KeyWriter,
+    by: Actor,
     at: Date,
   ): Promise<void> {
     await this.ctx.db.publishableKey.updateMany({

@@ -3,7 +3,7 @@ import type {
   ReadScope,
 } from '../../../common/organization-scope.js';
 import type {
-  KeyWriter,
+  Actor,
   NewPublishableKey,
   PublishableKey,
 } from '../entities/publishable-key.js';
@@ -37,14 +37,14 @@ export abstract class PublishableKeyRepository {
     scope: OrganizationScope,
     id: string,
     allowedOrigins: readonly string[],
-    by: KeyWriter,
+    by: Actor,
     at: Date,
   ): Promise<PublishableKey>;
   /** Revokes a key of the Organization if it is still active. */
   abstract revoke(
     scope: OrganizationScope,
     id: string,
-    by: KeyWriter,
+    by: Actor,
     at: Date,
   ): Promise<void>;
 }

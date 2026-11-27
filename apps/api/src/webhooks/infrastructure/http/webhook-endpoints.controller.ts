@@ -21,15 +21,15 @@ import { INTERNAL_PREFIX } from '../../../constants.js';
 import { ReadWebhookDeliveries } from '../../application/use-cases/webhook-deliveries.js';
 import { ManageWebhookEndpoints } from '../../application/use-cases/webhook-endpoints.js';
 import { PAYMENT_EVENT_KINDS } from '../../domain/entities/event-kinds.js';
+import { actorLabel } from '../../../common/principal/actor.js';
 import {
-  actorLabel,
   InvalidWebhookUrlError,
   SECRET_OVERLAPS,
   WebhookEndpointNotFoundError,
   type SecretOverlap,
   type WebhookEndpoint,
 } from '../../domain/entities/webhook-endpoint.js';
-import { callerOf } from './caller.js';
+import { callerOf } from '../../../common/principal/caller.js';
 
 const url = z.string().trim().min(1).max(2048);
 const eventKinds = z.array(z.enum(PAYMENT_EVENT_KINDS)).min(1).max(20);

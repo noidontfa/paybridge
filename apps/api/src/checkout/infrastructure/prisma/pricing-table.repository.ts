@@ -1,9 +1,10 @@
+import { roleOf } from '../../../common/principal/actor.js';
 import type {
   PricingTable as PricingTableRow,
   PricingTablePlan as PricingTablePlanRow,
 } from '../../../generated/prisma/client.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
-import type { PricingPlanEditor } from '../../domain/entities/pricing-plan.js';
+import type { Actor } from '../../domain/entities/pricing-plan.js';
 import type {
   PricingTable,
   PricingTableTerms,
@@ -25,14 +26,15 @@ function toTable(row: Row): PricingTable {
     organizationId: row.organizationId,
     name: row.name,
     planIds: row.plans.map((p) => p.pricingPlanId),
-    recommendedPlanId: row.plans.find((p) => p.recommended)?.pricingPlanId ?? null,
+    recommendedPlanId:
+      row.plans.find((p) => p.recommended)?.pricingPlanId ?? null,
     mainColor: row.mainColor,
     theme: row.theme,
     language: row.language,
     buttonText: row.buttonText,
     updatedBy: {
       userId: row.updatedByUserId,
-      role: row.updatedByRole,
+      role: roleOf(row.updatedByRole),
       name: row.updatedByName,
     },
     createdAt: row.createdAt,
@@ -40,7 +42,7 @@ function toTable(row: Row): PricingTable {
   };
 }
 
-function lookColumns(terms: PricingTableTerms, by: PricingPlanEditor, at: Date) {
+function lookColumns(terms: PricingTableTerms, by: Actor, at: Date) {
   return {
     name: terms.name,
     mainColor: terms.mainColor,
@@ -72,7 +74,10 @@ export class PrismaPricingTableRepository extends PricingTableRepository {
     super();
   }
 
-  async create(scope: OrganizationScope, table: NewPricingTable): Promise<PricingTable> {
+  async create(
+    scope: OrganizationScope,
+    table: NewPricingTable,
+  ): Promise<PricingTable> {
     await this.ctx.db.pricingTable.create({
       data: {
         id: table.id,
@@ -82,7 +87,10 @@ export class PrismaPricingTableRepository extends PricingTableRepository {
       },
     });
     await this.ctx.db.pricingTablePlan.createMany({
-      data: planRows(scope, table).map((p) => ({ ...p, pricingTableId: table.id })),
+      data: planRows(scope, table).map((p) => ({
+        ...p,
+        pricingTableId: table.id,
+      })),
     });
     return (await this.findById(scope, table.id))!;
   }
@@ -96,7 +104,10 @@ export class PrismaPricingTableRepository extends PricingTableRepository {
     return rows.map(toTable);
   }
 
-  async findById(scope: OrganizationScope, id: string): Promise<PricingTable | null> {
+  async findById(
+    scope: OrganizationScope,
+    id: string,
+  ): Promise<PricingTable | null> {
     const row = await this.ctx.db.pricingTable.findFirst({
       where: { id, organizationId: scope.organizationId },
       include: withPlans,
@@ -108,7 +119,7 @@ export class PrismaPricingTableRepository extends PricingTableRepository {
     scope: OrganizationScope,
     id: string,
     terms: PricingTableTerms,
-    by: PricingPlanEditor,
+    by: Actor,
     at: Date,
   ): Promise<PricingTable | null> {
     const { count } = await this.ctx.db.pricingTable.updateMany({
@@ -142,7 +153,9 @@ export class PrismaPricingTableRepository extends PricingTableRepository {
     return this.ctx.db.pricingTable.findMany({
       where: {
         organizationId: scope.organizationId,
-        plans: { some: { pricingPlanId, organizationId: scope.organizationId } },
+        plans: {
+          some: { pricingPlanId, organizationId: scope.organizationId },
+        },
       },
       select: { id: true, name: true },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],

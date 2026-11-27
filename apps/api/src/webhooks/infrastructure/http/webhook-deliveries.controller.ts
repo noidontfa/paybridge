@@ -33,12 +33,12 @@ import {
   WebhookDeliveryNotFoundError,
 } from '../../application/use-cases/webhook-deliveries.js';
 import { DELIVERY_KINDS } from '../../domain/entities/test-event.js';
-import { actorLabel } from '../../domain/entities/webhook-endpoint.js';
 import type {
   WebhookDeliveryDetailRow,
   WebhookDeliveryListRow,
 } from '../../domain/repositories/webhook-deliveries-read.repository.js';
-import { callerOf, readScopeOf } from './caller.js';
+import { actorLabel } from '../../../common/principal/actor.js';
+import { callerOf, readScopeOf } from '../../../common/principal/caller.js';
 
 const listQuerySchema = z
   .object({

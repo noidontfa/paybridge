@@ -4,7 +4,7 @@ import type { OrganizationScope } from '../../../payment-core/port/organization-
 import {
   definePricingPlanTerms,
   type PricingPlan,
-  type PricingPlanEditor,
+  type Actor,
   type PricingPlanInput,
   type PricingPlanStatus,
 } from '../../domain/entities/pricing-plan.js';
@@ -49,7 +49,7 @@ export class ManagePricingPlans {
   create(
     scope: OrganizationScope,
     input: PricingPlanInput,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingPlan> {
     const terms = definePricingPlanTerms(input, this.settings);
     return this.plans.create(scope, {
@@ -75,10 +75,16 @@ export class ManagePricingPlans {
     scope: OrganizationScope,
     id: string,
     input: PricingPlanInput,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingPlan> {
     const terms = definePricingPlanTerms(input, this.settings);
-    const plan = await this.plans.update(scope, id, terms, by, this.clock.now());
+    const plan = await this.plans.update(
+      scope,
+      id,
+      terms,
+      by,
+      this.clock.now(),
+    );
     if (!plan) throw new PricingPlanNotFoundError(id);
     return plan;
   }
@@ -90,7 +96,7 @@ export class ManagePricingPlans {
   archive(
     scope: OrganizationScope,
     id: string,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingPlanDetail> {
     return this.setStatus(scope, id, 'ARCHIVED', by);
   }
@@ -98,7 +104,7 @@ export class ManagePricingPlans {
   restore(
     scope: OrganizationScope,
     id: string,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingPlanDetail> {
     return this.setStatus(scope, id, 'ACTIVE', by);
   }
@@ -123,7 +129,7 @@ export class ManagePricingPlans {
     scope: OrganizationScope,
     id: string,
     status: PricingPlanStatus,
-    by: PricingPlanEditor,
+    by: Actor,
   ): Promise<PricingPlanDetail> {
     const plan = await this.plans.setStatus(
       scope,

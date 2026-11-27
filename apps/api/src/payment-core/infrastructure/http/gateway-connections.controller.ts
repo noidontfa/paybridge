@@ -25,7 +25,10 @@ import type {
   OrganizationScope,
   ReadScope,
 } from '../../domain/value-objects/organization-scope.js';
-import { CurrentReadScope, CurrentScope } from './current-scope.decorator.js';
+import {
+  CurrentReadScope,
+  CurrentScope,
+} from '../../../common/principal/caller.js';
 
 const createSchema = z.object({
   gatewayId: z.string().min(1).max(64),
