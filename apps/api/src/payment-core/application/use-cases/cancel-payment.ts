@@ -81,6 +81,7 @@ export class CancelPayment {
           amount: updated.amount,
           currency: updated.currency,
           status: updated.status,
+          expiresAt: updated.expiresAt.toISOString(),
           ...checkoutOriginPayload(updated),
         },
       });
