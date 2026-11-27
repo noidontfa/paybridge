@@ -1,7 +1,7 @@
 /**
  * `GET /internal/payments`: the operator Payments list. Schema and client
  * function live together here (a new file, so list tickets do not touch the
- * shared `schemas.ts` and `client.ts`).
+ * shared `schemas.ts` or `services/client.ts`).
  */
 import { z } from 'zod';
 import { INTERNAL, request } from '@/services/client';

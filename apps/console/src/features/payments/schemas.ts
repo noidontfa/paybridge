@@ -1,10 +1,10 @@
 /**
  * Response types copied from the API (no shared contract package: ADR 0004 and
  * the map). They use the API's current wire names. When an API response
- * changes, change it here and in `src/mocks` too.
+ * changes, change it here and in `mocks/` too.
  *
  * Extension point: add one schema per endpoint below, export the inferred
- * type, and give it a function in `./client.ts`.
+ * type, and give it a function in `./api.ts`.
  */
 import { z } from 'zod';
 

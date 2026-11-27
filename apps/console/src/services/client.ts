@@ -3,14 +3,13 @@
  * parses the response with its copied Zod schema, and turns every failure into
  * an `ApiError`.
  *
- * Extension point: add an endpoint by writing its schema in `./schemas.ts` and
- * a function here that calls `request(path, schema, init?)`. Build the path
- * with `INTERNAL` for operator routes.
+ * Extension point: add an endpoint in its feature's `api.ts`: write the schema
+ * there and a function that calls `request(path, schema, init?)` from this
+ * module. Build the path with `INTERNAL` for operator routes.
  */
 import type { z } from 'zod';
 import { BFF_PREFIX } from '@/services/bff';
 import { ApiError, CLIENT_ERROR_CODES, apiErrorBodySchema } from './errors';
-import { operatorPaymentSchema, type OperatorPayment } from '@/features/payments/schemas';
 
 /** Operator routes live under the API's internal prefix. */
 export const INTERNAL = '/internal';

@@ -2,7 +2,7 @@
 
 /**
  * The signed-in User on the client side. The root layout (a server component)
- * reads the session (`src/server/session-user.ts`) and provides it here;
+ * reads the session (`server/session-user.ts`) and provides it here;
  * components read it with `useCurrentOperator()`. The API records the acting
  * User from the access token: the browser never sends who it is.
  */

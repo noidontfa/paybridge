@@ -1,6 +1,6 @@
 /**
  * The mocked Overview endpoint: computed from the fixture store relative to its
- * fixed "now". See `@/lib/api/overview-schema` for the definitions.
+ * fixed "now". See `@/features/overview/api` for the definitions.
  */
 import type { Overview } from '@/features/overview/api';
 import { PAYMENT_STATUSES, type PaymentStatus } from '@/features/payments/schemas';
