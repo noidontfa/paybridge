@@ -24,6 +24,10 @@ import {
 } from './scenarios.js';
 import { seedPricingPlans } from './pricing-plans.js';
 import { seedPricingTables, type SeededPricingTable } from './pricing-tables.js';
+import {
+  seedCheckoutActivity,
+  type SeededCheckoutActivity,
+} from './checkout-activity.js';
 
 // Database seed (ticket 01). Writes straight to the database, outside Payment
 // Core, so it may use the database client and open its own transaction.
@@ -71,6 +75,8 @@ export interface SeedResult {
   pricingTables: readonly SeededPricingTable[];
   /** The development Webhook Endpoint and its signing secret (a dev fixture). */
   webhookEndpoint: typeof SEED_WEBHOOK_ENDPOINT;
+  /** Checkout Payments and the Webhook deliveries of their Payment Events. */
+  checkoutActivity: SeededCheckoutActivity;
 }
 
 const id = (name: string): string => v5(name, NAMESPACE);
@@ -290,6 +296,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   const passwordHash = await new Argon2PasswordHasher().hash(SEED_PASSWORD);
   let pricingPlans = 0;
   let pricingTables: SeededPricingTable[] = [];
+  let checkoutActivity: SeededCheckoutActivity = { payments: 0, deliveries: 0 };
 
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: options.databaseUrl }),
@@ -437,6 +444,17 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
         await insertChunked(rows.events, (data) =>
           tx.outboxEvent.createMany({ data }),
         );
+        checkoutActivity = await seedCheckoutActivity(tx, {
+          id,
+          now,
+          referencePrefix: SEED_PREFIX,
+          organizationId: ORGANIZATIONS.primary.id,
+          publishableKeyId: id(
+            `publishable-key:${SEED_PUBLISHABLE_KEYS[0]!.label}`,
+          ),
+          webhookEndpointId: id('webhook-endpoint:primary'),
+          operator: seedEditor('operator-primary'),
+        });
       },
       { timeout: 120_000, maxWait: 30_000 },
     );
@@ -457,6 +475,7 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     pricingPlans,
     pricingTables,
     webhookEndpoint: SEED_WEBHOOK_ENDPOINT,
+    checkoutActivity,
   };
 }
 
