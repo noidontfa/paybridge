@@ -6,7 +6,7 @@ import {
   listPaymentEvents,
   type PaymentEventListQuery,
   type PaymentEventSummary,
-} from '@/lib/api/payment-events';
+} from '@/features/payment-events/api';
 import { paymentEventTypeSchema } from '@/features/payments/schemas';
 import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 

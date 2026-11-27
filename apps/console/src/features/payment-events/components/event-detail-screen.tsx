@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import { usePaymentEvent } from '@/lib/queries/payment-events';
+import { usePaymentEvent } from '@/features/payment-events/hooks/queries';
 import { paymentHref } from './events-columns';
 
 /** One Payment Event: what it is, when it was emitted and relayed, and the payload downstream systems receive. */

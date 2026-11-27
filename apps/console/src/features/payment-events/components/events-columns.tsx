@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { PaymentEventSummary } from '@/lib/api/payment-events';
+import type { PaymentEventSummary } from '@/features/payment-events/api';
 
 const column = createDataTableColumnHelper<PaymentEventSummary>();
 
