@@ -10,7 +10,7 @@
 import type { CallbackStatus } from '@/features/callbacks/api';
 import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
 import type { MockUser } from './users';
-import type { OrganizationSummary } from '@/lib/api/organizations';
+import type { OrganizationSummary } from '@/features/platform/api/organizations';
 import type {
   AttemptStatus,
   NextAction,

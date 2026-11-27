@@ -1,7 +1,7 @@
 'use client';
 
 import { useCan } from '@/lib/operator';
-import { useOrganizationList } from '@/lib/queries/organizations';
+import { useOrganizationList } from '@/features/platform/hooks/organizations';
 
 /** Must match the BFF's `ORGANIZATION_COOKIE`: it forwards the choice to the API. */
 const COOKIE = 'pb_org';

@@ -7,8 +7,8 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { ReviewSummary } from '@/features/reviews/api';
 import { OperatorProvider, type Operator } from '@/lib/operator';
-import type { OrganizationList } from '@/lib/api/organizations';
-import { organizationKeys } from '@/lib/queries/organizations';
+import type { OrganizationList } from '@/features/platform/api/organizations';
+import { organizationKeys } from '@/features/platform/hooks/organizations';
 import { reviewKeys } from '@/features/reviews/hooks/reviews';
 import { AppSidebar } from './app-sidebar';
 

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCan } from '@/lib/operator';
-import { useChangeSuperAdmin, useInviteSuperAdmin, useSuperAdminList } from '@/lib/queries/platform';
+import { useChangeSuperAdmin, useInviteSuperAdmin, useSuperAdminList } from '@/features/platform/hooks/platform';
 
 /** Platform area: the Super Admin team, with invite, deactivate and reactivate. */
 export function SuperAdminsScreen() {

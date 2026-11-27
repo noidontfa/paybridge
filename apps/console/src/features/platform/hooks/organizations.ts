@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { listOrganizations } from '@/lib/api/organizations';
+import { listOrganizations } from '@/features/platform/api/organizations';
 
 export const organizationKeys = {
   all: ['organizations'] as const,

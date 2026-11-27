@@ -2,13 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createOrganization, reactivateOrganization, suspendOrganization } from '@/lib/api/organizations';
+import { createOrganization, reactivateOrganization, suspendOrganization } from '@/features/platform/api/organizations';
 import {
   deactivateSuperAdmin,
   inviteSuperAdmin,
   listSuperAdmins,
   reactivateSuperAdmin,
-} from '@/lib/api/super-admins';
+} from '@/features/platform/api/super-admins';
 import { isApiError } from '@/services/errors';
 import { organizationKeys } from './organizations';
 

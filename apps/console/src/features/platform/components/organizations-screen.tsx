@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCan } from '@/lib/operator';
-import { useOrganizationList } from '@/lib/queries/organizations';
-import { useCreateOrganization, useSetOrganizationSuspension } from '@/lib/queries/platform';
+import { useOrganizationList } from '@/features/platform/hooks/organizations';
+import { useCreateOrganization, useSetOrganizationSuspension } from '@/features/platform/hooks/platform';
 
 /** Platform area: every Organization, with create, suspend and reactivate. */
 export function OrganizationsScreen() {
