@@ -21,7 +21,7 @@ The public side of the Embedded Checkout: the SDK script an Organization pastes 
 - `data-key` (required): a Publishable Key whose allowed origins include this page's origin.
 - `data-table` (required): the Pricing Table to show. The cards are drawn where the script tag is, inside a Shadow DOM, so the page's styles do not change them.
 - `data-customer-ref` (optional): your own id for the Customer. It is stored on the Payment and sent in its Webhooks.
-- `data-success-url`, `data-cancel-url` (optional): override the Pricing Plan's URLs after a redirect gateway.
+- `data-success-url`, `data-cancel-url` (optional): override the Pricing Plan's URLs after a redirect gateway. They must be on one of the Publishable Key's allowed origins, or the return page ignores them.
 - `/v1/paybridge.js` always serves the latest 1.x. Pin an exact version with `/v1.0.0/paybridge.js`.
 
 ### Callbacks and events
@@ -47,7 +47,7 @@ The Customer sees only "Payment is not available right now", in the Pricing Tabl
 - The SDK and the page talk only through `postMessage`, each accepting messages only from the other's window and origin (`src/shared/messages.ts`).
 - From the iframe, API calls carry the checkout app's origin and `X-PayBridge-Host-Origin`; the API accepts them only from `CHECKOUT_APP_ORIGINS` and checks the host origin against the key.
 - The checkout session token lives in the iframe's `localStorage`, so reopening resumes the same open Payment. Without storage, every opening starts a new Payment.
-- NextAction views are in `src/page/next-actions.ts`: QR codes are drawn there; redirects link the whole tab to the gateway (the return page comes with ticket 10); client SDKs such as Stripe.js are ticket 11.
+- NextAction views are in `src/page/next-actions.ts`: QR codes are drawn there; redirects take the whole tab to the gateway; client SDKs such as Stripe.js are ticket 11.
 
 ## Running it
 
@@ -64,3 +64,7 @@ Try it after `pnpm db:seed`: serve a page containing the snippet above with the 
 
 - `pnpm test`: unit tests (message protocol, session token, the server's routes and headers).
 - `pnpm build && pnpm test:e2e`: Playwright against the real API (its own database `paybridge_e2e_checkout`, migrated and seeded; Redis from docker compose), the built app, and plain HTML host pages on `http://localhost:5173` (allowed) and `http://127.0.0.1:5174` (not allowed). Set `PLAYWRIGHT_CHANNEL=chrome` to use the installed Chrome.
+
+## Return page
+
+Redirect gateways send the Customer back to `/return` (`src/return/`). The checkout page builds that URL (`returnPageUrl()`) with the Payment id, the Publishable Key, the host page the Customer started from, the Pricing Table's language and the snippet's success and cancel URLs. The page reads the Payment's status from the API (never from the gateway's query parameters), asks Payment Core once to query the gateway, polls while the Payment is processing, and then forwards: the snippet's URL, else the Pricing Plan's, else the host page. Browser-supplied URLs count only on the key's allowed origins.
