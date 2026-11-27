@@ -30,7 +30,6 @@ export default defineConfig({
   webServer: [
     {
       command: 'pnpm exec tsx e2e/start-api.ts',
-      // Playwright counts any 2xx-403 answer as up; /api/health answers 401.
       url: `${API_URL}/api/health`,
       timeout: 180_000,
       reuseExistingServer: false,
