@@ -582,6 +582,11 @@ model CheckoutSession {
   publishableKeyId  String   @map("publishable_key_id") @db.Uuid
   paymentId         String   @unique(map: "chk_checkout_sessions_payment_id_uq") @map("payment_id") @db.Uuid
   createdAt         DateTime @map("created_at") @db.Timestamptz(3)
+  /// Where the Customer came from and goes next, as the checkout page sent
+  /// them with the latest attempt (null: none sent yet).
+  returnHostPageUrl String?  @map("return_host_page_url")
+  returnSuccessUrl  String?  @map("return_success_url")
+  returnCancelUrl   String?  @map("return_cancel_url")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   pricingPlan  PricingPlan  @relation(fields: [pricingPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)

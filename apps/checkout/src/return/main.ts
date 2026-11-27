@@ -10,8 +10,9 @@ import { strings, type Strings } from '../shared/i18n.js';
 import {
   forwardTarget,
   outcomeOf,
-  readReturnContext,
-  type ReturnContext,
+  readReturnLink,
+  returnTargetsOf,
+  type ReturnLink,
   type ReturnOutcome,
 } from './return-context.js';
 
@@ -56,16 +57,16 @@ class ReturnPage {
 
   constructor(
     private readonly api: CheckoutApi,
-    private readonly context: ReturnContext,
+    private readonly link: ReturnLink,
   ) {
-    this.t = strings(context.language);
+    this.t = strings(link.language);
   }
 
   async start(): Promise<void> {
     show(h('p', { class: 'muted' }, this.t.loading));
     try {
       const [payment, allowedOrigins] = await Promise.all([
-        this.api.payment(this.context.paymentId),
+        this.api.payment(this.link.paymentId),
         this.api.frameAncestors(),
       ]);
       await this.follow(payment, allowedOrigins);
@@ -80,11 +81,13 @@ class ReturnPage {
       const outcome = outcomeOf(payment);
       if (outcome !== 'processing') return this.finish(outcome, payment, allowedOrigins);
       this.requery(payment);
-      if (Date.now() - this.startedAt > POLL_FOR_MS) return this.stillProcessing(allowedOrigins, true);
-      this.stillProcessing(allowedOrigins, false);
+      if (Date.now() - this.startedAt > POLL_FOR_MS) {
+        return this.stillProcessing(payment, allowedOrigins, true);
+      }
+      this.stillProcessing(payment, allowedOrigins, false);
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
       try {
-        payment = await this.api.payment(this.context.paymentId);
+        payment = await this.api.payment(this.link.paymentId);
       } catch (error) {
         if (error instanceof CheckoutUnavailableError) throw error;
         // A transient failure: keep asking.
@@ -108,8 +111,12 @@ class ReturnPage {
     void fetch(url, { mode: 'no-cors', credentials: 'omit' }).catch(() => undefined);
   }
 
-  private stillProcessing(allowedOrigins: readonly string[], gaveUp: boolean): void {
-    const back = this.hostPage(allowedOrigins);
+  private stillProcessing(
+    payment: CheckoutPayment,
+    allowedOrigins: readonly string[],
+    gaveUp: boolean,
+  ): void {
+    const back = this.hostPage(payment, allowedOrigins);
     show(
       h(
         'section',
@@ -127,7 +134,12 @@ class ReturnPage {
     allowedOrigins: readonly string[],
   ): void {
     const [title, body] = TITLES[outcome](this.t);
-    const target = forwardTarget(outcome, this.context, payment.returnUrls, allowedOrigins);
+    const target = forwardTarget(
+      outcome,
+      returnTargetsOf(this.link, payment.returnContext),
+      payment.returnUrls,
+      allowedOrigins,
+    );
     show(
       h(
         'section',
@@ -141,9 +153,9 @@ class ReturnPage {
     if (target) setTimeout(() => window.location.replace(target), FORWARD_AFTER_MS);
   }
 
-  private hostPage(allowedOrigins: readonly string[]): string | null {
-    const url = this.context.hostPageUrl;
-    return allowedOrigins.includes(new URL(url).origin) ? url : null;
+  private hostPage(payment: CheckoutPayment, allowedOrigins: readonly string[]): string | null {
+    const url = returnTargetsOf(this.link, payment.returnContext).hostPageUrl;
+    return URL.canParse(url) && allowedOrigins.includes(new URL(url).origin) ? url : null;
   }
 
   private fail(error: unknown): void {
@@ -159,19 +171,19 @@ class ReturnPage {
 }
 
 function boot(): void {
-  const context = readReturnContext(new URL(window.location.href));
-  if (!context) {
+  const link = readReturnLink(new URL(window.location.href));
+  if (!link) {
     console.warn(`${LOG_PREFIX} The return page was opened without a checkout Payment.`);
     show(h('p', { class: 'notice' }, strings('en').unavailable));
     return;
   }
-  document.documentElement.lang = context.language;
+  document.documentElement.lang = link.language;
   const api = checkoutApi({
     apiUrl: config.apiUrl,
-    publishableKey: context.publishableKey,
-    hostOrigin: new URL(context.hostPageUrl).origin,
+    publishableKey: link.publishableKey,
+    hostOrigin: link.hostOrigin,
   });
-  void new ReturnPage(api, context).start();
+  void new ReturnPage(api, link).start();
 }
 
 boot();

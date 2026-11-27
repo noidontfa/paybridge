@@ -42,9 +42,26 @@ const startSchema = z.object({
 });
 type StartBody = z.output<typeof startSchema>;
 
+const webUrl = z.url({ protocol: /^https?$/ });
+
+// The return URL a gateway gets stays short (Payment id, key, host origin,
+// language); the host page and snippet URLs, which may be long, travel here
+// and are kept with the checkout session for the return page.
 const attemptSchema = z.object({
   gatewayId: z.string().trim().min(1).max(64),
-  returnUrl: z.url({ protocol: /^https?$/ }).max(2048),
+  returnUrl: webUrl.max(2048),
+  returnContext: z
+    .object({
+      hostPageUrl: webUrl.max(8192),
+      successUrl: webUrl.max(8192).nullish(),
+      cancelUrl: webUrl.max(8192).nullish(),
+    })
+    .transform((context) => ({
+      hostPageUrl: context.hostPageUrl,
+      successUrl: context.successUrl ?? null,
+      cancelUrl: context.cancelUrl ?? null,
+    }))
+    .optional(),
 });
 type AttemptBody = z.output<typeof attemptSchema>;
 
@@ -57,9 +74,14 @@ const attemptView = (attempt: CheckoutAttemptView) => ({
 
 /**
  * What the checkout page may know of a Payment: no Customer data echoed
- * back. `returnUrls` are the Pricing Plan's, for the return page.
+ * back. `returnUrls` are the Pricing Plan's and `returnContext` what the
+ * checkout page sent with its latest attempt, both for the return page.
  */
-const paymentView = ({ payment, returnUrls }: CheckoutPaymentWithReturnUrls) => {
+const paymentView = ({
+  payment,
+  returnUrls,
+  returnContext,
+}: CheckoutPaymentWithReturnUrls) => {
   const latest = payment.attempts.at(-1);
   return {
     id: payment.id,
@@ -74,6 +96,7 @@ const paymentView = ({ payment, returnUrls }: CheckoutPaymentWithReturnUrls) => 
         }
       : null,
     returnUrls,
+    returnContext,
     attempt: latest ? attemptView(latest) : null,
   };
 };

@@ -2,30 +2,39 @@ import type { CheckoutPayment } from '../shared/api.js';
 import type { Language } from '../shared/i18n.js';
 
 // The return page's rules, kept pure: what the checkout page puts in the
-// return URL it gives a redirect gateway, what the Payment's status means to
+// (short) return URL it gives a redirect gateway, what the Payment's status means to
 // the Customer, and where they go next. Nothing in the return URL is proof
 // of payment: the outcome comes only from the API's Payment status.
 
-/** What the checkout page knows and the return page needs back. */
-export interface ReturnContext {
+/**
+ * What the return URL carries: just enough to call the API and greet the
+ * Customer. It stays short (a gateway may cap its return URL's length); the
+ * host page and snippet URLs, which can be long, are kept with the checkout
+ * session and read back from the API (`ReturnTargets`).
+ */
+export interface ReturnLink {
   readonly paymentId: string;
   readonly publishableKey: string;
-  /** The host page the Customer started from; its origin is the host origin. */
-  readonly hostPageUrl: string;
+  /** The host page's origin, which the API checks against the key. */
+  readonly hostOrigin: string;
   /** The Pricing Table's language. */
   readonly language: Language;
-  /** The snippet's `data-success-url` / `data-cancel-url`. */
-  readonly successUrl?: string;
-  readonly cancelUrl?: string;
+}
+
+/** Where the Customer started and the snippet's URLs, from the API. */
+export interface ReturnTargets {
+  /** The host page the Customer started from. */
+  readonly hostPageUrl: string;
+  /** The snippet's `data-success-url` / `data-cancel-url` (null: unset). */
+  readonly successUrl: string | null;
+  readonly cancelUrl: string | null;
 }
 
 const PARAMS = {
   paymentId: 'paymentId',
   publishableKey: 'key',
-  hostPageUrl: 'back',
+  hostOrigin: 'origin',
   language: 'lang',
-  successUrl: 'success',
-  cancelUrl: 'cancel',
 } as const;
 
 /** An http(s) URL, or false. */
@@ -33,38 +42,45 @@ export function isWebUrl(value: string | null | undefined): value is string {
   return !!value && URL.canParse(value) && /^https?:$/.test(new URL(value).protocol);
 }
 
-/** The return URL for a redirect gateway: `<checkout>/return?…`. */
-export function returnPageUrl(checkoutUrl: string, context: ReturnContext): string {
+/** An http(s) origin and nothing more (no path, query or hash). */
+function isWebOrigin(value: string | null): value is string {
+  return isWebUrl(value) && new URL(value).origin === value;
+}
+
+/** The return URL for a redirect gateway: `<checkout>/return?...`. */
+export function returnPageUrl(checkoutUrl: string, link: ReturnLink): string {
   const url = new URL('/return', checkoutUrl);
-  url.searchParams.set(PARAMS.paymentId, context.paymentId);
-  url.searchParams.set(PARAMS.publishableKey, context.publishableKey);
-  url.searchParams.set(PARAMS.hostPageUrl, context.hostPageUrl);
-  url.searchParams.set(PARAMS.language, context.language);
-  if (context.successUrl) url.searchParams.set(PARAMS.successUrl, context.successUrl);
-  if (context.cancelUrl) url.searchParams.set(PARAMS.cancelUrl, context.cancelUrl);
+  url.searchParams.set(PARAMS.paymentId, link.paymentId);
+  url.searchParams.set(PARAMS.publishableKey, link.publishableKey);
+  url.searchParams.set(PARAMS.hostOrigin, link.hostOrigin);
+  url.searchParams.set(PARAMS.language, link.language);
   return url.toString();
 }
 
 /**
- * The context back from the return page's URL, or null when it cannot be
- * used. Gateways add their own parameters to it; those are ignored.
+ * The link back from the return page's URL, or null when it cannot be used.
+ * Gateways add their own parameters to it; those are ignored.
  */
-export function readReturnContext(url: URL): ReturnContext | null {
+export function readReturnLink(url: URL): ReturnLink | null {
   const get = (name: string) => url.searchParams.get(name)?.trim() || null;
   const paymentId = get(PARAMS.paymentId);
   const publishableKey = get(PARAMS.publishableKey);
-  const hostPageUrl = get(PARAMS.hostPageUrl);
-  if (!paymentId || !publishableKey || !isWebUrl(hostPageUrl)) return null;
-  const successUrl = get(PARAMS.successUrl);
-  const cancelUrl = get(PARAMS.cancelUrl);
+  const hostOrigin = get(PARAMS.hostOrigin);
+  if (!paymentId || !publishableKey || !isWebOrigin(hostOrigin)) return null;
   return {
     paymentId,
     publishableKey,
-    hostPageUrl,
+    hostOrigin,
     language: get(PARAMS.language) === 'vi' ? 'vi' : 'en',
-    ...(isWebUrl(successUrl) ? { successUrl } : {}),
-    ...(isWebUrl(cancelUrl) ? { cancelUrl } : {}),
   };
+}
+
+/**
+ * The Payment's return context from the API, or the host origin's home page
+ * when the checkout page sent none.
+ */
+export function returnTargetsOf(link: ReturnLink, sent: ReturnTargets | null): ReturnTargets {
+  return sent ?? { hostPageUrl: `${link.hostOrigin}/`, successUrl: null, cancelUrl: null };
 }
 
 /** What the Customer is told. */
@@ -108,7 +124,7 @@ export interface PlanReturnUrls {
  */
 export function forwardTarget(
   outcome: ReturnOutcome,
-  context: ReturnContext,
+  context: ReturnTargets,
   plan: PlanReturnUrls,
   allowedOrigins: readonly string[],
 ): string | null {
