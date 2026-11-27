@@ -3,7 +3,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -16,8 +15,9 @@ import {
   ReadWebhookDeliveries,
   SendWebhooksByHand,
 } from '../../application/use-cases/webhook-deliveries.js';
-import { WebhookEndpointNotFoundError } from '../../domain/entities/webhook-endpoint.js';
-import { callerOf } from './caller.js';
+import { MapErrors } from '../../../common/http/map-errors.js';
+import { callerOf } from '../../../common/principal/caller.js';
+import { WEBHOOK_ERROR_RULES } from './webhook-errors.js';
 import { detailView } from './webhook-deliveries.controller.js';
 
 /**
@@ -26,6 +26,7 @@ import { detailView } from './webhook-deliveries.controller.js';
  */
 @ApiTags('internal')
 @RequireSensitivePermission('webhook-endpoints:manage')
+@MapErrors(WEBHOOK_ERROR_RULES)
 @Controller(`${INTERNAL_PREFIX}/webhook-endpoints`)
 export class WebhookEndpointTestsController {
   constructor(
@@ -45,18 +46,7 @@ export class WebhookEndpointTestsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     const { scope, actor } = callerOf(request);
-    let deliveryId: string;
-    try {
-      deliveryId = await this.send.sendTest(scope, id, actor);
-    } catch (error) {
-      if (error instanceof WebhookEndpointNotFoundError) {
-        throw new NotFoundException({
-          message: error.message,
-          code: 'WEBHOOK_ENDPOINT_NOT_FOUND',
-        });
-      }
-      throw error;
-    }
+    const deliveryId = await this.send.sendTest(scope, id, actor);
     return detailView(await this.deliveries.get(scope, deliveryId));
   }
 }

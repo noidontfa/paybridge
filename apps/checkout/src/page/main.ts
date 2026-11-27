@@ -7,6 +7,7 @@ import {
   type CheckoutPayment,
   type PricingTable,
   type PricingTablePlan,
+  type ReturnContext,
 } from '../shared/api.js';
 import { h } from '../shared/dom.js';
 import { formatAmount, gatewayName, strings, type Language } from '../shared/i18n.js';
@@ -216,6 +217,7 @@ class Checkout {
       const { attempt, payment } = await this.api.startAttempt(this.payment!.id, {
         gatewayId,
         returnUrl: this.returnUrl(),
+        returnContext: this.returnContext(),
       });
       this.payment = payment;
       if (this.settle(payment)) return;
@@ -233,19 +235,25 @@ class Checkout {
 
   /**
    * Where a redirect gateway sends the Customer back: the checkout app's
-   * return page, with what it needs to forward them afterwards (the snippet's
-   * URLs and the host page they started from).
+   * return page. The URL stays short; what the page needs to forward the
+   * Customer afterwards travels as the attempt's return context.
    */
   private returnUrl(): string {
-    const { successUrl, cancelUrl } = this.init;
     return returnPageUrl(config.checkoutUrl, {
       paymentId: this.payment!.id,
       publishableKey: key!,
-      hostPageUrl: hostPageUrl(this.init.hostPageUrl),
+      hostOrigin: hostOrigin!,
       language: this.language,
-      ...(successUrl ? { successUrl } : {}),
-      ...(cancelUrl ? { cancelUrl } : {}),
     });
+  }
+
+  /** The host page the Customer started from and the snippet's URLs. */
+  private returnContext(): ReturnContext {
+    return {
+      hostPageUrl: hostPageUrl(this.init.hostPageUrl),
+      successUrl: this.init.successUrl ?? null,
+      cancelUrl: this.init.cancelUrl ?? null,
+    };
   }
 
   /** `fresh`: the Customer just chose this gateway (a redirect then leaves at once). */

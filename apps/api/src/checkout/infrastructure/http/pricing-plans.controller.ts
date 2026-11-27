@@ -9,7 +9,6 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
@@ -17,6 +16,7 @@ import {
   RequirePermission,
   RequireSensitivePermission,
 } from '../../../common/principal/access-policy.js';
+import { actorLabel } from '../../../common/principal/actor.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
@@ -24,12 +24,12 @@ import {
   ManagePricingPlans,
   type PricingPlanDetail,
 } from '../../application/use-cases/pricing-plans.js';
-import type {
-  PricingPlan,
-  PricingPlanEditor,
-} from '../../domain/entities/pricing-plan.js';
-import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
-import { CheckoutEditor, CheckoutScope } from './current-scope.js';
+import type { PricingPlan, Actor } from '../../domain/entities/pricing-plan.js';
+import { MapCheckoutErrors } from './checkout-errors.js';
+import {
+  CurrentActor,
+  CurrentScope,
+} from '../../../common/principal/caller.js';
 
 // Shapes only; the Pricing Plan rules (lengths, Amount, URLs, Payment Expiry)
 // are checked by the domain so every caller gets the same answers.
@@ -48,14 +48,11 @@ const planSchema = z.object({
 });
 type PlanBody = z.output<typeof planSchema>;
 
-/** How a Super Admin's change is shown: done by the platform. */
-const PLATFORM_LABEL = 'Super Admin (PayBridge)';
-
-const editorView = (by: PricingPlanEditor) => ({
+const editorView = (by: Actor) => ({
   userId: by.userId,
   role: by.role,
   name: by.name,
-  label: by.role === 'SUPER_ADMIN' ? PLATFORM_LABEL : null,
+  label: actorLabel(by),
 });
 
 const view = (plan: PricingPlan) => ({
@@ -86,7 +83,7 @@ const detailView = ({ plan, pricingTables }: PricingPlanDetail) => ({
  * are POSTs, so the Console's BFF needs no new methods.
  */
 @ApiTags('internal')
-@UseInterceptors(CheckoutErrorInterceptor)
+@MapCheckoutErrors()
 @Controller(`${INTERNAL_PREFIX}/pricing-plans`)
 export class PricingPlansController {
   constructor(
@@ -96,7 +93,7 @@ export class PricingPlansController {
   @Get()
   @RequirePermission('pricing:view')
   @ApiOperation({ summary: "List the Organization's Pricing Plans" })
-  async list(@CheckoutScope() scope: OrganizationScope) {
+  async list(@CurrentScope() scope: OrganizationScope) {
     const items = await this.plans.list(scope);
     return { items: items.map(view) };
   }
@@ -107,7 +104,7 @@ export class PricingPlansController {
     summary: 'One Pricing Plan, with the Pricing Tables that show it',
   })
   async get(
-    @CheckoutScope() scope: OrganizationScope,
+    @CurrentScope() scope: OrganizationScope,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return detailView(await this.plans.get(scope, id));
@@ -117,8 +114,8 @@ export class PricingPlansController {
   @RequireSensitivePermission('pricing:manage')
   @ApiOperation({ summary: 'Create a Pricing Plan' })
   async create(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Body(new ZodValidationPipe(planSchema)) body: PlanBody,
   ) {
     return view(await this.plans.create(scope, body, editor));
@@ -129,8 +126,8 @@ export class PricingPlansController {
   @RequireSensitivePermission('pricing:manage')
   @ApiOperation({ summary: 'Replace every field of a Pricing Plan' })
   async update(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body(new ZodValidationPipe(planSchema)) body: PlanBody,
   ) {
@@ -145,8 +142,8 @@ export class PricingPlansController {
       'Archive a Pricing Plan; returns the Pricing Tables that still show it',
   })
   async archive(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return detailView(await this.plans.archive(scope, id, editor));
@@ -157,8 +154,8 @@ export class PricingPlansController {
   @RequireSensitivePermission('pricing:manage')
   @ApiOperation({ summary: 'Restore an archived Pricing Plan' })
   async restore(
-    @CheckoutScope() scope: OrganizationScope,
-    @CheckoutEditor() editor: PricingPlanEditor,
+    @CurrentScope() scope: OrganizationScope,
+    @CurrentActor() editor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return detailView(await this.plans.restore(scope, id, editor));
@@ -170,7 +167,7 @@ export class PricingPlansController {
     summary: 'Delete a Pricing Plan that no Payment references',
   })
   async delete(
-    @CheckoutScope() scope: OrganizationScope,
+    @CurrentScope() scope: OrganizationScope,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     await this.plans.delete(scope, id);

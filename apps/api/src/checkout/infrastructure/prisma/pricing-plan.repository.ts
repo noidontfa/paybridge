@@ -1,8 +1,9 @@
+import { roleOf } from '../../../common/principal/actor.js';
 import type { PricingPlan as PricingPlanRow } from '../../../generated/prisma/client.js';
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
 import type {
   PricingPlan,
-  PricingPlanEditor,
+  Actor,
   PricingPlanFeature,
   PricingPlanStatus,
   PricingPlanTerms,
@@ -30,7 +31,7 @@ function toPlan(row: PricingPlanRow): PricingPlan {
     status: row.status,
     updatedBy: {
       userId: row.updatedByUserId,
-      role: row.updatedByRole,
+      role: roleOf(row.updatedByRole),
       name: row.updatedByName,
     },
     createdAt: row.createdAt,
@@ -42,7 +43,10 @@ function termColumns(terms: PricingPlanTerms) {
   return {
     name: terms.name,
     description: terms.description,
-    features: terms.features.map((f) => ({ text: f.text, included: f.included })),
+    features: terms.features.map((f) => ({
+      text: f.text,
+      included: f.included,
+    })),
     amount: terms.amount,
     currency: terms.currency,
     allowedGatewayIds: [...terms.allowedGatewayIds],
@@ -52,7 +56,7 @@ function termColumns(terms: PricingPlanTerms) {
   };
 }
 
-function editorColumns(by: PricingPlanEditor, at: Date) {
+function editorColumns(by: Actor, at: Date) {
   return {
     updatedByUserId: by.userId,
     updatedByRole: by.role,
@@ -67,7 +71,10 @@ export class PrismaPricingPlanRepository extends PricingPlanRepository {
     super();
   }
 
-  async create(scope: OrganizationScope, plan: NewPricingPlan): Promise<PricingPlan> {
+  async create(
+    scope: OrganizationScope,
+    plan: NewPricingPlan,
+  ): Promise<PricingPlan> {
     const row = await this.ctx.db.pricingPlan.create({
       data: {
         id: plan.id,
@@ -88,7 +95,10 @@ export class PrismaPricingPlanRepository extends PricingPlanRepository {
     return rows.map(toPlan);
   }
 
-  async findById(scope: OrganizationScope, id: string): Promise<PricingPlan | null> {
+  async findById(
+    scope: OrganizationScope,
+    id: string,
+  ): Promise<PricingPlan | null> {
     const row = await this.ctx.db.pricingPlan.findFirst({
       where: { id, organizationId: scope.organizationId },
     });
@@ -99,7 +109,7 @@ export class PrismaPricingPlanRepository extends PricingPlanRepository {
     scope: OrganizationScope,
     id: string,
     terms: PricingPlanTerms,
-    by: PricingPlanEditor,
+    by: Actor,
     at: Date,
   ): Promise<PricingPlan | null> {
     return this.change(scope, id, {
@@ -112,7 +122,7 @@ export class PrismaPricingPlanRepository extends PricingPlanRepository {
     scope: OrganizationScope,
     id: string,
     status: PricingPlanStatus,
-    by: PricingPlanEditor,
+    by: Actor,
     at: Date,
   ): Promise<PricingPlan | null> {
     return this.change(scope, id, { status, ...editorColumns(by, at) });

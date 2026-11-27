@@ -189,6 +189,7 @@ export async function succeedPayment(
       amount: succeeded.amount,
       currency: succeeded.currency,
       status: succeeded.status,
+      expiresAt: succeeded.expiresAt.toISOString(),
       attemptId: attempt.id,
       gatewayId: attempt.gatewayId,
       ...checkoutOriginPayload(succeeded),
@@ -248,7 +249,10 @@ async function openReview(
     payload: {
       paymentId: payment.id,
       upstreamReference: payment.merchantOrderId,
+      amount: payment.amount,
+      currency: payment.currency,
       status: payment.status,
+      expiresAt: payment.expiresAt.toISOString(),
       attemptId: inReview.id,
       gatewayId: inReview.gatewayId,
       reviewReason,

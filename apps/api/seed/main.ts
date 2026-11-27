@@ -32,6 +32,9 @@ async function main(): Promise<void> {
     `Seeded ${result.users} Users (password: ${SEED_PASSWORD}) and ${result.payments} Payments in ${result.organizations} Organizations, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
   );
   console.log(`Seeded ${result.pricingPlans} Pricing Plans.`);
+  console.log(
+    `Seeded ${result.checkoutActivity.payments} checkout Payments and ${result.checkoutActivity.deliveries} Webhook deliveries.`,
+  );
   for (const t of result.pricingTables) {
     console.log(`Pricing Table (${t.name}, ${t.plans} Pricing Plans): ${t.id}`);
   }

@@ -157,13 +157,27 @@ test('does not take the gateway\'s parameters as proof of payment', async ({ pag
   await page.waitForURL(success, { timeout: 20_000 });
 });
 
-test('ignores a success URL on an origin the key does not allow', async ({ page }) => {
+test('keeps the return URL short however long the host page URL is', async ({ page }) => {
+  const path = `/?from=pricing&campaign=${'x'.repeat(3000)}`;
+  const { attemptKey, returnUrl } = await leaveForGateway(page, SEED.plans.basic, path);
+  // Within the API's 2048-character cap, and far below it.
+  expect(returnUrl.length).toBeLessThan(512);
+
+  await gatewayCallback(attemptKey, 'SUCCEEDED', '99000');
+  await comeBack(page, returnUrl, {});
+
+  await page.waitForURL(`${ALLOWED_HOST}${path}`, { timeout: 20_000 });
+});
+
+test('sends nobody anywhere from a return URL with a forged host origin', async ({ page }) => {
   const { attemptKey, returnUrl } = await leaveForGateway(page, SEED.plans.basic, '/?from=pricing');
   await gatewayCallback(attemptKey, 'SUCCEEDED', '99000');
 
   const forged = new URL(returnUrl);
-  forged.searchParams.set('success', 'https://evil.example/phish');
+  forged.searchParams.set('origin', 'https://evil.example');
   await page.goto(forged.toString());
 
-  await page.waitForURL(`${ALLOWED_HOST}/?from=pricing`, { timeout: 20_000 });
+  await expect(page.getByTestId('unavailable')).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(3_000);
+  expect(page.url().startsWith(`${CHECKOUT_URL}/return?`)).toBe(true);
 });

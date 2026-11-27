@@ -1,11 +1,14 @@
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
-import type { PricingPlanEditor } from '../entities/pricing-plan.js';
-import type { PricingTable, PricingTableTerms } from '../entities/pricing-table.js';
+import type { Actor } from '../entities/pricing-plan.js';
+import type {
+  PricingTable,
+  PricingTableTerms,
+} from '../entities/pricing-table.js';
 import type { PricingTableRef } from '../services/pricing-plan-references.js';
 
 export interface NewPricingTable extends PricingTableTerms {
   readonly id: string;
-  readonly updatedBy: PricingPlanEditor;
+  readonly updatedBy: Actor;
   readonly at: Date;
 }
 
@@ -16,16 +19,22 @@ export interface NewPricingTable extends PricingTableTerms {
  * `TransactionRunner.run`.
  */
 export abstract class PricingTableRepository {
-  abstract create(scope: OrganizationScope, table: NewPricingTable): Promise<PricingTable>;
+  abstract create(
+    scope: OrganizationScope,
+    table: NewPricingTable,
+  ): Promise<PricingTable>;
   /** The Organization's Pricing Tables, newest first. */
   abstract list(scope: OrganizationScope): Promise<PricingTable[]>;
-  abstract findById(scope: OrganizationScope, id: string): Promise<PricingTable | null>;
+  abstract findById(
+    scope: OrganizationScope,
+    id: string,
+  ): Promise<PricingTable | null>;
   /** Replaces every field and the Pricing Plans; null when not found. */
   abstract update(
     scope: OrganizationScope,
     id: string,
     terms: PricingTableTerms,
-    by: PricingPlanEditor,
+    by: Actor,
     at: Date,
   ): Promise<PricingTable | null>;
   /** False when the Organization has no such Pricing Table. */

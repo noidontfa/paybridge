@@ -4,7 +4,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -28,15 +27,16 @@ import {
   ReadWebhookDeliveries,
   SendWebhooksByHand,
   webhookDeliveriesCursor,
-  WebhookDeliveryNotFoundError,
 } from '../../application/use-cases/webhook-deliveries.js';
 import { DELIVERY_KINDS } from '../../domain/entities/test-event.js';
-import { actorLabel } from '../../domain/entities/webhook-endpoint.js';
 import type {
   WebhookDeliveryDetailRow,
   WebhookDeliveryListRow,
 } from '../../domain/repositories/webhook-deliveries-read.repository.js';
-import { callerOf, readScopeOf } from './caller.js';
+import { MapErrors } from '../../../common/http/map-errors.js';
+import { actorLabel } from '../../../common/principal/actor.js';
+import { callerOf, readScopeOf } from '../../../common/principal/caller.js';
+import { WEBHOOK_ERROR_RULES } from './webhook-errors.js';
 
 const listQuerySchema = z
   .object({
@@ -96,16 +96,6 @@ export const detailView = (row: WebhookDeliveryDetailRow) => ({
   })),
 });
 
-export function mapDeliveryError(error: unknown): never {
-  if (error instanceof WebhookDeliveryNotFoundError) {
-    throw new NotFoundException({
-      message: error.message,
-      code: 'WEBHOOK_DELIVERY_NOT_FOUND',
-    });
-  }
-  throw error;
-}
-
 /**
  * Each Payment Event delivered (or tried) to the Organization's Webhook
  * Endpoints, for Operators and Admins. A resend is a sensitive write
@@ -113,6 +103,7 @@ export function mapDeliveryError(error: unknown): never {
  */
 @ApiTags('internal')
 @RequirePermission('webhook-deliveries:view')
+@MapErrors(WEBHOOK_ERROR_RULES)
 @Controller(`${INTERNAL_PREFIX}/webhook-deliveries`)
 export class WebhookDeliveriesController {
   constructor(
@@ -156,19 +147,11 @@ export class WebhookDeliveriesController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     const { scope, actor } = callerOf(request);
-    try {
-      await this.send.resend(scope, id, actor);
-    } catch (error) {
-      mapDeliveryError(error);
-    }
+    await this.send.resend(scope, id, actor);
     return this.detail(scope, id);
   }
 
   private async detail(scope: ReadScope, id: string) {
-    try {
-      return detailView(await this.deliveries.get(scope, id));
-    } catch (error) {
-      mapDeliveryError(error);
-    }
+    return detailView(await this.deliveries.get(scope, id));
   }
 }

@@ -45,6 +45,17 @@ export interface CheckoutAttempt {
   readonly nextAction: NextAction | null;
 }
 
+/**
+ * The host page the Customer started from and the snippet's URLs. Sent with
+ * an attempt and kept with the checkout session, so the return URL a gateway
+ * gets stays short.
+ */
+export interface ReturnContext {
+  readonly hostPageUrl: string;
+  readonly successUrl: string | null;
+  readonly cancelUrl: string | null;
+}
+
 export interface CheckoutPayment {
   readonly id: string;
   readonly status: PaymentStatus;
@@ -54,6 +65,8 @@ export interface CheckoutPayment {
   readonly pricingPlan: { readonly id: string; readonly name: string } | null;
   /** The Pricing Plan's success and cancel URLs (null: not set). */
   readonly returnUrls: { readonly successUrl: string | null; readonly cancelUrl: string | null };
+  /** What the checkout page sent with its latest attempt (null: none yet). */
+  readonly returnContext: ReturnContext | null;
   readonly attempt: CheckoutAttempt | null;
   readonly resumed?: boolean;
 }
@@ -100,7 +113,11 @@ export interface CheckoutApi {
   payment(id: string): Promise<CheckoutPayment>;
   startAttempt(
     paymentId: string,
-    input: { readonly gatewayId: string; readonly returnUrl: string },
+    input: {
+      readonly gatewayId: string;
+      readonly returnUrl: string;
+      readonly returnContext?: ReturnContext;
+    },
   ): Promise<{ attempt: CheckoutAttempt; payment: CheckoutPayment }>;
   /** The origins allowed to frame the checkout page (server side only). */
   frameAncestors(): Promise<readonly string[]>;

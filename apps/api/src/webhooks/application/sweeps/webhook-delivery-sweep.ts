@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ALL_ORGANIZATIONS } from '../../../payment-core/port/organization-scope.js';
-import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   DeliveryDispatcher,
   WebhooksClock,
@@ -28,8 +28,8 @@ export interface WebhookDeliverySweepResult {
 @Injectable()
 export class WebhookDeliverySweep {
   constructor(
-    @Inject(WebhooksTransactionRunner)
-    private readonly runner: WebhooksTransactionRunner,
+    @Inject(TransactionRunner)
+    private readonly runner: TransactionRunner,
     @Inject(WebhooksClock) private readonly clock: WebhooksClock,
     @Inject(DeliveryDispatcher) private readonly dispatcher: DeliveryDispatcher,
   ) {}

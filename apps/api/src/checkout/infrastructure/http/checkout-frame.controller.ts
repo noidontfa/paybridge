@@ -1,11 +1,11 @@
-import { Controller, Get, UseFilters, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, UseFilters } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CheckoutEndpoint,
   CurrentCheckout,
   type CheckoutCaller,
 } from '../../../identity/port/index.js';
-import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
+import { MapCheckoutErrors } from './checkout-errors.js';
 import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 
 /**
@@ -17,7 +17,7 @@ import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 @ApiTags('checkout')
 @CheckoutEndpoint()
 @UseFilters(CheckoutUnavailableFilter)
-@UseInterceptors(CheckoutErrorInterceptor)
+@MapCheckoutErrors()
 @Controller('checkout/frame')
 export class CheckoutFrameController {
   @Get()

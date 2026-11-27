@@ -14,6 +14,7 @@ import {
 } from '../../domain/errors.js';
 import { newCheckoutId } from '../../domain/ids.js';
 import type {
+  CheckoutReturnContext,
   CheckoutSession,
   CheckoutSessionKey,
 } from '../../domain/repositories/checkout-session.repository.js';
@@ -49,10 +50,14 @@ export interface CheckoutReturnUrls {
   readonly cancelUrl: string | null;
 }
 
-/** A checkout Payment with its Pricing Plan's return URLs. */
+/**
+ * A checkout Payment with its Pricing Plan's return URLs and the return
+ * context the checkout page sent (null until it sends one).
+ */
 export interface CheckoutPaymentWithReturnUrls {
   readonly payment: CheckoutPaymentView;
   readonly returnUrls: CheckoutReturnUrls;
+  readonly returnContext: CheckoutReturnContext | null;
 }
 
 const returnUrlsOf = (plan: PricingPlan): CheckoutReturnUrls => ({
@@ -68,6 +73,8 @@ export interface StartedCheckoutPayment extends CheckoutPaymentWithReturnUrls {
 export interface CheckoutAttemptRequest {
   readonly gatewayId: string;
   readonly returnUrl: string;
+  /** Kept for the return page; the latest one sent wins. */
+  readonly returnContext?: CheckoutReturnContext;
 }
 
 function hashToken(token: string): string {
@@ -114,7 +121,18 @@ export class CheckoutPaymentFlow {
 
     const open = await this.openPayment(scope, key);
     const returnUrls = returnUrlsOf(plan);
-    if (open) return { payment: open, returnUrls, resumed: true };
+    if (open) {
+      const session = await this.repos.checkoutSessions.findByPaymentId(
+        scope,
+        open.id,
+      );
+      return {
+        payment: open,
+        returnUrls,
+        returnContext: session?.returnContext ?? null,
+        resumed: true,
+      };
+    }
 
     const now = this.clock.now();
     const payment = await this.payments.create(scope, {
@@ -134,9 +152,10 @@ export class CheckoutPaymentFlow {
       publishableKeyId: caller.publishableKeyId,
       paymentId: payment.id,
       createdAt: now,
+      returnContext: null,
     };
     await this.repos.checkoutSessions.create(scope, session);
-    return { payment, returnUrls, resumed: false };
+    return { payment, returnUrls, returnContext: null, resumed: false };
   }
 
   /**
@@ -149,7 +168,10 @@ export class CheckoutPaymentFlow {
     paymentId: string,
     request: CheckoutAttemptRequest,
   ): Promise<CheckoutPaymentWithReturnUrls & { attempt: CheckoutAttemptView }> {
-    const { payment, plan } = await this.checkoutPayment(scope, paymentId);
+    const { payment, plan, session } = await this.checkoutPayment(
+      scope,
+      paymentId,
+    );
     assertGatewaySellable(
       plan,
       await this.payments.enabledGatewayIds(scope),
@@ -161,7 +183,18 @@ export class CheckoutPaymentFlow {
       returnUrl: request.returnUrl,
       description: payment.checkoutOrigin?.pricingPlanName ?? plan.name,
     });
-    return { ...started, returnUrls: returnUrlsOf(plan) };
+    if (request.returnContext) {
+      await this.repos.checkoutSessions.saveReturnContext(
+        scope,
+        payment.id,
+        request.returnContext,
+      );
+    }
+    return {
+      ...started,
+      returnUrls: returnUrlsOf(plan),
+      returnContext: request.returnContext ?? session.returnContext,
+    };
   }
 
   /** A checkout Payment of the Organization; any other Payment is not found. */
@@ -169,14 +202,25 @@ export class CheckoutPaymentFlow {
     scope: OrganizationScope,
     paymentId: string,
   ): Promise<CheckoutPaymentWithReturnUrls> {
-    const { payment, plan } = await this.checkoutPayment(scope, paymentId);
-    return { payment, returnUrls: returnUrlsOf(plan) };
+    const { payment, plan, session } = await this.checkoutPayment(
+      scope,
+      paymentId,
+    );
+    return {
+      payment,
+      returnUrls: returnUrlsOf(plan),
+      returnContext: session.returnContext,
+    };
   }
 
   private async checkoutPayment(
     scope: OrganizationScope,
     paymentId: string,
-  ): Promise<{ payment: CheckoutPaymentView; plan: PricingPlan }> {
+  ): Promise<{
+    payment: CheckoutPaymentView;
+    plan: PricingPlan;
+    session: CheckoutSession;
+  }> {
     const session = isUuid(paymentId)
       ? await this.repos.checkoutSessions.findByPaymentId(scope, paymentId)
       : null;
@@ -186,8 +230,10 @@ export class CheckoutPaymentFlow {
     const plan = session
       ? await this.repos.pricingPlans.findById(scope, session.pricingPlanId)
       : null;
-    if (!payment || !plan) throw new CheckoutPaymentNotFoundError(paymentId);
-    return { payment, plan };
+    if (!session || !payment || !plan) {
+      throw new CheckoutPaymentNotFoundError(paymentId);
+    }
+    return { payment, plan, session };
   }
 
   /** An active Pricing Plan with at least one gateway to pay with. */

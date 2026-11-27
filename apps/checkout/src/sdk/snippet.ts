@@ -1,4 +1,7 @@
-// What the host page's script tag asks for:
+import { SNIPPET_ATTRIBUTES as ATTR } from '@paybridge/checkout-snippet';
+
+// What the host page's script tag asks for (the attribute names are shared
+// with the Console through `@paybridge/checkout-snippet`):
 //
 //   <script src="https://checkout.paybridge.vn/v1/paybridge.js"
 //           data-key="pb_pk_…" data-table="<Pricing Table id>"
@@ -43,24 +46,24 @@ function optionalUrl(script: HTMLElement, name: string): string | undefined {
 }
 
 export function readSnippet(script: HTMLElement): SnippetResult {
-  const key = optional(script, 'data-key');
-  const tableId = optional(script, 'data-table');
+  const key = optional(script, ATTR.key);
+  const tableId = optional(script, ATTR.table);
   if (!key) return { ok: false, reason: 'MISSING_DATA_KEY' };
   if (!tableId) return { ok: false, reason: 'MISSING_DATA_TABLE' };
-  const askEmail = script.getAttribute('data-ask-email');
+  const askEmail = script.getAttribute(ATTR.askEmail);
   return {
     ok: true,
     snippet: {
       key,
       tableId,
-      customerReference: optional(script, 'data-customer-ref'),
-      successUrl: optionalUrl(script, 'data-success-url'),
-      cancelUrl: optionalUrl(script, 'data-cancel-url'),
+      customerReference: optional(script, ATTR.customerReference),
+      successUrl: optionalUrl(script, ATTR.successUrl),
+      cancelUrl: optionalUrl(script, ATTR.cancelUrl),
       askEmail: askEmail !== null && askEmail !== 'false',
       callbacks: {
-        onSuccess: optional(script, 'data-on-success'),
-        onCancel: optional(script, 'data-on-cancel'),
-        onError: optional(script, 'data-on-error'),
+        onSuccess: optional(script, ATTR.onSuccess),
+        onCancel: optional(script, ATTR.onCancel),
+        onError: optional(script, ATTR.onError),
       },
     },
   };

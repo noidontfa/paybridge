@@ -1,6 +1,6 @@
 /**
  * Static checks over `prisma/schema.prisma` and the migration SQL, used by
- * `schema.spec.ts` (ADR 0001: table-prefix ownership; spec: partial indexes).
+ * `schema.spec.ts` (ADR 0001 and 0010: table-prefix ownership; spec: partial indexes).
  */
 
 /** Table-name prefixes that identify an owning module: Payment Core, Identity, checkout and Webhooks. */

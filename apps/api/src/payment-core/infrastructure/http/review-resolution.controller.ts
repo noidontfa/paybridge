@@ -23,11 +23,11 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js'
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import { PaymentService } from '../../application/payment.service.js';
 import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
+import type { Actor } from '../../../common/principal/actor.js';
 import {
   CurrentActor,
   CurrentScope,
-  type Actor,
-} from './current-scope.decorator.js';
+} from '../../../common/principal/caller.js';
 import {
   PaymentDetailResponseDto,
   toPaymentDetailResponse,

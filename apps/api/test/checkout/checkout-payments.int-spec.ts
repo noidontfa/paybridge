@@ -474,6 +474,7 @@ describe("reading a checkout Payment's status", () => {
       expiresAt: payment.body.expiresAt,
       pricingPlan: { id: planId, name: 'Pro' },
       returnUrls: { successUrl: null, cancelUrl: null },
+      returnContext: null,
       attempt: {
         id: attempt.body.attempt.id,
         gatewayId: 'fake',
@@ -500,6 +501,46 @@ describe("reading a checkout Payment's status", () => {
       successUrl: 'https://shop.example.com/thanks',
       cancelUrl: 'https://shop.example.com/pricing',
     });
+  });
+
+  it('keeps the return context the checkout page sent with the attempt, so the return URL stays short', async () => {
+    const planId = await createPricingPlan(prisma);
+    const payment = await start({ pricingPlanId: planId, sessionToken: SESSION });
+    // A host page URL far longer than any return URL may be.
+    const hostPageUrl = `${SHOP_ORIGIN}/pricing?campaign=${'x'.repeat(4000)}`;
+    const returnContext = {
+      hostPageUrl,
+      successUrl: `${SHOP_ORIGIN}/thanks?ref=${'y'.repeat(3000)}`,
+      cancelUrl: `${SHOP_ORIGIN}/sorry`,
+    };
+
+    const attempt = await request(server())
+      .post(`${PAYMENTS}/${payment.body.id}/attempts`)
+      .set(bearer(key))
+      .set('Origin', SHOP_ORIGIN)
+      .send({ gatewayId: 'fake', returnUrl: RETURN_URL, returnContext });
+
+    expect(attempt.status, JSON.stringify(attempt.body)).toBe(201);
+    expect(attempt.body.payment.returnContext).toEqual(returnContext);
+    const res = await status(payment.body.id).expect(200);
+    expect(res.body.returnContext).toEqual(returnContext);
+  });
+
+  it('refuses a return context URL that is not a web page', async () => {
+    const planId = await createPricingPlan(prisma);
+    const payment = await start({ pricingPlanId: planId, sessionToken: SESSION });
+
+    const res = await request(server())
+      .post(`${PAYMENTS}/${payment.body.id}/attempts`)
+      .set(bearer(key))
+      .set('Origin', SHOP_ORIGIN)
+      .send({
+        gatewayId: 'fake',
+        returnUrl: RETURN_URL,
+        returnContext: { hostPageUrl: 'javascript:alert(1)' },
+      });
+
+    expect(res.status).toBe(400);
   });
 
   it('does not show a Payment created through the payments API', async () => {

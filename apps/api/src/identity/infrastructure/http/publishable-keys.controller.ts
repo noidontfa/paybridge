@@ -1,14 +1,10 @@
 import {
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
   Inject,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -21,9 +17,12 @@ import {
   RequireSensitivePermission,
 } from '../../../common/principal/access-policy.js';
 import {
-  PRINCIPAL_REQUEST_KEY,
-  type Principal,
-} from '../../../common/principal/principal.js';
+  errorRule,
+  MapErrors,
+  type ErrorRule,
+} from '../../../common/http/map-errors.js';
+import { actorLabel, type Actor } from '../../../common/principal/actor.js';
+import { callerOf } from '../../../common/principal/caller.js';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
 import { INTERNAL_PREFIX } from '../../../constants.js';
 import {
@@ -37,7 +36,6 @@ import {
   InvalidPublishableKeyLabelError,
   PublishableKeyNotFoundError,
   PublishableKeyRevokedError,
-  type KeyWriter,
   type PublishableKey,
 } from '../../domain/entities/publishable-key.js';
 
@@ -51,15 +49,10 @@ const originsSchema = z.object({ allowedOrigins: origins });
 type OriginsBody = z.output<typeof originsSchema>;
 
 /** How the Console names a writer; a Super Admin acts for the platform. */
-const PLATFORM_LABEL = 'Super Admin (PayBridge)';
-const writerView = (writer: KeyWriter | null) => ({
-  name: writer?.name ?? null,
+const writerView = (writer: Actor | null) => ({
+  name: writer?.name || null,
   role: writer?.role ?? null,
-  label: !writer
-    ? null
-    : writer.role === 'SUPER_ADMIN'
-      ? PLATFORM_LABEL
-      : writer.name,
+  label: writer ? (actorLabel(writer) ?? (writer.name || null)) : null,
 });
 
 const view = (key: PublishableKey) => ({
@@ -74,54 +67,37 @@ const view = (key: PublishableKey) => ({
   updatedBy: writerView(key.updatedBy),
 });
 
-const principalOf = (request: Record<string, unknown>): Principal =>
-  request[PRINCIPAL_REQUEST_KEY] as Principal;
-
 /** The Organization the caller works in: one is always required. */
-function organizationOf(request: Record<string, unknown>): string {
-  const { organizationId } = principalOf(request);
-  if (!organizationId) {
-    throw new ForbiddenException({
-      message: 'Choose one Organization to work in',
-      code: 'ORGANIZATION_REQUIRED',
-    });
-  }
-  return organizationId;
-}
+const organizationOf = (request: Record<string, unknown>): string =>
+  callerOf(request).scope.organizationId;
 
 /** The signed-in writer; a sensitive write has re-read their name. */
-function writerOf(request: Record<string, unknown>): KeyWriter {
-  const user = principalOf(request).user!;
-  return { userId: user.id, role: user.role, name: user.name ?? null };
-}
+const writerOf = (request: Record<string, unknown>): Actor =>
+  callerOf(request).actor;
 
-function mapError(error: unknown): never {
-  if (error instanceof InvalidPublishableKeyLabelError) {
-    throw new BadRequestException({
-      message: error.message,
-      code: 'INVALID_PUBLISHABLE_KEY_LABEL',
-    });
-  }
-  if (error instanceof InvalidAllowedOriginsError) {
-    throw new BadRequestException({
-      message: error.message,
-      code: 'INVALID_ALLOWED_ORIGINS',
-    });
-  }
-  if (error instanceof PublishableKeyNotFoundError) {
-    throw new NotFoundException({
-      message: error.message,
-      code: 'PUBLISHABLE_KEY_NOT_FOUND',
-    });
-  }
-  if (error instanceof PublishableKeyRevokedError) {
-    throw new ConflictException({
-      message: error.message,
-      code: 'PUBLISHABLE_KEY_REVOKED',
-    });
-  }
-  throw error;
-}
+/** How Publishable Key errors are answered. */
+const PUBLISHABLE_KEY_ERROR_RULES: readonly ErrorRule[] = [
+  errorRule({
+    error: InvalidPublishableKeyLabelError,
+    status: HttpStatus.BAD_REQUEST,
+    code: 'INVALID_PUBLISHABLE_KEY_LABEL',
+  }),
+  errorRule({
+    error: InvalidAllowedOriginsError,
+    status: HttpStatus.BAD_REQUEST,
+    code: 'INVALID_ALLOWED_ORIGINS',
+  }),
+  errorRule({
+    error: PublishableKeyNotFoundError,
+    status: HttpStatus.NOT_FOUND,
+    code: 'PUBLISHABLE_KEY_NOT_FOUND',
+  }),
+  errorRule({
+    error: PublishableKeyRevokedError,
+    status: HttpStatus.CONFLICT,
+    code: 'PUBLISHABLE_KEY_REVOKED',
+  }),
+];
 
 /**
  * Publishable Key management (ADR 0009). Creating, editing and revoking are
@@ -129,31 +105,32 @@ function mapError(error: unknown): never {
  * key is not secret, so listing shows it in full.
  */
 @ApiTags('internal')
+@MapErrors(PUBLISHABLE_KEY_ERROR_RULES)
 @Controller(`${INTERNAL_PREFIX}/publishable-keys`)
 export class PublishableKeysController {
   constructor(
-    @Inject(CreatePublishableKey) private readonly createKey: CreatePublishableKey,
+    @Inject(CreatePublishableKey)
+    private readonly createKey: CreatePublishableKey,
     @Inject(ListPublishableKeys) private readonly listKeys: ListPublishableKeys,
     @Inject(SetPublishableKeyOrigins)
     private readonly setOrigins: SetPublishableKeyOrigins,
-    @Inject(RevokePublishableKey) private readonly revokeKey: RevokePublishableKey,
+    @Inject(RevokePublishableKey)
+    private readonly revokeKey: RevokePublishableKey,
   ) {}
 
   @Post()
   @RequireSensitivePermission('publishable-keys:manage')
-  @ApiOperation({ summary: 'Create a Publishable Key with its allowed origins' })
+  @ApiOperation({
+    summary: 'Create a Publishable Key with its allowed origins',
+  })
   async create(
     @Req() request: Record<string, unknown>,
     @Body(new ZodValidationPipe(createSchema)) body: CreateBody,
   ) {
     const organizationId = organizationOf(request);
-    try {
-      return view(
-        await this.createKey.execute(organizationId, body, writerOf(request)),
-      );
-    } catch (error) {
-      return mapError(error);
-    }
+    return view(
+      await this.createKey.execute(organizationId, body, writerOf(request)),
+    );
   }
 
   @Get()
@@ -174,18 +151,14 @@ export class PublishableKeysController {
     @Body(new ZodValidationPipe(originsSchema)) body: OriginsBody,
   ) {
     const organizationId = organizationOf(request);
-    try {
-      return view(
-        await this.setOrigins.execute(
-          organizationId,
-          id,
-          body.allowedOrigins,
-          writerOf(request),
-        ),
-      );
-    } catch (error) {
-      return mapError(error);
-    }
+    return view(
+      await this.setOrigins.execute(
+        organizationId,
+        id,
+        body.allowedOrigins,
+        writerOf(request),
+      ),
+    );
   }
 
   @Post(':id/revoke')
@@ -199,11 +172,7 @@ export class PublishableKeysController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     const organizationId = organizationOf(request);
-    try {
-      await this.revokeKey.execute(organizationId, id, writerOf(request));
-    } catch (error) {
-      return mapError(error);
-    }
+    await this.revokeKey.execute(organizationId, id, writerOf(request));
     return { revoked: true };
   }
 }

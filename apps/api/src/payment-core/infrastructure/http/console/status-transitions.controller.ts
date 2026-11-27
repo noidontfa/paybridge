@@ -7,7 +7,8 @@ import {
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/filters/error-response.dto.js';
 import { ZodValidationPipe } from '../../../../common/pipes/zod-validation.pipe.js';
-import { CurrentReadScope } from '../current-scope.decorator.js';
+import { actorLabel } from '../../../../common/principal/actor.js';
+import { CurrentReadScope } from '../../../../common/principal/caller.js';
 import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { RequirePermission } from '../../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../../constants.js';
@@ -59,8 +60,7 @@ export class StatusTransitionsController {
         actorRole: row.actorRole,
         actorName: row.actorName,
         // Platform staff acting in an Organization are labelled as such.
-        actorLabel:
-          row.actorRole === 'SUPER_ADMIN' ? 'Super Admin (PayBridge)' : null,
+        actorLabel: actorLabel({ role: row.actorRole }),
         reason: row.reason,
         createdAt: row.createdAt.toISOString(),
         paymentId: row.paymentId,

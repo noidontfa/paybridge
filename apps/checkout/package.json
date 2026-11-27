@@ -29,6 +29,7 @@
     "vitest": "^5.1.1"
   },
   "dependencies": {
+    "@paybridge/checkout-snippet": "workspace:*",
     "qrcode": "^1.5.4"
   }
 }

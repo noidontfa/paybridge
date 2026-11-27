@@ -1,13 +1,11 @@
+import type { Actor } from '../../../common/principal/actor.js';
 import type { PaymentEventKind } from './event-kinds.js';
 
-export type WebhookEndpointStatus = 'ENABLED' | 'DISABLED';
+// Who wrote an endpoint (or rolled its secret, or resent a delivery): the
+// one Actor shape every module records.
+export type { Actor };
 
-/** Who wrote an endpoint last: the signed-in User and the Role they held. */
-export interface Actor {
-  readonly userId: string;
-  readonly role: string;
-  readonly name: string;
-}
+export type WebhookEndpointStatus = 'ENABLED' | 'DISABLED';
 
 /**
  * A URL of an Organization's system that receives Webhooks, with its own
@@ -65,11 +63,6 @@ export class WebhookEndpointNotFoundError extends Error {
 /** The URL is malformed, or points somewhere a Webhook may not go. */
 export class InvalidWebhookUrlError extends Error {
   override readonly name = 'InvalidWebhookUrlError';
-}
-
-/** The label an endpoint's last writer is shown with: a Super Admin is the platform. */
-export function actorLabel(actor: Actor): string | null {
-  return actor.role === 'SUPER_ADMIN' ? 'Super Admin (PayBridge)' : null;
 }
 
 /**

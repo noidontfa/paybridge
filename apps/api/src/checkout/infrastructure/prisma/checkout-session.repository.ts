@@ -2,6 +2,7 @@ import type { CheckoutSession as CheckoutSessionRow } from '../../../generated/p
 import type { OrganizationScope } from '../../../payment-core/port/organization-scope.js';
 import {
   CheckoutSessionRepository,
+  type CheckoutReturnContext,
   type CheckoutSession,
   type CheckoutSessionKey,
 } from '../../domain/repositories/checkout-session.repository.js';
@@ -17,6 +18,13 @@ function toSession(row: CheckoutSessionRow): CheckoutSession {
     publishableKeyId: row.publishableKeyId,
     paymentId: row.paymentId,
     createdAt: row.createdAt,
+    returnContext: row.returnHostPageUrl
+      ? {
+          hostPageUrl: row.returnHostPageUrl,
+          successUrl: row.returnSuccessUrl,
+          cancelUrl: row.returnCancelUrl,
+        }
+      : null,
   };
 }
 
@@ -29,8 +37,30 @@ export class PrismaCheckoutSessionRepository extends CheckoutSessionRepository {
     scope: OrganizationScope,
     session: CheckoutSession,
   ): Promise<void> {
+    const { returnContext, ...columns } = session;
     await this.ctx.db.checkoutSession.create({
-      data: { ...session, organizationId: scope.organizationId },
+      data: {
+        ...columns,
+        organizationId: scope.organizationId,
+        returnHostPageUrl: returnContext?.hostPageUrl ?? null,
+        returnSuccessUrl: returnContext?.successUrl ?? null,
+        returnCancelUrl: returnContext?.cancelUrl ?? null,
+      },
+    });
+  }
+
+  async saveReturnContext(
+    scope: OrganizationScope,
+    paymentId: string,
+    context: CheckoutReturnContext,
+  ): Promise<void> {
+    await this.ctx.db.checkoutSession.updateMany({
+      where: { organizationId: scope.organizationId, paymentId },
+      data: {
+        returnHostPageUrl: context.hostPageUrl,
+        returnSuccessUrl: context.successUrl,
+        returnCancelUrl: context.cancelUrl,
+      },
     });
   }
 

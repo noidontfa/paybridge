@@ -2,75 +2,91 @@ import type { CheckoutPayment } from '../shared/api.js';
 import {
   forwardTarget,
   outcomeOf,
-  readReturnContext,
+  readReturnLink,
   returnPageUrl,
-  type ReturnContext,
+  returnTargetsOf,
+  type ReturnLink,
+  type ReturnTargets,
 } from './return-context.js';
 
 // What the return page knows when a gateway sends the Customer back: the
-// context the checkout page put in the return URL, the Payment's status from
-// the API, and where that sends the Customer.
+// short link the checkout page put in the return URL, the return context and
+// status of the Payment from the API, and where that sends the Customer.
 
 const CHECKOUT = 'https://checkout.paybridge.example';
 const SHOP = 'https://shop.example.com';
 
-const context: ReturnContext = {
+const link: ReturnLink = {
   paymentId: '019a2b3c-4d5e-7f00-8a00-0000000000aa',
   publishableKey: 'pb_pk_test_key',
-  hostPageUrl: `${SHOP}/pricing?plan=pro`,
+  hostOrigin: SHOP,
   language: 'vi',
+};
+
+const context: ReturnTargets = {
+  hostPageUrl: `${SHOP}/pricing?plan=pro`,
   successUrl: `${SHOP}/thanks`,
   cancelUrl: `${SHOP}/sorry`,
 };
 
 describe('the return URL', () => {
-  it('is the checkout app\'s /return page, carrying the context back', () => {
-    const url = new URL(returnPageUrl(CHECKOUT, context));
+  it("is the checkout app's /return page, carrying the link back", () => {
+    const url = new URL(returnPageUrl(CHECKOUT, link));
 
     expect(url.origin + url.pathname).toBe(`${CHECKOUT}/return`);
-    expect(readReturnContext(url)).toEqual(context);
+    expect([...url.searchParams.keys()].sort()).toEqual(['key', 'lang', 'origin', 'paymentId']);
+    expect(readReturnLink(url)).toEqual(link);
   });
 
-  it('leaves out the snippet URLs it was not given', () => {
-    const minimal: ReturnContext = {
-      paymentId: context.paymentId,
-      publishableKey: context.publishableKey,
-      hostPageUrl: `${SHOP}/`,
-      language: 'en',
-    };
-    const url = new URL(returnPageUrl(CHECKOUT, minimal));
+  it('stays short however long the host page and snippet URLs are', () => {
+    // They are kept with the checkout session, not in the URL.
+    const longest = `https://${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(57)}:65535`;
+    const url = returnPageUrl(CHECKOUT, { ...link, hostOrigin: longest });
 
-    expect([...url.searchParams.keys()].sort()).toEqual(['back', 'key', 'lang', 'paymentId']);
-    expect(readReturnContext(url)).toEqual(minimal);
+    expect(url.length).toBeLessThan(512);
+    expect(readReturnLink(new URL(url))?.hostOrigin).toBe(longest);
   });
 
   it.each([
     ['no Payment id', 'paymentId'],
     ['no key', 'key'],
-    ['no host page', 'back'],
+    ['no host origin', 'origin'],
   ])('is refused with %s', (_, param) => {
-    const url = new URL(returnPageUrl(CHECKOUT, context));
+    const url = new URL(returnPageUrl(CHECKOUT, link));
     url.searchParams.delete(param);
 
-    expect(readReturnContext(url)).toBeNull();
+    expect(readReturnLink(url)).toBeNull();
   });
 
-  it('is refused when the host page is not a web page', () => {
-    const url = new URL(returnPageUrl(CHECKOUT, context));
-    url.searchParams.set('back', 'javascript:alert(1)');
+  it.each(['javascript:alert(1)', `${SHOP}/pricing`, 'not a url'])(
+    'is refused when the host origin is %s',
+    (origin) => {
+      const url = new URL(returnPageUrl(CHECKOUT, link));
+      url.searchParams.set('origin', origin);
 
-    expect(readReturnContext(url)).toBeNull();
-  });
+      expect(readReturnLink(url)).toBeNull();
+    },
+  );
 
-  it('drops snippet URLs that are not web pages, and an unknown language', () => {
-    const url = new URL(returnPageUrl(CHECKOUT, context));
-    url.searchParams.set('success', 'javascript:alert(1)');
+  it('reads an unknown language as English', () => {
+    const url = new URL(returnPageUrl(CHECKOUT, link));
     url.searchParams.set('lang', 'fr');
 
-    const read = readReturnContext(url)!;
-    expect(read.successUrl).toBeUndefined();
-    expect(read.cancelUrl).toBe(`${SHOP}/sorry`);
-    expect(read.language).toBe('en');
+    expect(readReturnLink(url)?.language).toBe('en');
+  });
+});
+
+describe('the return context', () => {
+  it('is what the checkout page sent with the attempt', () => {
+    expect(returnTargetsOf(link, context)).toEqual(context);
+  });
+
+  it("is the host origin's home page when none was sent", () => {
+    expect(returnTargetsOf(link, null)).toEqual({
+      hostPageUrl: `${SHOP}/`,
+      successUrl: null,
+      cancelUrl: null,
+    });
   });
 });
 
@@ -132,14 +148,14 @@ describe('where the Customer is sent', () => {
   );
 
   it('uses the Pricing Plan\'s URLs when the snippet sets none', () => {
-    const bare = { ...context, successUrl: undefined, cancelUrl: undefined };
+    const bare = { ...context, successUrl: null, cancelUrl: null };
 
     expect(forwardTarget('succeeded', bare, plan, allowed)).toBe('https://plan.example/thanks');
     expect(forwardTarget('cancelled', bare, plan, allowed)).toBe('https://plan.example/pricing');
   });
 
   it('falls back to the host page the Customer started from', () => {
-    const bare = { ...context, successUrl: undefined, cancelUrl: undefined };
+    const bare = { ...context, successUrl: null, cancelUrl: null };
 
     expect(forwardTarget('succeeded', bare, none, allowed)).toBe(`${SHOP}/pricing?plan=pro`);
     expect(forwardTarget('expired', bare, none, allowed)).toBe(`${SHOP}/pricing?plan=pro`);

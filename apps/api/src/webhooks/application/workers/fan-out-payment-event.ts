@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { organizationScope } from '../../../payment-core/port/organization-scope.js';
 import { eventKindOf } from '../../domain/entities/event-kinds.js';
-import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   DeliveryDispatcher,
   newWebhookId,
@@ -29,8 +29,8 @@ export class FanOutPaymentEvent {
   private readonly logger = new Logger(FanOutPaymentEvent.name);
 
   constructor(
-    @Inject(WebhooksTransactionRunner)
-    private readonly runner: WebhooksTransactionRunner,
+    @Inject(TransactionRunner)
+    private readonly runner: TransactionRunner,
     @Inject(DeliveryDispatcher) private readonly dispatcher: DeliveryDispatcher,
   ) {}
 

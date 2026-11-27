@@ -1,5 +1,5 @@
 import { InvalidPricingTableError } from '../errors.js';
-import type { PricingPlanEditor } from './pricing-plan.js';
+import type { Actor } from './pricing-plan.js';
 
 /** A Pricing Table shows one to three Pricing Plans side by side. */
 export const MIN_PLANS = 1;
@@ -29,7 +29,7 @@ export interface PricingTableTerms {
 export interface PricingTable extends PricingTableTerms {
   readonly id: string;
   readonly organizationId: string;
-  readonly updatedBy: PricingPlanEditor;
+  readonly updatedBy: Actor;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -51,12 +51,19 @@ const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 
 function line(field: string, value: string, max: number): string {
   const trimmed = value.trim();
-  if (trimmed === '') throw new InvalidPricingTableError(field, 'must not be empty');
+  if (trimmed === '')
+    throw new InvalidPricingTableError(field, 'must not be empty');
   if (trimmed.length > max) {
-    throw new InvalidPricingTableError(field, `must be at most ${max} characters`);
+    throw new InvalidPricingTableError(
+      field,
+      `must be at most ${max} characters`,
+    );
   }
   if (CONTROL_CHARACTERS.test(trimmed)) {
-    throw new InvalidPricingTableError(field, 'must be a single line of plain text');
+    throw new InvalidPricingTableError(
+      field,
+      'must be a single line of plain text',
+    );
   }
   return trimmed;
 }
@@ -69,7 +76,10 @@ function plans(ids: readonly string[]): readonly string[] {
     );
   }
   if (new Set(ids).size !== ids.length) {
-    throw new InvalidPricingTableError('planIds', 'must not repeat a Pricing Plan');
+    throw new InvalidPricingTableError(
+      'planIds',
+      'must not repeat a Pricing Plan',
+    );
   }
   return [...ids];
 }
@@ -90,7 +100,10 @@ function recommended(
 
 function colour(value: string): string {
   if (!HEX_COLOUR.test(value)) {
-    throw new InvalidPricingTableError('mainColor', 'must be a colour like #4f46e5');
+    throw new InvalidPricingTableError(
+      'mainColor',
+      'must be a colour like #4f46e5',
+    );
   }
   return value.toLowerCase();
 }
@@ -101,7 +114,9 @@ function colour(value: string): string {
  * colour and one line of button text. Whether the Pricing Plans exist in the
  * Organization is checked by the use case.
  */
-export function definePricingTable(input: PricingTableInput): PricingTableTerms {
+export function definePricingTable(
+  input: PricingTableInput,
+): PricingTableTerms {
   const planIds = plans(input.planIds);
   return {
     name: line('name', input.name, MAX_NAME_LENGTH),

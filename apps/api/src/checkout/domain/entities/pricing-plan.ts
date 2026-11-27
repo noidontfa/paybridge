@@ -1,3 +1,4 @@
+import type { Actor } from '../../../common/principal/actor.js';
 import {
   DEFAULT_PAYMENT_EXPIRY_MS,
   InvalidAmountError,
@@ -31,12 +32,11 @@ export interface PricingPlanFeature {
   readonly included: boolean;
 }
 
-/** Who last changed a Pricing Plan, as they were at that moment. */
-export interface PricingPlanEditor {
-  readonly userId: string;
-  readonly role: string;
-  readonly name: string;
-}
+/**
+ * Who last changed a Pricing Plan or Pricing Table, as they were at that
+ * moment: the one Actor shape every module records.
+ */
+export type { Actor };
 
 /** Everything an Organization Admin sets on a Pricing Plan. */
 export interface PricingPlanTerms {
@@ -57,7 +57,7 @@ export interface PricingPlan extends PricingPlanTerms {
   readonly id: string;
   readonly organizationId: string;
   readonly status: PricingPlanStatus;
-  readonly updatedBy: PricingPlanEditor;
+  readonly updatedBy: Actor;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -90,7 +90,10 @@ function text(field: string, value: string, max: number, required: boolean) {
     throw new InvalidPricingPlanError(field, 'must not be empty');
   }
   if (trimmed.length > max) {
-    throw new InvalidPricingPlanError(field, `must be at most ${max} characters`);
+    throw new InvalidPricingPlanError(
+      field,
+      `must be at most ${max} characters`,
+    );
   }
   return trimmed;
 }
@@ -108,7 +111,10 @@ function features(
     const field = `features.${i}.text`;
     const value = text(field, line.text, MAX_FEATURE_LENGTH, true);
     if (CONTROL_CHARACTERS.test(value)) {
-      throw new InvalidPricingPlanError(field, 'must be a single line of plain text');
+      throw new InvalidPricingPlanError(
+        field,
+        'must be a single line of plain text',
+      );
     }
     return { text: value, included: line.included };
   });
@@ -161,7 +167,9 @@ function returnUrl(
   if (!allowed.includes(url.protocol)) {
     throw new InvalidPricingPlanError(
       field,
-      rules.allowInsecureUrls ? 'must be an HTTP(S) URL' : 'must be an HTTPS URL',
+      rules.allowInsecureUrls
+        ? 'must be an HTTP(S) URL'
+        : 'must be an HTTPS URL',
     );
   }
   return trimmed;
