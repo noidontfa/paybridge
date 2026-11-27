@@ -6,8 +6,8 @@ import { ErrorState } from '@/components/data-states';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { API_KEY_LABEL_MAX_LENGTH, type CreatedApiKey } from '@/lib/api/api-keys';
-import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/lib/queries/api-keys';
+import { API_KEY_LABEL_MAX_LENGTH, type CreatedApiKey } from '@/features/api-keys/api';
+import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/features/api-keys/hooks/queries';
 import { useCan } from '@/lib/operator';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'Never');

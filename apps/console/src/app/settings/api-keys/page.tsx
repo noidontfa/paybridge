@@ -1,4 +1,4 @@
-import { ApiKeysScreen } from '@/components/api-keys/api-keys-screen';
+import { ApiKeysScreen } from '@/features/api-keys/components/api-keys-screen';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'API Keys' };

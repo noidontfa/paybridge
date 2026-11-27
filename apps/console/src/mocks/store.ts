@@ -85,7 +85,7 @@ const mockUser = (id: string, name: string, role: ManagedRole, active = true): M
 
 export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
-  readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+  readonly apiKeys: import('@/features/api-keys/api').ApiKey[] = [];
 
   /** Pending Invitations, for the Invitations page. */
   readonly invitations: import('@/features/users/api/invitations').InvitationItem[] = [];
