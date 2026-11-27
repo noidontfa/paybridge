@@ -8,7 +8,7 @@ import {
   listGatewayConnections,
   replaceGatewayCredentials,
   setGatewayConnectionEnabled,
-} from '@/lib/api/gateway-connections';
+} from '@/features/gateway-connections/api';
 
 export const gatewayConnectionKeys = {
   all: ['gateway-connections'] as const,

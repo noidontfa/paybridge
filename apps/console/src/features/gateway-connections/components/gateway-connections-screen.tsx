@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/services/errors';
-import { CREDENTIAL_FIELDS, type GatewayConnection } from '@/lib/api/gateway-connections';
+import { CREDENTIAL_FIELDS, type GatewayConnection } from '@/features/gateway-connections/api';
 import {
   useConnectGateway,
   useDeleteConnection,
   useGatewayConnections,
   useReplaceCredentials,
   useSetConnectionEnabled,
-} from '@/lib/queries/gateway-connections';
+} from '@/features/gateway-connections/hooks/queries';
 import { useCan } from '@/lib/operator';
 
 const MANAGE = 'gateway-connections:manage';

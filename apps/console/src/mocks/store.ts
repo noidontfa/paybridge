@@ -91,7 +91,7 @@ export class MockStore {
   readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
 
   /** The Organization's Gateway Connections (none until it connects one). */
-  readonly gatewayConnections: import('@/lib/api/gateway-connections').GatewayConnection[] = [];
+  readonly gatewayConnections: import('@/features/gateway-connections/api').GatewayConnection[] = [];
 
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [

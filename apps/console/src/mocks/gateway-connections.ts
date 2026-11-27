@@ -3,7 +3,7 @@
  * credentials, only the names of the fields that are set.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { CREDENTIAL_FIELDS, type GatewayConnection } from '@/lib/api/gateway-connections';
+import { CREDENTIAL_FIELDS, type GatewayConnection } from '@/features/gateway-connections/api';
 import type { MockStore } from './store';
 
 export function gatewayConnectionsHandlers(
