@@ -4,7 +4,7 @@
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] When the NextAction is a redirect, the checkout leaves the modal for the gateway's page. Start attempt already accepts a caller-supplied return URL, and the checkout passes the checkout app's return page.
 - [ ] The return page reads the checkout Payment's status (07) and shows success, cancellation, expiry or "still processing" in the Pricing Table's language. While processing, it polls.
