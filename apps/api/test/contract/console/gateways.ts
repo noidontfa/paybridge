@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/gateways.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/gateways/api.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 /**
  * `GET /internal/gateways` and `GET /internal/gateways/:id`: the
  * PaymentGateways this deployment serves and the health of their Callbacks.

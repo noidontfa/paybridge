@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/overview-schema.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/overview/api.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // The range list is inlined from apps/console/src/lib/overview-range.ts.
 /**
  * `GET /internal/overview?range=24h|7d|30d`: the operator Overview.
