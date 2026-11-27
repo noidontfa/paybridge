@@ -88,6 +88,8 @@ export interface StartPaymentInput {
   readonly pricingPlanId: string;
   readonly sessionToken: string;
   readonly customerReference?: string;
+  /** Asked for with `data-ask-email`; stored as the Customer Reference's email. */
+  readonly customerEmail?: string;
 }
 
 export interface CheckoutApi {
