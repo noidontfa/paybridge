@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { CallbacksScreen } from '@/components/callbacks/callbacks-screen';
+import { CallbacksScreen } from '@/features/callbacks/components/callbacks-screen';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Callbacks' };

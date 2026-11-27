@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
+import { CALLBACK_STATUSES } from '@/features/callbacks/api';
 import { humanizeCode } from '@/utils/format';
 import { useGateway } from '@/lib/queries/gateways';
 import { GatewayFacts } from './gateway-summary';

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { CallbackListItem } from '@/lib/api/callbacks';
+import type { CallbackListItem } from '@/features/callbacks/api';
 
 const column = createDataTableColumnHelper<CallbackListItem>();
 

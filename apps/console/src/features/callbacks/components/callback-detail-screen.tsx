@@ -7,8 +7,8 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import type { CallbackDetail } from '@/lib/api/callbacks';
-import { useCallback } from '@/lib/queries/callbacks';
+import type { CallbackDetail } from '@/features/callbacks/api';
+import { useCallback } from '@/features/callbacks/hooks/queries';
 
 /** JSON objects and arrays are pretty-printed; anything else is shown exactly as received. */
 export function formatBody(raw: string): string {
