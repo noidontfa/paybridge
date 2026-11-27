@@ -8,8 +8,9 @@ import {
   REQUIRED_INDEXES,
 } from './schema-guard.js';
 
-// ADR 0001 and 0010: every table lives in `public` and is owned by one module through a table-name
-// prefix. The spec (PostgreSQL schema) requires the partial indexes below.
+// ADR 0001 and 0010: every table lives in `public` and is owned by one module
+// through a table-name prefix. The spec (PostgreSQL schema) requires the
+// partial indexes below.
 
 const prismaDir = join(import.meta.dirname, '../../prisma');
 const schema = readFileSync(join(prismaDir, 'schema.prisma'), 'utf8');
