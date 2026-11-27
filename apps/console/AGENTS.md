@@ -24,6 +24,6 @@ All app code lives in `src/`, and `@/*` maps to `./src/*`. The app root holds on
 - `lib/environment.ts` is the only thing in `lib/`. `utils/` has `cn`, `format`, `decimal`. `hooks/` has shared hooks. `mocks/` is MSW (mock mode). `test/` has test helpers.
 - `proxy.ts` and `instrumentation.ts` live at the top of `src/`.
 
-Direction rule: `components/ui`, the flat shared components, `services/`, `utils/` and `lib/` never import from `features/`. `components/layout` and `app/` may. Features may import each other directly.
+Direction rule: `components/ui`, the flat shared components, `services/`, `utils/` and `lib/` never import from `features/`. `components/layout` and `app/` may. Features may import each other directly. Tests are exempt: a test in a shared folder may import feature vocabularies to check that shared code covers them (e.g. `components/status-badges.test.ts`).
 
 No barrel files: import from the file that defines the thing (`@/features/payments/api`), never from an `index.ts`.
