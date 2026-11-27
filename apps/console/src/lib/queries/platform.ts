@@ -9,7 +9,7 @@ import {
   listSuperAdmins,
   reactivateSuperAdmin,
 } from '@/lib/api/super-admins';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 import { organizationKeys } from './organizations';
 
 export const superAdminKeys = {

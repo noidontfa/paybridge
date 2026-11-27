@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 import { OVERVIEW_RANGES, RANGE_LABELS, type OverviewRange } from '@/lib/overview-range';
 
 /** Segmented control for the Overview range; the page keeps the choice in the URL. */

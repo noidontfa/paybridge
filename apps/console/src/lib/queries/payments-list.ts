@@ -4,7 +4,7 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { listPayments, type PaymentListItem, type PaymentListQuery, type PaymentSortColumn } from '@/lib/api/payments-list';
 import { PAYMENT_SORT_COLUMNS } from '@/lib/api/payments-list';
 import { paymentKeys } from '@/lib/queries/payments';
-import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
+import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 
 export const PAYMENT_LIST_URL_CONFIG: TableUrlConfig = {
   filters: ['status', 'gatewayId', 'createdFrom', 'createdTo'],

@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { SuperAdminsScreen } from '@/components/platform/super-admins-screen';
 
 export const metadata = { title: 'Super Admins' };

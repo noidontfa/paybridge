@@ -1,7 +1,7 @@
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import type { ReviewItem } from '@/lib/api/reviews';
-import { formatMoney, formatOpenFor } from '@/lib/format';
+import { formatMoney, formatOpenFor } from '@/utils/format';
 
 const column = createDataTableColumnHelper<ReviewItem>();
 

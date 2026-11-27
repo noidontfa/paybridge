@@ -3,7 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { type Density, DENSITIES, readDensity, writeDensity } from '@/lib/preferences';
+import { type Density, DENSITIES, readDensity, writeDensity } from '@/components/layout/preferences';
 import type { ConsoleEnvironment } from '@/lib/environment';
 
 const THEMES = [

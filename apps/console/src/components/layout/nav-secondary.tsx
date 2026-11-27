@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { isActivePath, type NavItem } from '@/lib/navigation';
+import { isActivePath, type NavItem } from '@/components/layout/navigation';
 import { useCanFn } from '@/lib/operator';
 
 export function NavSecondary({

@@ -7,8 +7,8 @@ import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from 
 import { Button } from '@/components/ui/button';
 import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
 import { CALLBACK_LIST_URL_CONFIG, useCallbackList } from '@/lib/queries/callbacks';
-import { statusBadge } from '@/lib/status-badges';
-import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
+import { statusBadge } from '@/components/status-badges';
+import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { callbackColumns, callbackHref } from './callbacks-columns';
 
 /** The gateways the Console knows (only `stripe` and `fake` exist today). */

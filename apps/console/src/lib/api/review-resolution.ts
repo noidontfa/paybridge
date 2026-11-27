@@ -4,7 +4,7 @@
  * Operator (auth seam) and ignores anything the browser sends.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 import { attemptStatusSchema, paymentStatusSchema } from './schemas';
 
 export const REVIEW_NOTE_MAX_LENGTH = 2000;

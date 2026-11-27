@@ -3,7 +3,7 @@ import { ArrowRightIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/status-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Overview } from '@/lib/api/overview-schema';
-import { formatMoney, formatRelativeTime } from '@/lib/format';
+import { formatMoney, formatRelativeTime } from '@/utils/format';
 
 export function formatRate(rate: number | null): string {
   return rate === null ? '–' : `${Math.round(rate * 100)}%`;

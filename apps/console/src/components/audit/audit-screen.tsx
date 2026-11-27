@@ -7,7 +7,7 @@ import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from 
 import { Button } from '@/components/ui/button';
 import { STATUS_TRANSITION_ENTITY_TYPES } from '@/lib/api/schemas';
 import { AUDIT_ACTORS, AUDIT_TRIGGERS, AUDIT_URL_CONFIG, useAuditList } from '@/lib/queries/audit-log';
-import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
+import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { auditColumns, auditPaymentHref, ENTITY_TYPE_LABELS } from './audit-columns';
 
 const ENTITY_OPTIONS = STATUS_TRANSITION_ENTITY_TYPES.map((type) => ({ value: type, label: ENTITY_TYPE_LABELS[type] }));

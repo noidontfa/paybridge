@@ -4,8 +4,8 @@
  * a Refund has none yet), so the Console never needs a second lookup to link.
  */
 import { z } from 'zod';
-import { request } from './client';
-import { listPageSchema, type ListPage, type ListQuery } from './pagination';
+import { request } from '@/services/client';
+import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
 import { statusTransitionSchema, type StatusTransitionEntityType } from './schemas';
 
 export const auditEntrySchema = statusTransitionSchema.extend({ paymentId: z.string().nullable() });

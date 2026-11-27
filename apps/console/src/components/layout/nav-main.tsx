@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { OpenReviewsBadge } from '@/components/open-reviews-badge';
-import { isActivePath, type NavSection } from '@/lib/navigation';
+import { isActivePath, type NavSection } from '@/components/layout/navigation';
 
 export function NavMain({ sections }: { sections: NavSection[] }) {
   const pathname = usePathname();

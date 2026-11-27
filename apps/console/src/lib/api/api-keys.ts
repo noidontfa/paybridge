@@ -3,7 +3,7 @@
  * key once; listing never does.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const apiKeySchema = z.object({
   id: z.string(),

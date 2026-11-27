@@ -6,7 +6,7 @@ import { CopyButton } from '@/components/copy-button';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 import type { CallbackDetail } from '@/lib/api/callbacks';
 import { useCallback } from '@/lib/queries/callbacks';
 

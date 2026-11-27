@@ -6,7 +6,7 @@ import { ErrorState } from '@/components/data-states';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 import {
   listInvitations,
   resendInvitation,

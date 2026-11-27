@@ -2,10 +2,10 @@
 
 import { WalletIcon } from 'lucide-react';
 import Link from 'next/link';
-import { NavMain } from '@/components/nav-main';
-import { NavSecondary } from '@/components/nav-secondary';
-import { NavUser } from '@/components/nav-user';
-import { OrganizationSwitcher } from '@/components/organization-switcher';
+import { NavMain } from '@/components/layout/nav-main';
+import { NavSecondary } from '@/components/layout/nav-secondary';
+import { NavUser } from '@/components/layout/nav-user';
+import { OrganizationSwitcher } from '@/components/layout/organization-switcher';
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCan } from '@/lib/operator';
-import { mainNav, platformNav, PRODUCT_NAME, secondaryNav } from '@/lib/navigation';
+import { mainNav, platformNav, PRODUCT_NAME, secondaryNav } from '@/components/layout/navigation';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const showPlatform = useCan('organizations:manage');

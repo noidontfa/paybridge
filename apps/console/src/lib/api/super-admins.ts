@@ -3,7 +3,7 @@
  * Permission to manage Super Admins. A Super Admin's Role never changes.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 import { managedUserListSchema } from './users';
 
 export function listSuperAdmins(signal?: AbortSignal) {

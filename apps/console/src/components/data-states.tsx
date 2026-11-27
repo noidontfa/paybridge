@@ -1,6 +1,6 @@
 import { Building2Icon, FileQuestionIcon, TriangleAlertIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 
 /** Shared empty / error states, so every data region fails the same way. */
 export function NotFoundState({ title, description }: { title: string; description: string }) {

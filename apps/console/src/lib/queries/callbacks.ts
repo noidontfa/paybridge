@@ -2,7 +2,7 @@
 
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { getCallback, listCallbacks, type CallbackListItem, type CallbackListQuery } from '@/lib/api/callbacks';
-import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
+import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 
 export const callbackKeys = {
   all: ['callbacks'] as const,

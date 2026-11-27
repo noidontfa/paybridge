@@ -3,7 +3,7 @@ import { createDataTableColumnHelper, type DataTableColumns } from '@/components
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { PaymentListItem } from '@/lib/api/payments-list';
-import { formatMoney } from '@/lib/format';
+import { formatMoney } from '@/utils/format';
 
 const column = createDataTableColumnHelper<PaymentListItem>();
 

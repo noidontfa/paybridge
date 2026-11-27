@@ -5,7 +5,7 @@
  * mutation can invalidate precisely (ticket 06 invalidates `paymentKeys.detail`).
  */
 import { useQuery } from '@tanstack/react-query';
-import { getOperatorPayment } from '@/lib/api/client';
+import { getOperatorPayment } from '@/services/client';
 
 export const paymentKeys = {
   all: ['payments'] as const,

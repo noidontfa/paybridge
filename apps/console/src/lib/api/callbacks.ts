@@ -4,8 +4,8 @@
  * not a Payment Event.
  */
 import { z } from 'zod';
-import { request } from './client';
-import { listPageSchema, type ListPage, type ListQuery } from './pagination';
+import { request } from '@/services/client';
+import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
 
 /** The inbox statuses (API `WebhookInboxStatus`). */
 export const CALLBACK_STATUSES = ['RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED'] as const;

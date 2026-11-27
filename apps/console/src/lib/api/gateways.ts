@@ -5,7 +5,7 @@
  * holds no gateway configuration and never sees a credential.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const gatewayModeSchema = z.enum(['test', 'live']);
 export type GatewayMode = z.infer<typeof gatewayModeSchema>;

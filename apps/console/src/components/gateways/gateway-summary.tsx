@@ -2,8 +2,8 @@ import { CheckCircle2Icon, CircleAlertIcon, FlaskConicalIcon, ZapIcon } from 'lu
 import { CopyButton } from '@/components/copy-button';
 import { Badge } from '@/components/ui/badge';
 import type { GatewayMode, GatewaySummary } from '@/lib/api/gateways';
-import { TONE_CLASSES } from '@/lib/status-badges';
-import { cn } from '@/lib/utils';
+import { TONE_CLASSES } from '@/components/status-badges';
+import { cn } from '@/utils/cn';
 
 /** Live is loud (solid red, bolt); test is quiet (neutral, flask), so real money is never mistaken for test traffic. */
 export function GatewayModeBadge({ mode }: { mode: GatewayMode }) {

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { AuditScreen } from '@/components/audit/audit-screen';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Audit log' };
 

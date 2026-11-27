@@ -1,4 +1,4 @@
-import { formatAbsoluteTime, formatRelativeTime } from '@/lib/format';
+import { formatAbsoluteTime, formatRelativeTime } from '@/utils/format';
 
 /** Local absolute time with a relative hint ("25 Nov 2026, 14:30:05 (3 days ago)"). */
 export function TimeText({ iso }: { iso: string }) {

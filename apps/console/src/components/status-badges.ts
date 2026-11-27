@@ -23,7 +23,7 @@ import {
   XCircleIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { humanizeCode } from '@/lib/format';
+import { humanizeCode } from '@/utils/format';
 
 export type BadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 

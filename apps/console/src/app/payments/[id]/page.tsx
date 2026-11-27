@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { PaymentDetailScreen } from '@/components/payment-detail/payment-detail-screen';
 
 export const metadata = { title: 'Payment' };

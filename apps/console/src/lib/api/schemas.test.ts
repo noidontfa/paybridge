@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apiErrorBodySchema, operatorPaymentSchema } from './schemas';
+import { operatorPaymentSchema } from './schemas';
 
 const sample = {
   id: '6f1c2c1e-6b0f-4d6e-9a53-0d2a3f6a9c11',
@@ -82,25 +82,5 @@ describe('operatorPaymentSchema', () => {
   it('rejects an attempt without refundRequired', () => {
     const { refundRequired: _drop, ...broken } = sample.attempts[1]!;
     expect(operatorPaymentSchema.safeParse({ ...sample, attempts: [broken] }).success).toBe(false);
-  });
-});
-
-describe('apiErrorBodySchema', () => {
-  it('accepts the API error envelope', () => {
-    const body = apiErrorBodySchema.parse({
-      statusCode: 404,
-      error: 'Not Found',
-      message: 'Payment x not found',
-      code: 'PAYMENT_NOT_FOUND',
-      path: '/internal/payments/x',
-      method: 'GET',
-      timestamp: '2026-11-25T03:00:00.000Z',
-      requestId: 'r1',
-    });
-    expect(body.code).toBe('PAYMENT_NOT_FOUND');
-  });
-
-  it('accepts a validation error with a message list and no code', () => {
-    expect(apiErrorBodySchema.parse({ statusCode: 400, message: ['a', 'b'] }).message).toEqual(['a', 'b']);
   });
 });

@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 
 /** A page that exists in the navigation but is built by a later ticket. */
 export function PlaceholderPage({ title, description }: { title: string; description: string }) {

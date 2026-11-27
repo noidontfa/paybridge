@@ -1,5 +1,5 @@
 import { EventDetailScreen } from '@/components/events/event-detail-screen';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Payment Event' };
 

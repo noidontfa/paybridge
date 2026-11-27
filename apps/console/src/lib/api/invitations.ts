@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 import { USER_ROLES, type UserRole } from '../roles';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const INVITABLE_ROLES = USER_ROLES;
 export type InvitableRole = UserRole;

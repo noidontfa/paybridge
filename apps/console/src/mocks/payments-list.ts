@@ -5,7 +5,7 @@
  * list handler can reuse `readListWindow` / `pageOf` for the same envelope.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { compareDecimal } from '@/lib/decimal';
+import { compareDecimal } from '@/utils/decimal';
 import type { PaymentListItem } from '@/lib/api/payments-list';
 import { PAYMENT_SORT_COLUMNS } from '@/lib/api/payments-list';
 import type { MockStore } from './store';

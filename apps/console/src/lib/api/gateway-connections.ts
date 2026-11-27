@@ -5,7 +5,7 @@
  * to the API.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const gatewayConnectionSchema = z.object({
   id: z.string(),

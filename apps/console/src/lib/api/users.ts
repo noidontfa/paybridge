@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { MANAGED_ROLES, USER_ROLES, type ManagedRole } from '../roles';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const managedRoleSchema = z.enum(MANAGED_ROLES);
 export type { ManagedRole };

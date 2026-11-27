@@ -23,8 +23,8 @@ import { ErrorState } from '@/components/data-states';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { SortState } from '@/lib/url-state/table-url-state';
-import { cn } from '@/lib/utils';
+import type { SortState } from '@/components/data-table/url-state/table-url-state';
+import { cn } from '@/utils/cn';
 
 export const dataTableFeatures = tableFeatures({ rowSortingFeature, columnFilteringFeature });
 export type DataTableColumns<Row extends RowData> = ColumnDef<typeof dataTableFeatures, Row>[];

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError } from '@/services/errors';
 import { CREDENTIAL_FIELDS, type GatewayConnection } from '@/lib/api/gateway-connections';
 import {
   useConnectGateway,

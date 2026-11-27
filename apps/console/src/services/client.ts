@@ -8,11 +8,11 @@
  * with `INTERNAL` for operator routes.
  */
 import type { z } from 'zod';
-import { BFF_PREFIX } from '@/lib/bff';
-import { ApiError, CLIENT_ERROR_CODES } from './errors';
+import { BFF_PREFIX } from '@/services/bff';
+import { ApiError, CLIENT_ERROR_CODES, apiErrorBodySchema } from './errors';
 import type { OverviewRange } from '@/lib/overview-range';
-import { overviewSchema, type Overview } from './overview-schema';
-import { apiErrorBodySchema, operatorPaymentSchema, type OperatorPayment } from './schemas';
+import { overviewSchema, type Overview } from '../lib/api/overview-schema';
+import { operatorPaymentSchema, type OperatorPayment } from '@/lib/api/schemas';
 
 /** Operator routes live under the API's internal prefix. */
 const INTERNAL = '/internal';

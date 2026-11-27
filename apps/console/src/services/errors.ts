@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /** Codes the Console itself assigns when no API error code exists. */
 export const CLIENT_ERROR_CODES = {
   network: 'NETWORK_ERROR',
@@ -36,3 +38,18 @@ export class ApiError extends Error {
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
+
+// --- Error envelope (apps/api/src/common/filters/all-exceptions.filter.ts) ---
+
+export const apiErrorBodySchema = z.object({
+  statusCode: z.number(),
+  error: z.string().optional(),
+  message: z.union([z.string(), z.array(z.string())]),
+  code: z.string().optional(),
+  details: z.unknown().optional(),
+  path: z.string().optional(),
+  method: z.string().optional(),
+  timestamp: z.string().optional(),
+  requestId: z.string().optional(),
+});
+export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;

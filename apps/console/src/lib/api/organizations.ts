@@ -5,7 +5,7 @@
  * Permission to manage Organizations.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const organizationSchema = z.object({
   id: z.string(),

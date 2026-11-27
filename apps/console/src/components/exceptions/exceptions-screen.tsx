@@ -10,8 +10,8 @@ import { REVIEW_REASONS } from '@/lib/api/schemas';
 import { useGatewayOptions } from '@/lib/queries/gateways';
 import { REVIEW_LIST_URL_CONFIG, useReviewList } from '@/lib/queries/reviews';
 import type { ReviewItem } from '@/lib/api/reviews';
-import { statusBadge } from '@/lib/status-badges';
-import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
+import { statusBadge } from '@/components/status-badges';
+import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { reviewColumns } from './exceptions-columns';
 
 const REASON_OPTIONS = REVIEW_REASONS.map((reason) => ({ value: reason, label: statusBadge('review', reason).label }));

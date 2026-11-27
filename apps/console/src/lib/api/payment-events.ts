@@ -4,8 +4,8 @@
  * adds it.
  */
 import { z } from 'zod';
-import { request } from './client';
-import { listPageSchema, type ListPage, type ListQuery } from './pagination';
+import { request } from '@/services/client';
+import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
 import { paymentEventSchema, type PaymentEvent, type PaymentEventType } from './schemas';
 
 export const paymentEventSummarySchema = paymentEventSchema.omit({ payload: true });

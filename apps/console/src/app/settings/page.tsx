@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { PageHeader } from '@/components/page-header';
-import { SettingsPanel } from '@/components/settings-panel';
+import { PageHeader } from '@/components/layout/page-header';
+import { SettingsPanel } from '@/components/layout/settings-panel';
 import { getEnvironment } from '@/lib/environment';
 
 export const metadata = { title: 'Settings' };

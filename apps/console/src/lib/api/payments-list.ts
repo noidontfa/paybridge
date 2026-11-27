@@ -4,8 +4,8 @@
  * shared `schemas.ts` and `client.ts`).
  */
 import { z } from 'zod';
-import { request } from './client';
-import { listPageSchema, type ListPage, type ListQuery } from './pagination';
+import { request } from '@/services/client';
+import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
 import { attemptStatusSchema, decimalStringSchema, paymentStatusSchema } from './schemas';
 
 export const PAYMENT_SORT_COLUMNS = ['createdAt', 'amount'] as const;

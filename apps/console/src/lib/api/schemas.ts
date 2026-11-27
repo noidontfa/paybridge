@@ -138,18 +138,3 @@ export const operatorPaymentSchema = z.object({
   events: z.array(paymentEventSchema),
 });
 export type OperatorPayment = z.infer<typeof operatorPaymentSchema>;
-
-// --- Error envelope (apps/api/src/common/filters/all-exceptions.filter.ts) ---
-
-export const apiErrorBodySchema = z.object({
-  statusCode: z.number(),
-  error: z.string().optional(),
-  message: z.union([z.string(), z.array(z.string())]),
-  code: z.string().optional(),
-  details: z.unknown().optional(),
-  path: z.string().optional(),
-  method: z.string().optional(),
-  timestamp: z.string().optional(),
-  requestId: z.string().optional(),
-});
-export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;

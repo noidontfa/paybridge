@@ -6,7 +6,7 @@ import { reviewActions } from '@/lib/review-resolution-rules';
 import { useCan } from '@/lib/operator';
 import { ResolutionForm } from './resolution-form';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
-import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/lib/format';
+import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/utils/format';
 
 const HOUR = 3_600_000;
 

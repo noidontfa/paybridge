@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 
 /** Client errors (4xx) will not change on retry; anything else gets two more tries. */
 function shouldRetry(failureCount: number, error: unknown): boolean {

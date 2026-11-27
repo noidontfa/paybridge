@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { breadcrumbFor } from '@/lib/navigation';
+import { breadcrumbFor } from '@/components/layout/navigation';
 
 /** `current` names the item a detail page shows (an id), added after the section crumb. */
 export function PageHeader({ title, description, current }: { title: string; description?: string; current?: string }) {

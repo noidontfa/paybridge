@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { InvitationsPanel } from '@/components/settings/invitations-panel';
 
 export const metadata = { title: 'Invitations' };

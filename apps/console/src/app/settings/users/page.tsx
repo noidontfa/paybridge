@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { UsersScreen } from '@/components/users/users-screen';
 
 export const metadata = { title: 'Users' };

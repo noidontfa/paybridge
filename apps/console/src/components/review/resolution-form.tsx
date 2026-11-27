@@ -25,7 +25,7 @@ import {
   type ResolutionFormValues,
 } from '@/lib/review-resolution-form';
 import type { ReviewActions, Verdict } from '@/lib/review-resolution-rules';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 
 const OPTIONS: { action: ResolutionAction; label: string; verdict: (actions: ReviewActions) => Verdict }[] = [
   { action: 'SUCCEEDED', label: 'Resolve to SUCCEEDED', verdict: (a) => a.succeed },

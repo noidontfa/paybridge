@@ -7,8 +7,8 @@ import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from 
 import { Button } from '@/components/ui/button';
 import { PAYMENT_EVENT_TYPES } from '@/lib/api/schemas';
 import { PAYMENT_EVENT_URL_CONFIG, usePaymentEventList } from '@/lib/queries/payment-events';
-import { statusBadge } from '@/lib/status-badges';
-import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
+import { statusBadge } from '@/components/status-badges';
+import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { eventColumns, eventHref } from './events-columns';
 
 const TYPE_OPTIONS = PAYMENT_EVENT_TYPES.map((type) => ({ value: type, label: statusBadge('event', type).label }));

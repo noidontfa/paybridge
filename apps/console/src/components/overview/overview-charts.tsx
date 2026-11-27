@@ -5,8 +5,8 @@ import { Area, AreaChart, Bar, BarChart, Cell, CartesianGrid, XAxis, YAxis } fro
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartStyle, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { Overview } from '@/lib/api/overview-schema';
-import { formatMoney } from '@/lib/format';
-import { statusBadge } from '@/lib/status-badges';
+import { formatMoney } from '@/utils/format';
+import { statusBadge } from '@/components/status-badges';
 
 const COMPACT = new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 });
 

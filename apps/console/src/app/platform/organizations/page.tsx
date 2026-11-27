@@ -1,5 +1,5 @@
 import { OrganizationsScreen } from '@/components/platform/organizations-screen';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Organizations' };
 

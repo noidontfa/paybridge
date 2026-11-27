@@ -5,9 +5,9 @@ import { ErrorState, NotFoundState } from '@/components/data-states';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
-import { humanizeCode } from '@/lib/format';
+import { humanizeCode } from '@/utils/format';
 import { useGateway } from '@/lib/queries/gateways';
 import { GatewayFacts } from './gateway-summary';
 

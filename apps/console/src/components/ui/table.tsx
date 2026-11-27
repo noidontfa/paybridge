@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 
 /**
  * Table primitives (shadcn style). The container scrolls horizontally, so a
