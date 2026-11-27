@@ -15,7 +15,7 @@ import {
   useReplaceCredentials,
   useSetConnectionEnabled,
 } from '@/features/gateway-connections/hooks/queries';
-import { useCan } from '@/features/auth/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 
 const MANAGE = 'gateway-connections:manage';
 

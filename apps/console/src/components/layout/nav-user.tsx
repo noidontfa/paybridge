@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { ChevronsUpDownIcon, KeyRoundIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { describeOperator, useCurrentOperator } from '@/features/auth/operator';
+import { describeOperator } from '@/features/auth/utils/operator';
+import { useCurrentOperator } from '@/features/auth/hooks/use-operator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,

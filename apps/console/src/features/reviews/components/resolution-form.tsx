@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { REVIEW_NOTE_MAX_LENGTH } from '@/features/reviews/review-resolution';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { useResolveReview } from '@/features/reviews/hooks/review-resolution';
-import { useCurrentOperator } from '@/features/auth/operator';
+import { useCurrentOperator } from '@/features/auth/hooks/use-operator';
 import {
   resolutionFormSchema,
   type ResolutionAction,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCan } from '@/features/auth/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { useOrganizationList } from '@/features/platform/hooks/organizations';
 
 /** Must match the BFF's `ORGANIZATION_COOKIE`: it forwards the choice to the API. */

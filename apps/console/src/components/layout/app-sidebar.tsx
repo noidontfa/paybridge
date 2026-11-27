@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useCan } from '@/features/auth/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { mainNav, platformNav, PRODUCT_NAME, secondaryNav } from '@/components/layout/navigation';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

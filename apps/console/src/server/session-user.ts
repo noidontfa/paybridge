@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getEnvironment } from '@/lib/environment';
-import type { Operator } from '@/features/auth/operator';
+import type { Operator } from '@/features/auth/utils/operator';
 import { apiMe } from './auth-api';
 import { getCurrentOperator } from './current-operator';
 import { ACCESS_COOKIE } from './session-cookies';
