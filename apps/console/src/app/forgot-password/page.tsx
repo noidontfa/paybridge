@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ForgotPasswordForm } from '@/components/password-forms';
+import { ForgotPasswordForm } from '@/features/auth/components/password-forms';
 import { PRODUCT_NAME } from '@/components/layout/navigation';
 
 export const metadata = { title: 'Forgot password' };

@@ -4,7 +4,7 @@
  * manage Users. The BFF forwards GET, HEAD, POST and DELETE only, so a Role change is a POST.
  */
 import { z } from 'zod';
-import { MANAGED_ROLES, USER_ROLES, type ManagedRole } from '@/lib/roles';
+import { MANAGED_ROLES, USER_ROLES, type ManagedRole } from '@/features/auth/utils/roles';
 import { request } from '@/services/client';
 
 export const managedRoleSchema = z.enum(MANAGED_ROLES);

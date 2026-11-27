@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ManagedUser } from '@/features/users/api/users';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/operator';
 import { useChangeUser, useUserList } from '@/features/users/hooks/queries';
 
 /** Users of the Organization: Role, active state, and the actions an Organization Admin may take. */

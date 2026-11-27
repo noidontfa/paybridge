@@ -14,7 +14,7 @@ import {
   sendInvitation,
   type InvitableRole,
 } from '@/features/users/api/invitations';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/operator';
 
 const KEY = ['invitations'] as const;
 

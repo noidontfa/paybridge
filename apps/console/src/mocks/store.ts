@@ -8,7 +8,7 @@
  * `./handlers.ts`. Mutating handlers push to / edit these arrays directly.
  */
 import type { CallbackStatus } from '@/features/callbacks/api';
-import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
+import { ROLE_LABELS, type ManagedRole } from '@/features/auth/utils/roles';
 import type { MockUser } from './users';
 import type { OrganizationSummary } from '@/features/platform/api/organizations';
 import type {

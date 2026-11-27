@@ -1,7 +1,7 @@
 /** The mocked Users endpoints, with the API's last-admin rule. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import type { ManagedUser } from '@/features/users/api/users';
-import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
+import { ROLE_LABELS, type ManagedRole } from '@/features/auth/utils/roles';
 import type { MockStore } from './store';
 
 export type MockUser = ManagedUser;

@@ -1,4 +1,4 @@
-import { SignInForm } from '@/components/sign-in-form';
+import { SignInForm } from '@/features/auth/components/sign-in-form';
 import { PRODUCT_NAME } from '@/components/layout/navigation';
 
 export const metadata = { title: 'Sign in' };

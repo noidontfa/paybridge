@@ -1,7 +1,7 @@
 /** The mocked Invitations endpoints: list pending, send, re-send, revoke. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { INVITABLE_ROLES, type InvitationItem } from '@/features/users/api/invitations';
-import { ROLE_LABELS } from '@/lib/roles';
+import { ROLE_LABELS } from '@/features/auth/utils/roles';
 import type { MockStore } from './store';
 
 const WEEK = 7 * 24 * 3_600_000;

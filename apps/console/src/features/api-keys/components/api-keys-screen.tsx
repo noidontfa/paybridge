@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { API_KEY_LABEL_MAX_LENGTH, type CreatedApiKey } from '@/features/api-keys/api';
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/features/api-keys/hooks/queries';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/operator';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'Never');
 

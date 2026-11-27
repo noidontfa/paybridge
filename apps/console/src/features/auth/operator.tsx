@@ -7,7 +7,7 @@
  * User from the access token: the browser never sends who it is.
  */
 import { createContext, useContext } from 'react';
-import { ROLE_LABELS, type UserRole } from './roles';
+import { ROLE_LABELS, type UserRole } from './utils/roles';
 
 export interface Operator {
   id: string;

@@ -3,7 +3,7 @@
 import { StatusBadge } from '@/components/status-badge';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { reviewActions } from '@/features/reviews/utils/review-resolution-rules';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/operator';
 import { ResolutionForm } from './resolution-form';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/features/reviews/api';
 import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/utils/format';

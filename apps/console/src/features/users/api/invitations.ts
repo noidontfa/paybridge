@@ -3,7 +3,7 @@
  * Permission to manage Users and is re-checked by the API in the database.
  */
 import { z } from 'zod';
-import { USER_ROLES, type UserRole } from '@/lib/roles';
+import { USER_ROLES, type UserRole } from '@/features/auth/utils/roles';
 import { request } from '@/services/client';
 
 export const INVITABLE_ROLES = USER_ROLES;

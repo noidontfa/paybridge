@@ -5,7 +5,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { StatusTransitionEntityType } from '@/features/payments/schemas';
 import type { AuditEntry } from '@/features/payments/status-transitions';
-import { actorText } from '@/lib/actor';
+import { actorText } from '@/features/auth/utils/actor';
 
 export const ENTITY_TYPE_LABELS: Record<StatusTransitionEntityType, string> = {
   PAYMENT: 'Payment',

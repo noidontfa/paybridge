@@ -13,7 +13,7 @@ import {
 } from 'vitest';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
-import { OperatorProvider } from '@/lib/operator';
+import { OperatorProvider } from '@/features/auth/operator';
 import { UsersScreen } from './users-screen';
 
 vi.mock('next/navigation', async () => await import('@/test/fake-navigation'));

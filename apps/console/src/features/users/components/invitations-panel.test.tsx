@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { OperatorProvider, type Operator } from '@/lib/operator';
+import { OperatorProvider, type Operator } from '@/features/auth/operator';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
 import { InvitationsPanel } from './invitations-panel';

@@ -3,7 +3,7 @@ import { ThemeProvider } from 'next-themes';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { MockBanner } from '@/components/layout/mock-banner';
 import { Providers } from '@/components/layout/providers';
-import { OperatorProvider } from '@/lib/operator';
+import { OperatorProvider } from '@/features/auth/operator';
 import { getSessionOperator } from '@/server/session-user';
 import { Toaster } from '@/components/ui/sonner';
 import { DensityEffect } from '@/components/layout/settings-panel';

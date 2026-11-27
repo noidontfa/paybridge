@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { isActivePath, type NavItem } from '@/components/layout/navigation';
-import { useCanFn } from '@/lib/operator';
+import { useCanFn } from '@/features/auth/operator';
 
 export function NavSecondary({
   items,

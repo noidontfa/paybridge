@@ -4,7 +4,7 @@
  * `CONSOLE_OPERATOR_NAME`). With a real API the signed-in User comes from the
  * session (`./session-user.ts`). Server-side only.
  */
-import type { Operator } from '@/lib/operator';
+import type { Operator } from '@/features/auth/operator';
 
 export const DEFAULT_OPERATOR: Operator = { id: 'operator', name: 'Operator' };
 
