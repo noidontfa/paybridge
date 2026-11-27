@@ -96,11 +96,11 @@ describe('seeded data', () => {
       expect(o.openReviewCount, range).toBeGreaterThan(0);
     }
     const all = await overview('30d');
-    expect(all.paymentCount).toBe(22);
+    expect(all.paymentCount).toBe(22 + 3); // API and checkout Payments
     expect(new Set(all.statusCounts.map((s) => s.status))).toEqual(
       new Set(PAYMENT_STATUSES),
     );
-    expect(all.statusCounts.reduce((n, s) => n + s.count, 0)).toBe(22);
+    expect(all.statusCounts.reduce((n, s) => n + s.count, 0)).toBe(22 + 3);
   });
 });
 

@@ -46,7 +46,7 @@ async function allDetails() {
 describe('GET /internal/payments/:id', () => {
   it('returns every seeded Payment in the Console contract', async () => {
     const payments = await allDetails();
-    expect(payments).toHaveLength(22);
+    expect(payments).toHaveLength(22 + 3); // API and checkout Payments
   });
 
   it('shows both attempts of the gateway-switch Payment, oldest first', async () => {
