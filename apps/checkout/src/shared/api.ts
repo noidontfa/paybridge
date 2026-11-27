@@ -52,6 +52,8 @@ export interface CheckoutPayment {
   readonly currency: string;
   readonly expiresAt: string;
   readonly pricingPlan: { readonly id: string; readonly name: string } | null;
+  /** The Pricing Plan's success and cancel URLs (null: not set). */
+  readonly returnUrls: { readonly successUrl: string | null; readonly cancelUrl: string | null };
   readonly attempt: CheckoutAttempt | null;
   readonly resumed?: boolean;
 }

@@ -41,7 +41,11 @@ beforeAll(async () => {
     apiUrl: 'https://api.paybridge.example',
     internalApiUrl: apiUrl,
     version: '1.2.3',
-    assets: { sdk: 'console.log("sdk", __PAYBRIDGE_CONFIG__);', page: 'console.log("page");' },
+    assets: {
+      sdk: 'console.log("sdk", __PAYBRIDGE_CONFIG__);',
+      page: 'console.log("page");',
+      returnPage: 'console.log("return");',
+    },
   });
   base = await listen(checkout);
 });
@@ -131,5 +135,38 @@ describe('the checkout page', () => {
       'connect-src https://api.paybridge.example',
     );
     expect(await res.text()).toContain('/assets/checkout.js');
+  });
+});
+
+describe('the return page', () => {
+  const returnPage = () =>
+    fetch(`${base}/return?paymentId=p1&key=${KEY}&back=${encodeURIComponent(`${SHOP}/`)}&vnp_ResponseCode=00`);
+
+  it('is a top-level page that may not be framed, calling only the API', async () => {
+    const res = await returnPage();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const policy = res.headers.get('content-security-policy') ?? '';
+    expect(policy).toContain("frame-ancestors 'none'");
+    expect(policy).toContain('connect-src https://api.paybridge.example');
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(res.headers.get('referrer-policy')).toBe('no-referrer');
+    const html = await res.text();
+    expect(html).toContain('/assets/return.js');
+    expect(html).not.toContain('vnp_ResponseCode');
+  });
+
+  it('serves its script', async () => {
+    const res = await fetch(`${base}/assets/return.js`);
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('console.log("return");');
+  });
+
+  it('does not ask the API anything itself', async () => {
+    await returnPage();
+
+    expect(apiRequests).toHaveLength(0);
   });
 });

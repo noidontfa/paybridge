@@ -24,6 +24,15 @@ button:disabled { opacity: .6; cursor: progress; }
 
 /** The checkout page's shell; `/assets/checkout.js` renders everything in it. */
 export function checkoutPageHtml(config: PublicConfig): string {
+  return pageShell(config, 'checkout.js');
+}
+
+/** The return page's shell; `/assets/return.js` renders everything in it. */
+export function returnPageHtml(config: PublicConfig): string {
+  return pageShell(config, 'return.js');
+}
+
+function pageShell(config: PublicConfig, script: string): string {
   const json = JSON.stringify(config).replaceAll('<', '\\u003c');
   return `<!doctype html>
 <html lang="en">
@@ -34,7 +43,7 @@ export function checkoutPageHtml(config: PublicConfig): string {
 <title>PayBridge Checkout</title>
 <style>${STYLES}</style>
 <script id="paybridge-config" type="application/json">${json}</script>
-<script src="/assets/checkout.js?v=${encodeURIComponent(config.version)}" defer></script>
+<script src="/assets/${script}?v=${encodeURIComponent(config.version)}" defer></script>
 </head>
 <body><main id="app" aria-live="polite"></main></body>
 </html>`;

@@ -16,9 +16,11 @@ export type SdkMessage = {
   /** The Pricing Table's language, for messages shown before it is read. */
   readonly language: Language;
   readonly customerReference?: string;
-  /** Snippet URLs (`data-success-url`, `data-cancel-url`); ticket 10 uses them. */
+  /** Snippet URLs (`data-success-url`, `data-cancel-url`), for the return page. */
   readonly successUrl?: string;
   readonly cancelUrl?: string;
+  /** The host page the Customer started from; the return page's last resort. */
+  readonly hostPageUrl?: string;
 };
 
 /** Checkout page -> SDK. */
@@ -102,7 +104,8 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
   if (
     !isOptionalString(m.customerReference) ||
     !isOptionalString(m.successUrl) ||
-    !isOptionalString(m.cancelUrl)
+    !isOptionalString(m.cancelUrl) ||
+    !isOptionalString(m.hostPageUrl)
   ) {
     return null;
   }
@@ -114,5 +117,6 @@ export function readSdkMessage(event: MessageEvent, from: Sender): SdkMessage | 
     ...(m.customerReference ? { customerReference: m.customerReference } : {}),
     ...(m.successUrl ? { successUrl: m.successUrl } : {}),
     ...(m.cancelUrl ? { cancelUrl: m.cancelUrl } : {}),
+    ...(m.hostPageUrl ? { hostPageUrl: m.hostPageUrl } : {}),
   };
 }

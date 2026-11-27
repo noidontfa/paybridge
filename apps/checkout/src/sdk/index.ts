@@ -66,6 +66,13 @@ function unavailable(reason: string): void {
   console.warn(`${LOG_PREFIX} Payment is not available right now. Reason: ${reason}`);
 }
 
+/** This page, without its fragment: where the return page may bring the Customer back. */
+function hostPageUrl(): string {
+  const url = new URL(window.location.href);
+  url.hash = '';
+  return url.toString();
+}
+
 function startCheckout(
   snippet: Snippet,
   table: PricingTable,
@@ -86,6 +93,7 @@ function startCheckout(
       ...(snippet.customerReference ? { customerReference: snippet.customerReference } : {}),
       ...(snippet.successUrl ? { successUrl: snippet.successUrl } : {}),
       ...(snippet.cancelUrl ? { cancelUrl: snippet.cancelUrl } : {}),
+      hostPageUrl: hostPageUrl(),
     },
     onMessage: (message) => {
       switch (message.type) {
