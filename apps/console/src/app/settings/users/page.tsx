@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header';
-import { UsersScreen } from '@/components/users/users-screen';
+import { UsersScreen } from '@/features/users/components/users-screen';
 
 export const metadata = { title: 'Users' };
 

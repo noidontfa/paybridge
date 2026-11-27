@@ -8,7 +8,7 @@ import {
   listUsers,
   reactivateUser,
   type ManagedRole,
-} from '@/lib/api/users';
+} from '@/features/users/api/users';
 
 export const userKeys = {
   all: ['users'] as const,

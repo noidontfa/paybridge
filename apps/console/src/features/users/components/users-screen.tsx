@@ -12,9 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ManagedUser } from '@/lib/api/users';
+import type { ManagedUser } from '@/features/users/api/users';
 import { useCan } from '@/lib/operator';
-import { useChangeUser, useUserList } from '@/lib/queries/users';
+import { useChangeUser, useUserList } from '@/features/users/hooks/queries';
 
 /** Users of the Organization: Role, active state, and the actions an Organization Admin may take. */
 export function UsersScreen() {

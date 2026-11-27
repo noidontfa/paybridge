@@ -88,7 +88,7 @@ export class MockStore {
   readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
 
   /** Pending Invitations, for the Invitations page. */
-  readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
+  readonly invitations: import('@/features/users/api/invitations').InvitationItem[] = [];
 
   /** The Organization's Gateway Connections (none until it connects one). */
   readonly gatewayConnections: import('@/features/gateway-connections/api').GatewayConnection[] = [];

@@ -13,7 +13,7 @@ import {
   revokeInvitation,
   sendInvitation,
   type InvitableRole,
-} from '@/lib/api/invitations';
+} from '@/features/users/api/invitations';
 import { useCan } from '@/lib/operator';
 
 const KEY = ['invitations'] as const;

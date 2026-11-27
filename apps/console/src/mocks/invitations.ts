@@ -1,6 +1,6 @@
 /** The mocked Invitations endpoints: list pending, send, re-send, revoke. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { INVITABLE_ROLES, type InvitationItem } from '@/lib/api/invitations';
+import { INVITABLE_ROLES, type InvitationItem } from '@/features/users/api/invitations';
 import { ROLE_LABELS } from '@/lib/roles';
 import type { MockStore } from './store';
 

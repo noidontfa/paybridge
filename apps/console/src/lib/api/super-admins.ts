@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 import { request } from '@/services/client';
-import { managedUserListSchema } from './users';
+import { managedUserListSchema } from '@/features/users/api/users';
 
 export function listSuperAdmins(signal?: AbortSignal) {
   return request('/internal/super-admins', managedUserListSchema, { signal });
