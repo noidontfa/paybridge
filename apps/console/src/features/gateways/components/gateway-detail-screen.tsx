@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
 import { CALLBACK_STATUSES } from '@/features/callbacks/api';
 import { humanizeCode } from '@/utils/format';
-import { useGateway } from '@/lib/queries/gateways';
+import { useGateway } from '@/features/gateways/hooks/queries';
 import { GatewayFacts } from './gateway-summary';
 
 const linkClass = 'text-sm font-medium underline-offset-4 hover:underline';

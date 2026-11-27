@@ -1,4 +1,4 @@
-import { GatewayDetailScreen } from '@/components/gateways/gateway-detail-screen';
+import { GatewayDetailScreen } from '@/features/gateways/components/gateway-detail-screen';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Gateway' };

@@ -1,7 +1,7 @@
 import { CheckCircle2Icon, CircleAlertIcon, FlaskConicalIcon, ZapIcon } from 'lucide-react';
 import { CopyButton } from '@/components/copy-button';
 import { Badge } from '@/components/ui/badge';
-import type { GatewayMode, GatewaySummary } from '@/lib/api/gateways';
+import type { GatewayMode, GatewaySummary } from '@/features/gateways/api';
 import { TONE_CLASSES } from '@/components/status-badges';
 import { cn } from '@/utils/cn';
 

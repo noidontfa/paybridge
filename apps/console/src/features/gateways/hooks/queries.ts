@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getGateway, listGateways } from '@/lib/api/gateways';
+import { getGateway, listGateways } from '@/features/gateways/api';
 
 export const gatewayKeys = {
   all: ['gateways'] as const,

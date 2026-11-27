@@ -7,7 +7,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_STATUSES } from '@/features/payments/schemas';
 import { statusBadge } from '@/components/status-badges';
-import { useGatewayOptions } from '@/lib/queries/gateways';
+import { useGatewayOptions } from '@/features/gateways/hooks/queries';
 import { PAYMENT_LIST_URL_CONFIG, usePaymentList } from '@/features/payments/hooks/payments-list';
 import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { paymentColumns, paymentHref } from './payments-columns';

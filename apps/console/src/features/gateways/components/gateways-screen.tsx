@@ -4,7 +4,7 @@ import { LandmarkIcon } from 'lucide-react';
 import Link from 'next/link';
 import { ErrorState } from '@/components/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useGatewayList } from '@/lib/queries/gateways';
+import { useGatewayList } from '@/features/gateways/hooks/queries';
 import { GatewayFacts } from './gateway-summary';
 
 export function GatewaysScreen() {
