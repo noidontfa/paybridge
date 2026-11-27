@@ -17,7 +17,7 @@ import {
 } from './application/sweeps/webhook-retention.js';
 import { DeliverWebhook } from './application/workers/deliver-webhook.js';
 import { FanOutPaymentEvent } from './application/workers/fan-out-payment-event.js';
-import { WebhooksTransactionRunner } from './domain/repositories/transaction-runner.js';
+import { TransactionRunner } from './domain/repositories/transaction-runner.js';
 import { WebhookDeliveriesReadRepository } from './domain/repositories/webhook-deliveries-read.repository.js';
 import {
   DeliveryDispatcher,
@@ -38,7 +38,7 @@ import { WebhookDeliveriesController } from './infrastructure/http/webhook-deliv
 import { WebhookEndpointTestsController } from './infrastructure/http/webhook-endpoint-tests.controller.js';
 import { WebhookEndpointsController } from './infrastructure/http/webhook-endpoints.controller.js';
 import { PrismaWebhookDeliveriesReadRepository } from './infrastructure/prisma/webhook-deliveries-read.repository.js';
-import { PrismaWebhooksTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
+import { PrismaTransactionRunner } from './infrastructure/prisma/transaction-runner.js';
 import {
   WebhookMaintenanceProcessor,
   WebhookMaintenanceScheduler,
@@ -71,8 +71,8 @@ import {
   ],
   providers: [
     {
-      provide: WebhooksTransactionRunner,
-      useClass: PrismaWebhooksTransactionRunner,
+      provide: TransactionRunner,
+      useClass: PrismaTransactionRunner,
     },
     { provide: WebhooksClock, useClass: SystemWebhooksClock },
     { provide: DeliveryDispatcher, useClass: BullDeliveryDispatcher },

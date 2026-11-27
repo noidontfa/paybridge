@@ -4,7 +4,7 @@ import {
   organizationScope,
 } from '../../../payment-core/port/organization-scope.js';
 import { refused, AttemptDelivery } from '../attempt-delivery.js';
-import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import { retryDelayMs } from '../../domain/services/backoff.js';
 import {
   DeliveryDispatcher,
@@ -42,8 +42,8 @@ export class DeliverWebhook {
   private readonly logger = new Logger(DeliverWebhook.name);
 
   constructor(
-    @Inject(WebhooksTransactionRunner)
-    private readonly runner: WebhooksTransactionRunner,
+    @Inject(TransactionRunner)
+    private readonly runner: TransactionRunner,
     @Inject(AttemptDelivery) private readonly attempt: AttemptDelivery,
     @Inject(WebhooksClock) private readonly clock: WebhooksClock,
     @Inject(DeliveryDispatcher) private readonly dispatcher: DeliveryDispatcher,

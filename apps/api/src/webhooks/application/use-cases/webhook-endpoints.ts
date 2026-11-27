@@ -12,7 +12,7 @@ import {
   type WebhookEndpoint,
   type WebhookEndpointStatus,
 } from '../../domain/entities/webhook-endpoint.js';
-import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   newWebhookId,
   SecretCipher,
@@ -39,8 +39,8 @@ export interface CreatedWebhookEndpoint {
 @Injectable()
 export class ManageWebhookEndpoints {
   constructor(
-    @Inject(WebhooksTransactionRunner)
-    private readonly runner: WebhooksTransactionRunner,
+    @Inject(TransactionRunner)
+    private readonly runner: TransactionRunner,
     @Inject(SecretCipher) private readonly cipher: SecretCipher,
     @Inject(WebhookUrlGuard) private readonly urlGuard: WebhookUrlGuard,
     @Inject(WebhooksClock) private readonly clock: WebhooksClock,

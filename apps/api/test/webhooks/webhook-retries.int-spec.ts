@@ -24,7 +24,7 @@ import { AttemptDelivery } from '../../src/webhooks/application/attempt-delivery
 import { WebhookDeliverySweep } from '../../src/webhooks/application/sweeps/webhook-delivery-sweep.js';
 import { WebhookRetention } from '../../src/webhooks/application/sweeps/webhook-retention.js';
 import { DeliverWebhook } from '../../src/webhooks/application/workers/deliver-webhook.js';
-import { WebhooksTransactionRunner } from '../../src/webhooks/domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../src/webhooks/domain/repositories/transaction-runner.js';
 import {
   RetryJitter,
   WebhooksClock,
@@ -458,14 +458,14 @@ describe('a Redis outage', () => {
     });
     const offline = new BullDeliveryDispatcher(flaky, clock);
     const deliverOffline = new DeliverWebhook(
-      moduleRef.get(WebhooksTransactionRunner),
+      moduleRef.get(TransactionRunner),
       moduleRef.get(AttemptDelivery),
       clock,
       offline,
       moduleRef.get(RetryJitter),
     );
     const sweepOffline = new WebhookDeliverySweep(
-      moduleRef.get(WebhooksTransactionRunner),
+      moduleRef.get(TransactionRunner),
       clock,
       offline,
     );

@@ -18,7 +18,7 @@ import {
   type Actor,
   type WebhookEndpoint,
 } from '../../domain/entities/webhook-endpoint.js';
-import { WebhooksTransactionRunner } from '../../domain/repositories/transaction-runner.js';
+import { TransactionRunner } from '../../domain/repositories/transaction-runner.js';
 import {
   WebhookDeliveriesReadRepository,
   type WebhookDeliveryDetailRow,
@@ -107,8 +107,8 @@ export class ReadWebhookDeliveries {
 @Injectable()
 export class SendWebhooksByHand {
   constructor(
-    @Inject(WebhooksTransactionRunner)
-    private readonly runner: WebhooksTransactionRunner,
+    @Inject(TransactionRunner)
+    private readonly runner: TransactionRunner,
     @Inject(AttemptDelivery) private readonly attempt: AttemptDelivery,
     @Inject(WebhooksClock) private readonly clock: WebhooksClock,
   ) {}
