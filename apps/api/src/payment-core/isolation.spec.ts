@@ -69,10 +69,20 @@ export function unscopedRepositoryMembers(
 
 /** Modules whose repositories hold Organization data, scope first. */
 const SCANNED_MODULES = ['payment-core', 'checkout', 'webhooks'] as const;
+/**
+ * Identity's repositories that hold Organization data and take a scope.
+ * (Its User, Organization and session repositories predate ADR 0006's scope
+ * and are keyed by the principal; they are not scanned yet.)
+ */
+const SCANNED_FILES = [
+  'identity/domain/repositories/publishable-key.repository.ts',
+  'identity/infrastructure/prisma/publishable-key.repository.ts',
+] as const;
 
-const files = SCANNED_MODULES.flatMap((module) =>
-  repositoryFiles(join(SRC, module)),
-).map((path) => ({
+const files = [
+  ...SCANNED_MODULES.flatMap((module) => repositoryFiles(join(SRC, module))),
+  ...SCANNED_FILES.map((file) => join(SRC, file)),
+].map((path) => ({
   path: relative(SRC, path).split(sep).join('/'),
   text: readFileSync(path, 'utf8'),
 }));
@@ -95,6 +105,9 @@ describe('Organization isolation (static)', () => {
     );
     expect(paths).toContain(
       'webhooks/domain/repositories/webhook-delivery.repository.ts',
+    );
+    expect(paths).toContain(
+      'identity/infrastructure/prisma/publishable-key.repository.ts',
     );
   });
 

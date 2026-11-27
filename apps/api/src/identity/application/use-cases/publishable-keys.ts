@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  ALL_ORGANIZATIONS,
+  organizationScope,
+} from '../../../common/organization-scope.js';
+import {
   CheckoutOrganizationSuspendedError,
   InvalidPublishableKeyError,
   isOriginAllowed,
@@ -32,7 +36,10 @@ export class CreatePublishableKey {
 
   execute(
     organizationId: string,
-    input: { readonly label: string; readonly allowedOrigins: readonly string[] },
+    input: {
+      readonly label: string;
+      readonly allowedOrigins: readonly string[];
+    },
     by: KeyWriter,
   ): Promise<PublishableKey> {
     const label = normalisePublishableKeyLabel(input.label);
@@ -40,15 +47,18 @@ export class CreatePublishableKey {
       input.allowedOrigins,
       this.rules,
     );
-    return this.runner.repositories.publishableKeys.create({
-      id: newIdentityId(),
-      organizationId,
-      label,
-      key: generatePublishableKey(),
-      allowedOrigins,
-      createdBy: by,
-      createdAt: this.clock.now(),
-    });
+    return this.runner.repositories.publishableKeys.create(
+      organizationScope(organizationId),
+      {
+        id: newIdentityId(),
+        organizationId,
+        label,
+        key: generatePublishableKey(),
+        allowedOrigins,
+        createdBy: by,
+        createdAt: this.clock.now(),
+      },
+    );
   }
 }
 
@@ -59,8 +69,8 @@ export class ListPublishableKeys {
   ) {}
 
   execute(organizationId: string): Promise<PublishableKey[]> {
-    return this.runner.repositories.publishableKeys.listOfOrganization(
-      organizationId,
+    return this.runner.repositories.publishableKeys.list(
+      organizationScope(organizationId),
     );
   }
 }
@@ -81,15 +91,13 @@ export class SetPublishableKeyOrigins {
     by: KeyWriter,
   ): Promise<PublishableKey> {
     const origins = normaliseAllowedOrigins(allowedOrigins, this.rules);
+    const scope = organizationScope(organizationId);
     return this.runner.run(async (repos) => {
-      const found = await repos.publishableKeys.findOfOrganization(
-        organizationId,
-        id,
-      );
+      const found = await repos.publishableKeys.findById(scope, id);
       if (!found) throw new PublishableKeyNotFoundError(id);
       if (found.revokedAt) throw new PublishableKeyRevokedError(id);
       return repos.publishableKeys.setAllowedOrigins(
-        organizationId,
+        scope,
         id,
         origins,
         by,
@@ -107,14 +115,16 @@ export class RevokePublishableKey {
     @Inject(IdentityClock) private readonly clock: IdentityClock,
   ) {}
 
-  async execute(organizationId: string, id: string, by: KeyWriter): Promise<void> {
+  async execute(
+    organizationId: string,
+    id: string,
+    by: KeyWriter,
+  ): Promise<void> {
+    const scope = organizationScope(organizationId);
     await this.runner.run(async (repos) => {
-      const found = await repos.publishableKeys.findOfOrganization(
-        organizationId,
-        id,
-      );
+      const found = await repos.publishableKeys.findById(scope, id);
       if (!found) throw new PublishableKeyNotFoundError(id);
-      await repos.publishableKeys.revoke(organizationId, id, by, this.clock.now());
+      await repos.publishableKeys.revoke(scope, id, by, this.clock.now());
     });
   }
 }
@@ -162,8 +172,10 @@ export class AuthenticatePublishableKey {
     if (!looksLikePublishableKey(presented)) {
       throw new InvalidPublishableKeyError();
     }
-    const stored =
-      await this.runner.repositories.publishableKeys.findByKey(presented);
+    const stored = await this.runner.repositories.publishableKeys.findByKey(
+      ALL_ORGANIZATIONS,
+      presented,
+    );
     if (!stored || stored.revokedAt) throw new InvalidPublishableKeyError();
     const organization = await this.organizations.findById(
       stored.organizationId,

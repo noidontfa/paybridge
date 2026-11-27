@@ -1,3 +1,7 @@
+import type {
+  OrganizationScope,
+  ReadScope,
+} from '../../../common/organization-scope.js';
 import type { PublishableKey as PublishableKeyRow } from '../../../generated/prisma/client.js';
 import type {
   KeyWriter,
@@ -41,11 +45,14 @@ export class PrismaPublishableKeyRepository extends PublishableKeyRepository {
     super();
   }
 
-  async create(key: NewPublishableKey): Promise<PublishableKey> {
+  async create(
+    scope: OrganizationScope,
+    key: NewPublishableKey,
+  ): Promise<PublishableKey> {
     const row = await this.ctx.db.publishableKey.create({
       data: {
         id: key.id,
-        organizationId: key.organizationId,
+        organizationId: scope.organizationId,
         label: key.label,
         key: key.key,
         allowedOrigins: [...key.allowedOrigins],
@@ -62,54 +69,63 @@ export class PrismaPublishableKeyRepository extends PublishableKeyRepository {
     return toEntity(row);
   }
 
-  async findByKey(key: string): Promise<PublishableKey | null> {
-    const row = await this.ctx.db.publishableKey.findUnique({ where: { key } });
-    return row ? toEntity(row) : null;
-  }
-
-  async findOfOrganization(
-    organizationId: string,
-    id: string,
+  async findByKey(
+    scope: ReadScope,
+    key: string,
   ): Promise<PublishableKey | null> {
     const row = await this.ctx.db.publishableKey.findFirst({
-      where: { id, organizationId },
+      where: {
+        key,
+        ...(scope.kind === 'organization'
+          ? { organizationId: scope.organizationId }
+          : {}),
+      },
     });
     return row ? toEntity(row) : null;
   }
 
-  async listOfOrganization(organizationId: string): Promise<PublishableKey[]> {
+  async findById(
+    scope: OrganizationScope,
+    id: string,
+  ): Promise<PublishableKey | null> {
+    const row = await this.ctx.db.publishableKey.findFirst({
+      where: { id, organizationId: scope.organizationId },
+    });
+    return row ? toEntity(row) : null;
+  }
+
+  async list(scope: OrganizationScope): Promise<PublishableKey[]> {
     const rows = await this.ctx.db.publishableKey.findMany({
-      where: { organizationId },
+      where: { organizationId: scope.organizationId },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
     return rows.map(toEntity);
   }
 
   async setAllowedOrigins(
-    organizationId: string,
+    scope: OrganizationScope,
     id: string,
     allowedOrigins: readonly string[],
     by: KeyWriter,
     at: Date,
   ): Promise<PublishableKey> {
+    const where = { id, organizationId: scope.organizationId };
     await this.ctx.db.publishableKey.updateMany({
-      where: { id, organizationId },
+      where,
       data: { allowedOrigins: [...allowedOrigins], ...updatedBy(by, at) },
     });
-    const row = await this.ctx.db.publishableKey.findFirstOrThrow({
-      where: { id, organizationId },
-    });
+    const row = await this.ctx.db.publishableKey.findFirstOrThrow({ where });
     return toEntity(row);
   }
 
   async revoke(
-    organizationId: string,
+    scope: OrganizationScope,
     id: string,
     by: KeyWriter,
     at: Date,
   ): Promise<void> {
     await this.ctx.db.publishableKey.updateMany({
-      where: { id, organizationId, revokedAt: null },
+      where: { id, organizationId: scope.organizationId, revokedAt: null },
       data: { revokedAt: at, ...updatedBy(by, at) },
     });
   }
