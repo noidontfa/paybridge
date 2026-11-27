@@ -9,7 +9,6 @@ import {
   Req,
   Res,
   UseFilters,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
@@ -25,7 +24,7 @@ import {
   CheckoutPaymentFlow,
   type CheckoutPaymentWithReturnUrls,
 } from '../../application/use-cases/checkout-payments.js';
-import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
+import { MapCheckoutErrors } from './checkout-errors.js';
 import { CheckoutUnavailableFilter } from './checkout-unavailable.filter.js';
 
 // The browser sends no Amount: unknown fields (an `amount` among them) are
@@ -113,7 +112,7 @@ interface ClientRequest {
 @ApiTags('checkout')
 @CheckoutEndpoint()
 @UseFilters(CheckoutUnavailableFilter)
-@UseInterceptors(CheckoutErrorInterceptor)
+@MapCheckoutErrors()
 @Controller('checkout/payments')
 export class CheckoutPaymentsController {
   constructor(
@@ -159,7 +158,7 @@ export class CheckoutPaymentsController {
   @ApiOperation({
     summary: 'Start an attempt on a checkout Payment',
     description:
-      "Returns the attempt with its NextAction. The gateway must be allowed by the Pricing Plan and enabled for the Organization.",
+      'Returns the attempt with its NextAction. The gateway must be allowed by the Pricing Plan and enabled for the Organization.',
   })
   async startAttempt(
     @CurrentCheckout() caller: CheckoutCaller,

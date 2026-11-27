@@ -9,7 +9,6 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
@@ -28,7 +27,7 @@ import {
   PRICING_TABLE_THEMES,
   type PricingTable,
 } from '../../domain/entities/pricing-table.js';
-import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
+import { MapCheckoutErrors } from './checkout-errors.js';
 import {
   CurrentActor,
   CurrentScope,
@@ -72,7 +71,7 @@ const view = (table: PricingTable) => ({
  * are POSTs, so the Console's BFF needs no new methods.
  */
 @ApiTags('internal')
-@UseInterceptors(CheckoutErrorInterceptor)
+@MapCheckoutErrors()
 @Controller(`${INTERNAL_PREFIX}/pricing-tables`)
 export class PricingTablesController {
   constructor(

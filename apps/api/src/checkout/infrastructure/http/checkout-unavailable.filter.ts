@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { AllExceptionsFilter } from '../../../common/filters/all-exceptions.filter.js';
-import { checkoutUnavailable } from './checkout-error.interceptor.js';
+import { checkoutUnavailable } from './checkout-errors.js';
 
 /**
  * On public checkout endpoints, the credential checks identity runs before

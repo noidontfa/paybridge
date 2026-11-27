@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  NotFoundException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -23,13 +21,13 @@ import { ManageWebhookEndpoints } from '../../application/use-cases/webhook-endp
 import { PAYMENT_EVENT_KINDS } from '../../domain/entities/event-kinds.js';
 import { actorLabel } from '../../../common/principal/actor.js';
 import {
-  InvalidWebhookUrlError,
   SECRET_OVERLAPS,
-  WebhookEndpointNotFoundError,
   type SecretOverlap,
   type WebhookEndpoint,
 } from '../../domain/entities/webhook-endpoint.js';
+import { MapErrors } from '../../../common/http/map-errors.js';
 import { callerOf } from '../../../common/principal/caller.js';
+import { WEBHOOK_ERROR_RULES } from './webhook-errors.js';
 
 const url = z.string().trim().min(1).max(2048);
 const eventKinds = z.array(z.enum(PAYMENT_EVENT_KINDS)).min(1).max(20);
@@ -67,22 +65,6 @@ const view = (endpoint: WebhookEndpoint) => ({
   },
 });
 
-function mapError(error: unknown): never {
-  if (error instanceof WebhookEndpointNotFoundError) {
-    throw new NotFoundException({
-      message: error.message,
-      code: 'WEBHOOK_ENDPOINT_NOT_FOUND',
-    });
-  }
-  if (error instanceof InvalidWebhookUrlError) {
-    throw new BadRequestException({
-      message: error.message,
-      code: 'INVALID_WEBHOOK_URL',
-    });
-  }
-  throw error;
-}
-
 /**
  * Webhook Endpoint management. Every route is a sensitive write or gated like
  * one: the caller is re-checked in the database (ADR 0008), and an Operator
@@ -90,6 +72,7 @@ function mapError(error: unknown): never {
  */
 @ApiTags('internal')
 @RequireSensitivePermission('webhook-endpoints:manage')
+@MapErrors(WEBHOOK_ERROR_RULES)
 @Controller(`${INTERNAL_PREFIX}/webhook-endpoints`)
 export class WebhookEndpointsController {
   constructor(
@@ -109,16 +92,12 @@ export class WebhookEndpointsController {
     @Body(new ZodValidationPipe(createSchema)) body: CreateBody,
   ) {
     const { scope, actor } = callerOf(request);
-    try {
-      const { endpoint, secret } = await this.endpoints.create(
-        scope,
-        body,
-        actor,
-      );
-      return { ...view(endpoint), secret };
-    } catch (error) {
-      mapError(error);
-    }
+    const { endpoint, secret } = await this.endpoints.create(
+      scope,
+      body,
+      actor,
+    );
+    return { ...view(endpoint), secret };
   }
 
   @Get()
@@ -147,11 +126,7 @@ export class WebhookEndpointsController {
     @Body(new ZodValidationPipe(updateSchema)) body: UpdateBody,
   ) {
     const { scope, actor } = callerOf(request);
-    try {
-      return view(await this.endpoints.update(scope, id, body, actor));
-    } catch (error) {
-      mapError(error);
-    }
+    return view(await this.endpoints.update(scope, id, body, actor));
   }
 
   @Post(':id/disable')
@@ -186,17 +161,13 @@ export class WebhookEndpointsController {
     @Body(new ZodValidationPipe(rollSchema)) body: RollBody,
   ) {
     const { scope, actor } = callerOf(request);
-    try {
-      const { endpoint, secret } = await this.endpoints.rollSecret(
-        scope,
-        id,
-        body.previousSecretValidFor,
-        actor,
-      );
-      return { ...view(endpoint), secret };
-    } catch (error) {
-      mapError(error);
-    }
+    const { endpoint, secret } = await this.endpoints.rollSecret(
+      scope,
+      id,
+      body.previousSecretValidFor,
+      actor,
+    );
+    return { ...view(endpoint), secret };
   }
 
   @Get(':id/secret-rolls')
@@ -207,26 +178,19 @@ export class WebhookEndpointsController {
     @Req() request: Record<string, unknown>,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    try {
-      const rolls = await this.endpoints.secretRolls(
-        callerOf(request).scope,
-        id,
-      );
-      return {
-        items: rolls.map((roll) => ({
-          rolledAt: roll.rolledAt.toISOString(),
-          previousSecretExpiresAt:
-            roll.previousSecretExpiresAt?.toISOString() ?? null,
-          rolledBy: {
-            name: roll.rolledBy.name,
-            role: roll.rolledBy.role,
-            label: actorLabel(roll.rolledBy),
-          },
-        })),
-      };
-    } catch (error) {
-      mapError(error);
-    }
+    const rolls = await this.endpoints.secretRolls(callerOf(request).scope, id);
+    return {
+      items: rolls.map((roll) => ({
+        rolledAt: roll.rolledAt.toISOString(),
+        previousSecretExpiresAt:
+          roll.previousSecretExpiresAt?.toISOString() ?? null,
+        rolledBy: {
+          name: roll.rolledBy.name,
+          role: roll.rolledBy.role,
+          label: actorLabel(roll.rolledBy),
+        },
+      })),
+    };
   }
 
   @Delete(':id')
@@ -237,11 +201,7 @@ export class WebhookEndpointsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
     const { scope, actor } = callerOf(request);
-    try {
-      await this.endpoints.delete(scope, id, actor);
-    } catch (error) {
-      mapError(error);
-    }
+    await this.endpoints.delete(scope, id, actor);
   }
 
   private async setStatus(
@@ -250,10 +210,6 @@ export class WebhookEndpointsController {
     status: 'ENABLED' | 'DISABLED',
   ) {
     const { scope, actor } = callerOf(request);
-    try {
-      return view(await this.endpoints.setStatus(scope, id, status, actor));
-    } catch (error) {
-      mapError(error);
-    }
+    return view(await this.endpoints.setStatus(scope, id, status, actor));
   }
 }

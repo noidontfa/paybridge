@@ -9,7 +9,6 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
@@ -26,7 +25,7 @@ import {
   type PricingPlanDetail,
 } from '../../application/use-cases/pricing-plans.js';
 import type { PricingPlan, Actor } from '../../domain/entities/pricing-plan.js';
-import { CheckoutErrorInterceptor } from './checkout-error.interceptor.js';
+import { MapCheckoutErrors } from './checkout-errors.js';
 import {
   CurrentActor,
   CurrentScope,
@@ -84,7 +83,7 @@ const detailView = ({ plan, pricingTables }: PricingPlanDetail) => ({
  * are POSTs, so the Console's BFF needs no new methods.
  */
 @ApiTags('internal')
-@UseInterceptors(CheckoutErrorInterceptor)
+@MapCheckoutErrors()
 @Controller(`${INTERNAL_PREFIX}/pricing-plans`)
 export class PricingPlansController {
   constructor(
