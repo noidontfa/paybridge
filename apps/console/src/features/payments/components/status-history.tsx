@@ -1,7 +1,7 @@
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { BadgeKind } from '@/components/status-badges';
-import type { StatusTransition } from '@/lib/api/schemas';
+import type { StatusTransition } from '@/features/payments/schemas';
 import { actorText } from '@/lib/actor';
 
 const KIND_BY_ENTITY: Record<StatusTransition['entityType'], BadgeKind> = {

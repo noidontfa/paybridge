@@ -19,7 +19,7 @@ import type {
   PaymentStatus,
   ReviewReason,
   StatusTransition,
-} from '@/lib/api/schemas';
+} from '@/features/payments/schemas';
 
 export interface MockPayment {
   id: string;

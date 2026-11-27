@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PaymentEvent } from '@/lib/api/schemas';
+import type { PaymentEvent } from '@/features/payments/schemas';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
 import { currentLocation, resetNavigation } from '@/test/fake-navigation';

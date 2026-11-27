@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { TimeText } from '@/components/time-text';
-import type { PaymentEvent } from '@/lib/api/schemas';
+import type { PaymentEvent } from '@/features/payments/schemas';
 
 /** The Payment Events Core emitted for this Payment, oldest first. */
 export function PaymentEvents({ events }: { events: PaymentEvent[] }) {

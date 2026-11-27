@@ -1,7 +1,7 @@
 'use client';
 
 import { StatusBadge } from '@/components/status-badge';
-import type { OperatorAttempt, OperatorPayment } from '@/lib/api/schemas';
+import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { reviewActions } from '@/lib/review-resolution-rules';
 import { useCan } from '@/lib/operator';
 import { ResolutionForm } from './resolution-form';

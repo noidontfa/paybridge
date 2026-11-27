@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { REVIEW_NOTE_MAX_LENGTH } from '@/lib/api/review-resolution';
-import type { OperatorAttempt, OperatorPayment } from '@/lib/api/schemas';
+import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { useResolveReview } from '@/lib/queries/review-resolution';
 import { useCurrentOperator } from '@/lib/operator';
 import {

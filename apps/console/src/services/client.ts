@@ -10,7 +10,7 @@
 import type { z } from 'zod';
 import { BFF_PREFIX } from '@/services/bff';
 import { ApiError, CLIENT_ERROR_CODES, apiErrorBodySchema } from './errors';
-import { operatorPaymentSchema, type OperatorPayment } from '@/lib/api/schemas';
+import { operatorPaymentSchema, type OperatorPayment } from '@/features/payments/schemas';
 
 /** Operator routes live under the API's internal prefix. */
 export const INTERNAL = '/internal';
@@ -89,9 +89,4 @@ export async function request<S extends z.ZodType>(
     });
   }
   return parsed.data;
-}
-
-/** `GET /internal/payments/:id`: a Payment with its attempts, transitions and events. */
-export function getOperatorPayment(id: string, signal?: AbortSignal): Promise<OperatorPayment> {
-  return request(`${INTERNAL}/payments/${encodeURIComponent(id)}`, operatorPaymentSchema, { signal });
 }

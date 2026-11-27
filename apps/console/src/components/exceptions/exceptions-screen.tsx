@@ -6,7 +6,7 @@ import { useCallback, useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
-import { REVIEW_REASONS } from '@/lib/api/schemas';
+import { REVIEW_REASONS } from '@/features/payments/schemas';
 import { useGatewayOptions } from '@/lib/queries/gateways';
 import { REVIEW_LIST_URL_CONFIG, useReviewList } from '@/lib/queries/reviews';
 import type { ReviewItem } from '@/lib/api/reviews';

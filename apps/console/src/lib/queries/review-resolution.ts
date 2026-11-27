@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { resolveReview, type ReviewResolutionBody } from '@/lib/api/review-resolution';
 import { overviewKeys } from '@/features/overview/hooks/queries';
-import { paymentKeys } from './payments';
+import { paymentKeys } from '@/features/payments/hooks/payments';
 import { reviewKeys } from './reviews';
 
 /**

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { OperatorAttempt } from '@/lib/api/schemas';
+import type { OperatorAttempt } from '@/features/payments/schemas';
 import { OperatorProvider, type Operator } from '@/lib/operator';
 import { ReviewPanel } from './review-panel';
 

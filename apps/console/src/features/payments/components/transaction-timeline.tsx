@@ -1,7 +1,7 @@
 import { CopyButton } from '@/components/copy-button';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { OperatorAttempt, OperatorPayment } from '@/lib/api/schemas';
+import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { humanizeCode } from '@/utils/format';
 import { ReviewPanel } from '@/components/review/review-panel';
 import { StatusHistory } from './status-history';

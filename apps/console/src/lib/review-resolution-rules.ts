@@ -12,7 +12,7 @@
  * - `LATE_SUCCESS_ON_CLOSED_PAYMENT` and `DUPLICATE_SUCCESS`: add a note only.
  */
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
-import type { AttemptStatus, PaymentStatus, ReviewReason } from '@/lib/api/schemas';
+import type { AttemptStatus, PaymentStatus, ReviewReason } from '@/features/payments/schemas';
 
 const HOUR = 3_600_000;
 

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { PaymentListItem } from '@/lib/api/payments-list';
+import type { PaymentListItem } from '@/features/payments/api';
 import { formatMoney } from '@/utils/format';
 
 const column = createDataTableColumnHelper<PaymentListItem>();

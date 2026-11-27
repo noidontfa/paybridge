@@ -1,7 +1,7 @@
 import { CopyButton } from '@/components/copy-button';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { OperatorPayment } from '@/lib/api/schemas';
+import type { OperatorPayment } from '@/features/payments/schemas';
 import { formatMoney } from '@/utils/format';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

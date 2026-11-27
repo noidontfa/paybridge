@@ -3,7 +3,7 @@
  * fixed "now". See `@/lib/api/overview-schema` for the definitions.
  */
 import type { Overview } from '@/features/overview/api';
-import { PAYMENT_STATUSES, type PaymentStatus } from '@/lib/api/schemas';
+import { PAYMENT_STATUSES, type PaymentStatus } from '@/features/payments/schemas';
 import type { OverviewRange } from '@/features/overview/utils/overview-range';
 import type { MockPayment, MockStore } from './store';
 

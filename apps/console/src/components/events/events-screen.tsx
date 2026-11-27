@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
-import { PAYMENT_EVENT_TYPES } from '@/lib/api/schemas';
+import { PAYMENT_EVENT_TYPES } from '@/features/payments/schemas';
 import { PAYMENT_EVENT_URL_CONFIG, usePaymentEventList } from '@/lib/queries/payment-events';
 import { statusBadge } from '@/components/status-badges';
 import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';

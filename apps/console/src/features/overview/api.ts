@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { INTERNAL, request } from '@/services/client';
 import type { OverviewRange } from './utils/overview-range';
 import { OVERVIEW_RANGES } from '@/features/overview/utils/overview-range';
-import { decimalStringSchema, paymentStatusSchema } from '@/lib/api/schemas';
+import { decimalStringSchema, paymentStatusSchema } from '@/features/payments/schemas';
 
 const rateSchema = z.number().min(0).max(1).nullable();
 

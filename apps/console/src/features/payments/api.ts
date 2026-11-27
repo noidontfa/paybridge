@@ -4,9 +4,15 @@
  * shared `schemas.ts` and `client.ts`).
  */
 import { z } from 'zod';
-import { request } from '@/services/client';
+import { INTERNAL, request } from '@/services/client';
 import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
-import { attemptStatusSchema, decimalStringSchema, paymentStatusSchema } from './schemas';
+import {
+  attemptStatusSchema,
+  decimalStringSchema,
+  operatorPaymentSchema,
+  paymentStatusSchema,
+  type OperatorPayment,
+} from './schemas';
 
 export const PAYMENT_SORT_COLUMNS = ['createdAt', 'amount'] as const;
 export type PaymentSortColumn = (typeof PAYMENT_SORT_COLUMNS)[number];
@@ -46,4 +52,9 @@ export interface PaymentListQuery extends ListQuery {
 
 export function listPayments(query: PaymentListQuery, signal?: AbortSignal): Promise<PaymentList> {
   return request('/internal/payments', paymentListSchema, { query: { ...query }, signal });
+}
+
+/** `GET /internal/payments/:id`: a Payment with its attempts, transitions and events. */
+export function getOperatorPayment(id: string, signal?: AbortSignal): Promise<OperatorPayment> {
+  return request(`${INTERNAL}/payments/${encodeURIComponent(id)}`, operatorPaymentSchema, { signal });
 }

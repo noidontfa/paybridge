@@ -14,7 +14,7 @@ import {
   type ReviewListQuery,
   type ReviewState,
 } from '@/lib/api/reviews';
-import type { ReviewReason } from '@/lib/api/schemas';
+import type { ReviewReason } from '@/features/payments/schemas';
 import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 
 export const reviewKeys = {

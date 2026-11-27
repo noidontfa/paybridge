@@ -4,8 +4,8 @@
  * `./payments-list`.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { AuditEntry } from '@/lib/api/status-transitions';
-import { PAYMENT_EVENT_TYPES, STATUS_TRANSITION_ENTITY_TYPES, type StatusTransition } from '@/lib/api/schemas';
+import type { AuditEntry } from '@/features/payments/status-transitions';
+import { PAYMENT_EVENT_TYPES, STATUS_TRANSITION_ENTITY_TYPES, type StatusTransition } from '@/features/payments/schemas';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockStore } from './store';
 

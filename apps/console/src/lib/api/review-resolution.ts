@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { request } from '@/services/client';
-import { attemptStatusSchema, paymentStatusSchema } from './schemas';
+import { attemptStatusSchema, paymentStatusSchema } from '@/features/payments/schemas';
 
 export const REVIEW_NOTE_MAX_LENGTH = 2000;
 

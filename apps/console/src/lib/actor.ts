@@ -1,4 +1,4 @@
-import type { StatusTransition } from '@/lib/api/schemas';
+import type { StatusTransition } from '@/features/payments/schemas';
 
 /** Who acted: platform staff are labelled as such, with their name. */
 export function actorText(transition: Pick<StatusTransition, 'actor' | 'actorName' | 'actorLabel'>): string {

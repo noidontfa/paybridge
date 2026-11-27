@@ -7,7 +7,7 @@ import {
   type PaymentEventListQuery,
   type PaymentEventSummary,
 } from '@/lib/api/payment-events';
-import { paymentEventTypeSchema } from '@/lib/api/schemas';
+import { paymentEventTypeSchema } from '@/features/payments/schemas';
 import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 
 /** The outbox is always newest first, so there is nothing to sort in the URL. */

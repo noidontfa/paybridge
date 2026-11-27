@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
-import { PaymentsScreen } from '@/components/payments/payments-screen';
+import { PaymentsScreen } from '@/features/payments/components/payments-screen';
 
 export const metadata = { title: 'Payments' };
 

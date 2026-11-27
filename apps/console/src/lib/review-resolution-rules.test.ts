@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ReviewReason } from '@/lib/api/schemas';
+import type { ReviewReason } from '@/features/payments/schemas';
 import { reviewActions, type ReviewFacts } from './review-resolution-rules';
 
 const NOW = new Date('2026-11-25T12:00:00.000Z');

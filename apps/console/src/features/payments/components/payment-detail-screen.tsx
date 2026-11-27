@@ -3,7 +3,7 @@
 import { NotFoundState, ErrorState } from '@/components/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import { usePayment } from '@/lib/queries/payments';
+import { usePayment } from '@/features/payments/hooks/payments';
 import { PaymentEvents } from './payment-events';
 import { PaymentSummary } from './payment-summary';
 import { TransactionTimeline } from './transaction-timeline';

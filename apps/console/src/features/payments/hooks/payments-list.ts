@@ -1,9 +1,9 @@
 'use client';
 
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { listPayments, type PaymentListItem, type PaymentListQuery, type PaymentSortColumn } from '@/lib/api/payments-list';
-import { PAYMENT_SORT_COLUMNS } from '@/lib/api/payments-list';
-import { paymentKeys } from '@/lib/queries/payments';
+import { listPayments, type PaymentListItem, type PaymentListQuery, type PaymentSortColumn } from '@/features/payments/api';
+import { PAYMENT_SORT_COLUMNS } from '@/features/payments/api';
+import { paymentKeys } from '@/features/payments/hooks/payments';
 import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 
 export const PAYMENT_LIST_URL_CONFIG: TableUrlConfig = {

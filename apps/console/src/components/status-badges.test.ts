@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTEMPT_STATUSES, PAYMENT_EVENT_TYPES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/lib/api/schemas';
+import { ATTEMPT_STATUSES, PAYMENT_EVENT_TYPES, PAYMENT_STATUSES, REVIEW_REASONS } from '@/features/payments/schemas';
 import { CALLBACK_STATUSES } from '@/lib/api/callbacks';
 import { statusBadge } from './status-badges';
 

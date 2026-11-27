@@ -17,7 +17,7 @@ import {
   paymentStatusSchema,
   reviewReasonSchema,
   type ReviewReason,
-} from './schemas';
+} from '@/features/payments/schemas';
 
 export const REVIEW_SORT_COLUMNS = ['reviewOpenedAt'] as const;
 export const REVIEW_STATES = ['open', 'closed'] as const;

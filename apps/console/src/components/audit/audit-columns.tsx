@@ -3,8 +3,8 @@ import { ArrowRightIcon } from 'lucide-react';
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/data-table/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
-import type { StatusTransitionEntityType } from '@/lib/api/schemas';
-import type { AuditEntry } from '@/lib/api/status-transitions';
+import type { StatusTransitionEntityType } from '@/features/payments/schemas';
+import type { AuditEntry } from '@/features/payments/status-transitions';
 import { actorText } from '@/lib/actor';
 
 export const ENTITY_TYPE_LABELS: Record<StatusTransitionEntityType, string> = {

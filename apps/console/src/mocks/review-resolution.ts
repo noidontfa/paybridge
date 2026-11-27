@@ -24,7 +24,7 @@ import { http, HttpResponse, type HttpHandler } from 'msw';
 import { z } from 'zod';
 import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
 import { REVIEW_NOTE_MAX_LENGTH } from '@/lib/api/review-resolution';
-import { decimalStringSchema } from '@/lib/api/schemas';
+import { decimalStringSchema } from '@/features/payments/schemas';
 import { compareDecimal } from '@/utils/decimal';
 import type { MockAttempt, MockPayment, MockStore } from './store';
 

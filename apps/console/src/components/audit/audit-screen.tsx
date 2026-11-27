@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from '@/components/data-table/toolbar';
 import { Button } from '@/components/ui/button';
-import { STATUS_TRANSITION_ENTITY_TYPES } from '@/lib/api/schemas';
+import { STATUS_TRANSITION_ENTITY_TYPES } from '@/features/payments/schemas';
 import { AUDIT_ACTORS, AUDIT_TRIGGERS, AUDIT_URL_CONFIG, useAuditList } from '@/lib/queries/audit-log';
 import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { auditColumns, auditPaymentHref, ENTITY_TYPE_LABELS } from './audit-columns';

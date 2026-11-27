@@ -1,11 +1,11 @@
 'use client';
 
 import { ErrorState, NotFoundState } from '@/components/data-states';
-import { PaymentSummary } from '@/components/payment-detail/payment-summary';
-import { TransactionTimeline } from '@/components/payment-detail/transaction-timeline';
+import { PaymentSummary } from '@/features/payments/components/payment-summary';
+import { TransactionTimeline } from '@/features/payments/components/transaction-timeline';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import { usePayment } from '@/lib/queries/payments';
+import { usePayment } from '@/features/payments/hooks/payments';
 import { statusBadge } from '@/components/status-badges';
 
 export const REVIEW_DESCRIPTION = 'The Payment, the PaymentTransaction in Review and its status history.';

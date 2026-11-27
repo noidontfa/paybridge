@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { request } from '@/services/client';
 import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
-import { paymentEventSchema, type PaymentEvent, type PaymentEventType } from './schemas';
+import { paymentEventSchema, type PaymentEvent, type PaymentEventType } from '@/features/payments/schemas';
 
 export const paymentEventSummarySchema = paymentEventSchema.omit({ payload: true });
 export type PaymentEventSummary = z.infer<typeof paymentEventSummarySchema>;
