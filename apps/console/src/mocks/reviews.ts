@@ -12,7 +12,7 @@ import {
   type ReviewItem,
   type ReviewState,
   type ReviewSummary,
-} from '@/lib/api/reviews';
+} from '@/features/reviews/api';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockAttempt, MockStore } from './store';
 

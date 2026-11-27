@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { REVIEW_DESCRIPTION, ReviewDetail, useReviewTitle } from '@/components/review/review-detail';
+import { REVIEW_DESCRIPTION, ReviewDetail, useReviewTitle } from '@/features/reviews/components/review-detail';
 
 /**
  * The Review as a modal over the Exceptions list. Rendered by the intercepted

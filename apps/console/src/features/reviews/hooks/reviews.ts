@@ -13,7 +13,7 @@ import {
   type ReviewItem,
   type ReviewListQuery,
   type ReviewState,
-} from '@/lib/api/reviews';
+} from '@/features/reviews/api';
 import type { ReviewReason } from '@/features/payments/schemas';
 import type { TableUrlConfig, TableUrlState } from '@/components/data-table/url-state/table-url-state';
 

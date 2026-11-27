@@ -8,8 +8,8 @@ import { ClearFiltersButton, DataTableToolbar, FilterSelect, SearchInput } from 
 import { Button } from '@/components/ui/button';
 import { REVIEW_REASONS } from '@/features/payments/schemas';
 import { useGatewayOptions } from '@/lib/queries/gateways';
-import { REVIEW_LIST_URL_CONFIG, useReviewList } from '@/lib/queries/reviews';
-import type { ReviewItem } from '@/lib/api/reviews';
+import { REVIEW_LIST_URL_CONFIG, useReviewList } from '@/features/reviews/hooks/reviews';
+import type { ReviewItem } from '@/features/reviews/api';
 import { statusBadge } from '@/components/status-badges';
 import { useTableUrlState } from '@/components/data-table/url-state/use-table-url-state';
 import { reviewColumns } from './exceptions-columns';

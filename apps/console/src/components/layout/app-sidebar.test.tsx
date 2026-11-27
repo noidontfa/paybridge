@@ -5,11 +5,11 @@ import { ThemeProvider } from 'next-themes';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { ReviewSummary } from '@/lib/api/reviews';
+import type { ReviewSummary } from '@/features/reviews/api';
 import { OperatorProvider, type Operator } from '@/lib/operator';
 import type { OrganizationList } from '@/lib/api/organizations';
 import { organizationKeys } from '@/lib/queries/organizations';
-import { reviewKeys } from '@/lib/queries/reviews';
+import { reviewKeys } from '@/features/reviews/hooks/reviews';
 import { AppSidebar } from './app-sidebar';
 
 const pathname = vi.hoisted(() => ({ current: '/' }));

@@ -11,7 +11,7 @@
  * - `AMOUNT_MISMATCH`: FAILED only;
  * - `LATE_SUCCESS_ON_CLOSED_PAYMENT` and `DUPLICATE_SUCCESS`: add a note only.
  */
-import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
+import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/features/reviews/api';
 import type { AttemptStatus, PaymentStatus, ReviewReason } from '@/features/payments/schemas';
 
 const HOUR = 3_600_000;

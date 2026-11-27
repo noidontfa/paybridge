@@ -2,10 +2,10 @@
 
 import { StatusBadge } from '@/components/status-badge';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
-import { reviewActions } from '@/lib/review-resolution-rules';
+import { reviewActions } from '@/features/reviews/utils/review-resolution-rules';
 import { useCan } from '@/lib/operator';
 import { ResolutionForm } from './resolution-form';
-import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/lib/api/reviews';
+import { REVIEW_RESOLVABLE_AFTER_HOURS } from '@/features/reviews/api';
 import { formatAbsoluteTime, formatMoney, formatOpenFor } from '@/utils/format';
 
 const HOUR = 3_600_000;

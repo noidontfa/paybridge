@@ -14,17 +14,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { REVIEW_NOTE_MAX_LENGTH } from '@/lib/api/review-resolution';
+import { REVIEW_NOTE_MAX_LENGTH } from '@/features/reviews/review-resolution';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
-import { useResolveReview } from '@/lib/queries/review-resolution';
+import { useResolveReview } from '@/features/reviews/hooks/review-resolution';
 import { useCurrentOperator } from '@/lib/operator';
 import {
   resolutionFormSchema,
   type ResolutionAction,
   type ResolutionFormInput,
   type ResolutionFormValues,
-} from '@/lib/review-resolution-form';
-import type { ReviewActions, Verdict } from '@/lib/review-resolution-rules';
+} from '@/features/reviews/utils/review-resolution-form';
+import type { ReviewActions, Verdict } from '@/features/reviews/utils/review-resolution-rules';
 import { cn } from '@/utils/cn';
 
 const OPTIONS: { action: ResolutionAction; label: string; verdict: (actions: ReviewActions) => Verdict }[] = [

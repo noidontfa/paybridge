@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarMenuBadge } from '@/components/ui/sidebar';
-import { useReviewSummary } from '@/lib/queries/reviews';
+import { useReviewSummary } from '@/features/reviews/hooks/reviews';
 
 /** The number of open Reviews beside Exceptions; nothing while unknown, failed or zero. */
 export function OpenReviewsBadge() {

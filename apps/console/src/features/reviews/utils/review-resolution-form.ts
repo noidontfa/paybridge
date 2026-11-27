@@ -4,7 +4,7 @@
  * shown in the form.
  */
 import { z } from 'zod';
-import { REVIEW_NOTE_MAX_LENGTH } from '@/lib/api/review-resolution';
+import { REVIEW_NOTE_MAX_LENGTH } from '@/features/reviews/review-resolution';
 import { compareDecimal } from '@/utils/decimal';
 
 export const RESOLUTION_ACTIONS = ['SUCCEEDED', 'FAILED', 'NOTE'] as const;

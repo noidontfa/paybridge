@@ -1,4 +1,4 @@
-import { ReviewDetail } from '@/components/review/review-detail';
+import { ReviewDetail } from '@/features/reviews/components/review-detail';
 
 /** The full-page Review, shown on a reload or a shared link. */
 export function ReviewPage({ paymentId, transactionId }: { paymentId: string; transactionId: string }) {

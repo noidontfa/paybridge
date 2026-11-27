@@ -9,7 +9,7 @@ import type { ReviewReason, StatusTransition } from '@/features/payments/schemas
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore, type MockAttempt, type MockPayment } from '@/mocks/store';
 import { currentLocation, resetNavigation } from '@/test/fake-navigation';
-import { ReviewDetail } from '@/components/review/review-detail';
+import { ReviewDetail } from '@/features/reviews/components/review-detail';
 import { ExceptionsScreen } from './exceptions-screen';
 import { ReviewModal } from './review-modal';
 

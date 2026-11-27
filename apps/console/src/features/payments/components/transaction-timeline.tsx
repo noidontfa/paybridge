@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { TimeText } from '@/components/time-text';
 import type { OperatorAttempt, OperatorPayment } from '@/features/payments/schemas';
 import { humanizeCode } from '@/utils/format';
-import { ReviewPanel } from '@/components/review/review-panel';
+import { ReviewPanel } from '@/features/reviews/components/review-panel';
 import { StatusHistory } from './status-history';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
