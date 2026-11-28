@@ -11,5 +11,5 @@ Each Organization connects its own account with each PaymentGateway (a Gateway C
 ## Consequences
 
 - An Organization has at most one Gateway Connection per PaymentGateway, and it can enable or disable it. Disabling stops new PaymentTransactions only: Callbacks, re-queries, reconciliation and Refunds for existing ones keep working, so a Gateway Connection that has been used is never deleted.
-- A Callback must identify its Organization before its signature can be verified, because the verifying secret belongs to that Organization's Gateway Connection. The callback URL therefore carries the Organization.
+- A Callback must identify its Organization before its signature can be verified, because the verifying secret belongs to that Organization's Gateway Connection. The callback URL therefore carries the Organization. (It names the Gateway Connection, which since [ADR 0012](0012-gateway-connections-per-mode-and-a-built-in-test-gateway.md) also fixes the Mode.)
 - Gateway credentials are encrypted at rest and are never returned to the Console after they are saved.

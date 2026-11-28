@@ -16,6 +16,10 @@ _Avoid_: Payment, Order, Charge
 An external payment service provider (such as VNPay, ZaloPay, or Stripe) that processes PaymentTransactions and refunds.
 _Avoid_: Bank, Payment Method
 
+**Test Gateway**:
+A PaymentGateway that PayBridge itself provides in Test Mode only. It moves no money: the Customer is sent to a PayBridge page where whoever is testing chooses how the PaymentTransaction ends (paid, declined, left pending, paid a different Amount, or paid late), and PayBridge then receives a Callback exactly as from a real PaymentGateway. The Organization's system can make the same choice with a Test API Key. Every Organization has a Gateway Connection to the Test Gateway from the start, with no credentials to enter.
+_Avoid_: Fake gateway, Simulator, Mock gateway
+
 **Gateway Plugin**:
 The implementation of the gateway contract for one PaymentGateway. Core never depends on a Gateway Plugin; the application registers each one at startup.
 _Avoid_: Adapter, Connector
@@ -37,11 +41,11 @@ The person who pays a Payment. A Customer is never a User and has no sign-in in 
 _Avoid_: User, Buyer, Payer, End user
 
 **Pricing Plan**:
-A named offer an Organization sells for a fixed Amount, set up in the Console with a description and a list of what it includes to show Customers. A Payment created from a Pricing Plan copies its Amount at that moment, so later changes to the Pricing Plan never touch Payments already created. A Pricing Plan that has Payments is archived, never deleted. A Pricing Plan sets the Payment Expiry of Payments started from it, and may limit which of the Organization's enabled PaymentGateways a Customer can choose. For now a Pricing Plan is paid once; it is not a subscription.
+A named offer an Organization sells for a fixed Amount, set up in the Console with a description and a list of what it includes to show Customers. A Payment created from a Pricing Plan copies its Amount at that moment, so later changes to the Pricing Plan never touch Payments already created. A Pricing Plan that has Payments is archived, never deleted. A Pricing Plan sets the Payment Expiry of Payments started from it, and may limit which of the Organization's enabled PaymentGateways a Customer can choose. For now a Pricing Plan is paid once; it is not a subscription. A Pricing Plan belongs to one Mode. A Test Pricing Plan can be copied into Live; the copy is a separate Pricing Plan that later changes to either never reach.
 _Avoid_: Product, Package, Price, Subscription
 
 **Publishable Key**:
-The public key an Organization puts in its web pages so that Customers' browsers can start Payments for that Organization's Pricing Plans. Unlike an API Key it is not secret, so it can do nothing else.
+The public key an Organization puts in its web pages so that Customers' browsers can start Payments for that Organization's Pricing Plans. Unlike an API Key it is not secret, so it can do nothing else. Each Publishable Key belongs to one Mode, and the Payments it starts are in that Mode. A Test Publishable Key may also work on a developer's own machine; a Live one works only on secure websites.
 _Avoid_: Public API Key, Client key, Embed token
 
 **Embedded Checkout**:
@@ -49,7 +53,7 @@ The checkout an Organization puts on its own web page by pasting a snippet from 
 _Avoid_: Embed file, Widget, Payment button, Hosted checkout
 
 **Pricing Table**:
-An ordered set of one to three Pricing Plans, with its look, that an Embedded Checkout shows side by side. One of its Pricing Plans may be marked as recommended. Changing a Pricing Table in the Console changes every page that embeds it. A Pricing Table holds no money, so it can be deleted; pages that embed it then show that it is unavailable.
+An ordered set of one to three Pricing Plans, with its look, that an Embedded Checkout shows side by side. One of its Pricing Plans may be marked as recommended. Changing a Pricing Table in the Console changes every page that embeds it. A Pricing Table holds no money, so it can be deleted; pages that embed it then show that it is unavailable. A Pricing Table belongs to one Mode and holds only Pricing Plans of that Mode. An Embedded Checkout whose Publishable Key is in the other Mode shows the Pricing Table as unavailable.
 _Avoid_: Pricing page, Widget, Plan group
 
 **Customer Reference**:
@@ -57,7 +61,7 @@ An identifier of the Customer that the Organization passes to an Embedded Checko
 _Avoid_: Customer ID, User ID, Buyer
 
 **Upstream Reference**:
-The identifier of the order or obligation a Payment settles. The Organization's system assigns it when it creates the Payment with an API Key; PayBridge assigns it when a Customer starts the Payment from an Embedded Checkout. It is unique within an Organization and never changes after the Payment is created.
+The identifier of the order or obligation a Payment settles. The Organization's system assigns it when it creates the Payment with an API Key; PayBridge assigns it when a Customer starts the Payment from an Embedded Checkout. It is unique within an Organization's Mode and never changes after the Payment is created.
 _Avoid_: Order ID, Merchant Reference
 
 **Attempt Key**:
@@ -89,7 +93,7 @@ A verified PaymentGateway callback that does not concern any PayBridge PaymentTr
 _Avoid_: Dropped webhook, Skipped event
 
 **Organization**:
-A business that collects payments through PayBridge. Every Payment, PaymentTransaction, Refund and Review belongs to exactly one Organization, and nobody in one Organization can see another Organization's data. A Super Admin can suspend an Organization: it then accepts no new Payments and its Users cannot sign in, but Callbacks for attempts already under way are still processed.
+A business that collects payments through PayBridge. Every Payment, PaymentTransaction, Refund and Review belongs to exactly one Organization, and nobody in one Organization can see another Organization's data. A Super Admin can suspend an Organization: it then accepts no new Payments in either Mode and its Users cannot sign in, but Callbacks for attempts already under way are still processed.
 _Avoid_: Merchant, Tenant, Company, Account
 
 **User**:
@@ -112,16 +116,20 @@ _Avoid_: Group, Profile
 One named action a User may perform, such as resolving a Review. Access is always decided by Permission, never by Role name.
 _Avoid_: Right, Scope, Privilege
 
+**Mode**:
+One of the two separate worlds inside an Organization: Live, where real money moves, and Test, where an Organization tries PayBridge without it. Every Payment, PaymentTransaction, Refund, Review, Payment Event, Webhook, Webhook Endpoint, Pricing Plan and Pricing Table belongs to exactly one Mode, and nothing in one Mode can see or affect the other. Users, Roles and Permissions have no Mode; the same User does the same things in both. An Organization Admin can delete all of an Organization's Test data at once; Live data is never deleted that way.
+_Avoid_: Environment, Sandbox, Livemode
+
 **API Key**:
-The secret an Organization's own system uses to call PayBridge. The Organization a request acts for is always the API Key's Organization. An Organization can hold several API Keys at once so it can rotate them.
+The secret an Organization's own system uses to call PayBridge. The Organization and the Mode a request acts in are always the API Key's; nothing in the request can change them. An Organization can hold several API Keys in each Mode at once so it can rotate them.
 _Avoid_: Token, Client secret, Merchant key
 
 **Gateway Connection**:
-An Organization's own account with one PaymentGateway: its credentials and whether it is enabled. An Organization has at most one per PaymentGateway. Money collected through it goes straight to the Organization, not to PayBridge. Disabling it stops new PaymentTransactions through that PaymentGateway but not the ones already under way.
+An Organization's own account with one PaymentGateway in one Mode: its credentials and whether it is enabled. In Test Mode the credentials are the PaymentGateway's sandbox ones. An Organization has at most one per PaymentGateway and Mode; a PaymentGateway without a sandbox cannot be connected in Test Mode. Money collected through it goes straight to the Organization, not to PayBridge. Disabling it stops new PaymentTransactions through that PaymentGateway but not the ones already under way.
 _Avoid_: Gateway config, Integration, Merchant account
 
 **Super Admin**:
-A User who runs the PayBridge platform itself and belongs to no Organization. A Super Admin can do anything in any Organization, including resolving its Reviews; anything a Super Admin changes in an Organization is shown to that Organization as done by the platform.
+A User who runs the PayBridge platform itself and belongs to no Organization. A Super Admin can do anything in any Organization and in either Mode, including resolving its Reviews; anything a Super Admin changes in an Organization is shown to that Organization as done by the platform.
 _Avoid_: Root, System admin, Platform owner
 
 **Organization Admin**:
@@ -145,5 +153,5 @@ The delivery of a Payment Event to one of the Organization's Webhook Endpoints, 
 _Avoid_: Callback, Notification
 
 **Webhook Endpoint**:
-A URL of the Organization's system that receives Webhooks, with its own signing secret and the kinds of Payment Event it wants. An Organization can have several.
+A URL of the Organization's system that receives Webhooks, with its own signing secret and the kinds of Payment Event it wants. It belongs to one Mode and receives only that Mode's Webhooks. An Organization can have several in each Mode.
 _Avoid_: Webhook URL, Subscription, Listener
