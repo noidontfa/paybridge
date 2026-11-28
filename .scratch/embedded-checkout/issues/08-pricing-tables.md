@@ -4,7 +4,7 @@
 
 **Blocked by:** 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An Organization Admin creates a Pricing Table with:
   - one to three of the Organization's Pricing Plans in order;

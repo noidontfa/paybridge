@@ -45,3 +45,7 @@ jobs:
       - run: pnpm turbo run build --filter=@paybridge/console
       - run: pnpm --filter @paybridge/console exec playwright install --with-deps chromium
       - run: pnpm turbo run test:e2e --filter=@paybridge/console
+      # The checkout app (SDK + checkout page): Playwright against the real API
+      # (its own migrated, seeded database on the Postgres service) and plain
+      # HTML host pages on an allowed and a disallowed origin.
+      - run: pnpm turbo run test:e2e --filter=@paybridge/checkout

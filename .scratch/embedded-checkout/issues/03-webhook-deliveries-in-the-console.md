@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The Console lists the Organization's deliveries, newest first, with:
   - the Webhook Endpoint, the event kind and the Payment;

@@ -4,7 +4,7 @@
 
 **Blocked by:** 09
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] When the NextAction is client SDK, the checkout page loads Stripe.js and mounts the Payment Element using the `clientParams` (publishable key, return URL). The Customer confirms in the iframe.
 - [ ] A Stripe decline keeps the Customer on the same attempt so they can retry, matching the plugin's `PENDING` behaviour. 3-D Secure returns through the return page (10 if it is done; otherwise straight to the checkout page).

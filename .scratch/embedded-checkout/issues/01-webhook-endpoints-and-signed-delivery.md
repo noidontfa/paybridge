@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] An Organization Admin creates a Webhook Endpoint with a URL and the Payment Event kinds it wants: `payment.created`, `payment.succeeded`, `payment.cancelled`, `payment.expired` and `payment.requires_review`. The signing secret is returned in full only once, then shown only by its prefix. The secret is stored encrypted.
 - [ ] An Organization Admin lists, edits, disables, enables and deletes Webhook Endpoints. An Organization can have several.

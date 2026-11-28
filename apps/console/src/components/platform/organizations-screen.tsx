@@ -1,11 +1,12 @@
 'use client';
 
-import { ErrorState } from '@/components/data-states';
+import { useMemo } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { OrganizationSummary } from '@/lib/api/organizations';
 import { useCan } from '@/lib/operator';
 import { useOrganizationList } from '@/lib/queries/organizations';
 import { useCreateOrganization, useSetOrganizationSuspension } from '@/lib/queries/platform';
@@ -16,6 +17,14 @@ export function OrganizationsScreen() {
   const { data, error, isPending, refetch } = useOrganizationList(canManage);
   const create = useCreateOrganization();
   const setSuspension = useSetOrganizationSuspension();
+  const columns = useMemo(
+    () =>
+      organizationColumns({
+        pending: setSuspension.isPending,
+        onToggle: (organization, suspend) => setSuspension.mutate({ id: organization.id, suspend }),
+      }),
+    [setSuspension],
+  );
 
   if (!canManage) {
     return (
@@ -58,44 +67,56 @@ export function OrganizationsScreen() {
         </Button>
       </form>
 
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading organizations" className="h-40 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : (
-        <Table aria-label="Organizations">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.items.map((organization) => {
-              const suspended = organization.status === 'SUSPENDED';
-              return (
-                <TableRow key={organization.id} aria-label={organization.name}>
-                  <TableCell>{organization.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={suspended ? 'outline' : 'secondary'}>{suspended ? 'Suspended' : 'Active'}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={setSuspension.isPending}
-                      onClick={() => setSuspension.mutate({ id: organization.id, suspend: !suspended })}
-                    >
-                      {suspended ? 'Reactivate' : 'Suspend'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      )}
+      <DataTable
+        label="Organizations"
+        columns={columns}
+        rows={data?.items ?? []}
+        getRowId={(organization) => organization.id}
+        getRowLabel={(organization) => organization.name}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={<EmptyListState title="No Organizations yet." description="Create the first one above." />}
+      />
     </div>
   );
+}
+
+const orgColumn = createDataTableColumnHelper<OrganizationSummary>();
+
+function organizationColumns({
+  pending,
+  onToggle,
+}: {
+  pending: boolean;
+  onToggle: (organization: OrganizationSummary, suspend: boolean) => void;
+}): DataTableColumns<OrganizationSummary> {
+  return orgColumn.columns([
+    orgColumn.accessor('name', {
+      id: 'name',
+      header: 'Name',
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    }),
+    orgColumn.display({
+      id: 'state',
+      header: 'State',
+      cell: ({ row }) => {
+        const suspended = row.original.status === 'SUSPENDED';
+        return <Badge variant={suspended ? 'outline' : 'secondary'}>{suspended ? 'Suspended' : 'Active'}</Badge>;
+      },
+    }),
+    orgColumn.display({
+      id: 'actions',
+      header: 'Actions',
+      meta: { align: 'right' },
+      cell: ({ row }) => {
+        const suspended = row.original.status === 'SUSPENDED';
+        return (
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => onToggle(row.original, !suspended)}>
+            {suspended ? 'Reactivate' : 'Suspend'}
+          </Button>
+        );
+      },
+    }),
+  ]);
 }

@@ -1,0 +1,35 @@
+{
+  "name": "@paybridge/checkout",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PayBridge Embedded Checkout: the SDK script and the checkout page (public)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsx build.ts",
+    "dev": "tsx build.ts --watch",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "oxlint --type-aware src/ e2e/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@paybridge/typescript-config": "workspace:*",
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "@types/qrcode": "^1.5.6",
+    "esbuild": "^0.28.2",
+    "jsdom": "^31.0.1",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2008",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "@paybridge/checkout-snippet": "workspace:*",
+    "qrcode": "^1.5.4"
+  }
+}

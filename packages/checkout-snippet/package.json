@@ -1,0 +1,11 @@
+{
+  "name": "@paybridge/checkout-snippet",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Embedded Checkout snippet contract: the script tag's data-* attribute names and the SDK path, shared by the Console (which writes the snippet) and the checkout app's SDK (which reads it)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src"]
+}

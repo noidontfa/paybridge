@@ -7,7 +7,7 @@ import { paymentKeys } from '@/lib/queries/payments';
 import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
 
 export const PAYMENT_LIST_URL_CONFIG: TableUrlConfig = {
-  filters: ['status', 'gatewayId', 'createdFrom', 'createdTo'],
+  filters: ['status', 'gatewayId', 'pricingPlanId', 'createdFrom', 'createdTo'],
   sortable: PAYMENT_SORT_COLUMNS,
   defaultSort: { id: 'createdAt', desc: true },
 };
@@ -16,11 +16,12 @@ export const paymentListKey = (query: PaymentListQuery) => [...paymentKeys.all, 
 
 /** The table state as the endpoint's query (without the cursor, which is the page param). */
 export function paymentListQuery(state: TableUrlState): PaymentListQuery {
-  const { status, gatewayId, createdFrom, createdTo } = state.filters;
+  const { status, gatewayId, pricingPlanId, createdFrom, createdTo } = state.filters;
   return {
     q: state.q || undefined,
     status,
     gatewayId,
+    pricingPlanId,
     createdFrom,
     createdTo,
     sort: state.sort.id as PaymentSortColumn,

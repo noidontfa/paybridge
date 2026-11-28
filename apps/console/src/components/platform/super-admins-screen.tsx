@@ -1,11 +1,12 @@
 'use client';
 
-import { ErrorState } from '@/components/data-states';
+import { useMemo } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { ManagedUser } from '@/lib/api/users';
 import { useCan } from '@/lib/operator';
 import { useChangeSuperAdmin, useInviteSuperAdmin, useSuperAdminList } from '@/lib/queries/platform';
 
@@ -15,6 +16,14 @@ export function SuperAdminsScreen() {
   const { data, error, isPending, refetch } = useSuperAdminList();
   const invite = useInviteSuperAdmin();
   const change = useChangeSuperAdmin();
+  const columns = useMemo(
+    () =>
+      superAdminColumns({
+        pending: change.isPending,
+        onToggle: (admin, active) => change.mutate({ id: admin.id, active }),
+      }),
+    [change],
+  );
 
   if (!canManage) {
     return (
@@ -47,43 +56,53 @@ export function SuperAdminsScreen() {
         </Button>
       </form>
 
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading super admins" className="h-40 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : (
-        <Table aria-label="Super Admins">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.items.map((admin) => (
-              <TableRow key={admin.id} aria-label={admin.email}>
-                <TableCell>{admin.name}</TableCell>
-                <TableCell>{admin.email}</TableCell>
-                <TableCell>
-                  <Badge variant={admin.active ? 'secondary' : 'outline'}>{admin.active ? 'Active' : 'Deactivated'}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={change.isPending}
-                    onClick={() => change.mutate({ id: admin.id, active: !admin.active })}
-                  >
-                    {admin.active ? 'Deactivate' : 'Reactivate'}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <DataTable
+        label="Super Admins"
+        columns={columns}
+        rows={data?.items ?? []}
+        getRowId={(admin) => admin.id}
+        getRowLabel={(admin) => admin.email}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={<EmptyListState title="No Super Admins yet." description="Invite one above." />}
+      />
     </div>
   );
+}
+
+const adminColumn = createDataTableColumnHelper<ManagedUser>();
+
+function superAdminColumns({
+  pending,
+  onToggle,
+}: {
+  pending: boolean;
+  onToggle: (admin: ManagedUser, active: boolean) => void;
+}): DataTableColumns<ManagedUser> {
+  return adminColumn.columns([
+    adminColumn.accessor('name', {
+      id: 'name',
+      header: 'Name',
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    }),
+    adminColumn.accessor('email', { id: 'email', header: 'Email' }),
+    adminColumn.display({
+      id: 'state',
+      header: 'State',
+      cell: ({ row }) => (
+        <Badge variant={row.original.active ? 'secondary' : 'outline'}>{row.original.active ? 'Active' : 'Deactivated'}</Badge>
+      ),
+    }),
+    adminColumn.display({
+      id: 'actions',
+      header: 'Actions',
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => onToggle(row.original, !row.original.active)}>
+          {row.original.active ? 'Deactivate' : 'Reactivate'}
+        </Button>
+      ),
+    }),
+  ]);
 }

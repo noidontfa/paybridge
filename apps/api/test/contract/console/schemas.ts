@@ -134,6 +134,18 @@ export const operatorAttemptSchema = z.object({
 });
 export type OperatorAttempt = z.infer<typeof operatorAttemptSchema>;
 
+/**
+ * Where a Payment came from when the Embedded Checkout created it: the
+ * Pricing Plan (its name at purchase) and the Customer Reference.
+ */
+export const checkoutOriginSchema = z.object({
+  pricingPlanId: z.string(),
+  pricingPlanName: z.string(),
+  customerReference: z.string().nullable(),
+  customerEmail: z.string().nullable(),
+});
+export type CheckoutOrigin = z.infer<typeof checkoutOriginSchema>;
+
 export const operatorPaymentSchema = z.object({
   id: z.string(),
   /** Upstream Reference. */
@@ -145,6 +157,8 @@ export const operatorPaymentSchema = z.object({
   expiresAt: isoTimeSchema,
   createdAt: isoTimeSchema,
   updatedAt: isoTimeSchema,
+  /** Null unless the Embedded Checkout created the Payment. */
+  checkoutOrigin: checkoutOriginSchema.nullable(),
   /** Oldest first. */
   attempts: z.array(operatorAttemptSchema),
   /** Oldest first. */

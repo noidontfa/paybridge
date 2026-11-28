@@ -76,14 +76,14 @@ const list = (query = '') =>
   api.getValid(`/internal/payment-events${query}`, paymentEventListSchema);
 
 describe('seeded data', () => {
-  it('lists the six seeded Payment Events: every type, published and unpublished, each with a payload in its detail', async () => {
+  it('lists the seeded Payment Events (six of API Payments, five of checkout Payments): every type, published and unpublished, each with a payload in its detail', async () => {
     await runSeed({
       databaseUrl: testDatabaseUrl(),
       nodeEnv: 'test',
       now: new Date(),
     });
     const page = await list('?limit=100');
-    expect(page.items).toHaveLength(6);
+    expect(page.items).toHaveLength(6 + 5);
     expect(new Set(page.items.map((e) => e.type))).toEqual(
       new Set(PAYMENT_EVENT_TYPES),
     );

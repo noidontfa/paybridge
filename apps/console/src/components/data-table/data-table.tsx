@@ -50,8 +50,11 @@ export interface DataTableProps<Row extends RowData> {
   getRowHref?: (row: Row) => string | null;
   /** Opens the row in place (a side sheet) instead of navigating. Give the row a button for the keyboard. */
   onRowOpen?: (row: Row) => void;
-  sort: SortState;
-  onSortChange: (sort: SortState) => void;
+  /** Accessible name of each row, for lists whose rows are found by name. */
+  getRowLabel?: (row: Row) => string;
+  /** Server-side sort. Leave both out for a short list that is not sortable. */
+  sort?: SortState;
+  onSortChange?: (sort: SortState) => void;
   /** First load, or a new query with nothing to show yet. */
   isLoading: boolean;
   /** The query is fetching something new while old rows are shown. */
@@ -60,9 +63,10 @@ export interface DataTableProps<Row extends RowData> {
   onRetry: () => void;
   /** Rendered instead of the table when there are no rows. */
   emptyState: ReactNode;
-  hasMore: boolean;
-  isLoadingMore: boolean;
-  onLoadMore: () => void;
+  /** Cursor paging ("Load more"). Leave out for a list that loads in one go. */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   /** Shown above the table: search and filter controls. */
   toolbar?: ReactNode;
 }
@@ -74,6 +78,7 @@ export function DataTable<Row extends RowData>({
   getRowId,
   getRowHref,
   onRowOpen,
+  getRowLabel,
   sort,
   onSortChange,
   isLoading,
@@ -81,13 +86,13 @@ export function DataTable<Row extends RowData>({
   error,
   onRetry,
   emptyState,
-  hasMore,
-  isLoadingMore,
+  hasMore = false,
+  isLoadingMore = false,
   onLoadMore,
   toolbar,
 }: DataTableProps<Row>) {
   const router = useRouter();
-  const sorting: SortingState = [{ id: sort.id, desc: sort.desc }];
+  const sorting: SortingState = sort ? [{ id: sort.id, desc: sort.desc }] : [];
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -95,6 +100,7 @@ export function DataTable<Row extends RowData>({
     getRowId,
     manualSorting: true,
     manualFiltering: true,
+    enableSorting: sort !== undefined,
     enableSortingRemoval: false,
     enableMultiSort: false,
     sortDescFirst: true,
@@ -102,7 +108,7 @@ export function DataTable<Row extends RowData>({
     onSortingChange: (updater) => {
       const next = typeof updater === 'function' ? updater(sorting) : updater;
       const first = next[0];
-      if (first) onSortChange({ id: first.id, desc: first.desc });
+      if (first) onSortChange?.({ id: first.id, desc: first.desc });
     },
   });
 
@@ -180,7 +186,12 @@ export function DataTable<Row extends RowData>({
                     </TableRow>
                   ))
                 : table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className={cn((onRowOpen || getRowHref?.(row.original)) && 'cursor-pointer')} onClick={(event) => openRow(event, row.original)}>
+                    <TableRow
+                      key={row.id}
+                      aria-label={getRowLabel?.(row.original)}
+                      className={cn((onRowOpen || getRowHref?.(row.original)) && 'cursor-pointer')}
+                      onClick={(event) => openRow(event, row.original)}
+                    >
                       {row.getAllCells().map((cell) => {
                         const align = (cell.column.columnDef.meta as DataTableColumnMeta | undefined)?.align;
                         return (
@@ -200,7 +211,7 @@ export function DataTable<Row extends RowData>({
                   Could not load more: {error.message}
                 </p>
               )}
-              <Button variant="outline" onClick={error ? onRetry : onLoadMore} disabled={isLoadingMore}>
+              <Button variant="outline" onClick={error ? onRetry : () => onLoadMore?.()} disabled={isLoadingMore}>
                 {isLoadingMore ? 'Loading…' : error ? 'Retry' : 'Load more'}
               </Button>
             </div>

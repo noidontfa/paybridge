@@ -4,7 +4,10 @@ import {
   PaymentNotPendingError,
 } from '../../domain/errors.js';
 import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
-import type { Payment } from '../../domain/entities/payment.js';
+import {
+  checkoutOriginPayload,
+  type Payment,
+} from '../../domain/entities/payment.js';
 import { isOpenAttempt } from '../../domain/rules/attempt-transitions.js';
 import { canTransitionPayment } from '../../domain/rules/payment-transitions.js';
 import { ConnectionPlugins } from '../connection-plugins.js';
@@ -78,6 +81,8 @@ export class CancelPayment {
           amount: updated.amount,
           currency: updated.currency,
           status: updated.status,
+          expiresAt: updated.expiresAt.toISOString(),
+          ...checkoutOriginPayload(updated),
         },
       });
       const reloaded = await repos.payments.findById(scope, locked.id);

@@ -26,6 +26,8 @@ import { QUEUES, jobIds } from './queue.constants.js';
  */
 export interface OutboxJobData {
   readonly outboxEventId: string;
+  /** The Organization the event belongs to, so consumers stay scoped. */
+  readonly organizationId: string;
   readonly eventType: OutboxEventType;
   readonly paymentId: string;
   readonly payload: unknown;
@@ -206,6 +208,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
   private async publish(row: OutboxEvent): Promise<boolean> {
     const data: OutboxJobData = {
       outboxEventId: row.id,
+      organizationId: row.organizationId,
       eventType: row.eventType,
       paymentId: row.paymentId,
       payload: row.payload,

@@ -12,7 +12,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../../../../common/filters/error-response.dto.js';
-import { CurrentReadScope } from '../current-scope.decorator.js';
+import { CurrentReadScope } from '../../../../common/principal/caller.js';
 import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { RequirePermission } from '../../../../common/principal/access-policy.js';
 import { INTERNAL_PREFIX } from '../../../../constants.js';
@@ -49,6 +49,7 @@ export class PaymentDetailController {
       expiresAt: p.expiresAt.toISOString(),
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
+      checkoutOrigin: p.checkoutOrigin,
       attempts: p.attempts.map((a) => ({
         id: a.id,
         gatewayId: a.gatewayId,

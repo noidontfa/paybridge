@@ -43,7 +43,32 @@ function build(): MockStore {
     };
     store.attempts.push(attempt);
   }
+  // Every fifth Payment came from the Embedded Checkout for the "Pro" Pricing Plan.
+  store.pricingPlans.push(pricingPlan('plan-pro', 'Pro'), pricingPlan('plan-basic', 'Basic'));
+  for (const payment of store.payments.filter((_, i) => (i + 1) % 5 === 0)) {
+    payment.checkoutOrigin = { pricingPlanId: 'plan-pro', pricingPlanName: 'Pro', customerReference: null, customerEmail: null };
+  }
   return store;
+}
+
+function pricingPlan(id: string, name: string): MockStore['pricingPlans'][number] {
+  const at = NOW.toISOString();
+  return {
+    id,
+    name,
+    description: '',
+    features: [],
+    amount: '99000',
+    currency: 'VND',
+    allowedGatewayIds: [],
+    successUrl: null,
+    cancelUrl: null,
+    expiryMinutes: 30,
+    status: 'ACTIVE',
+    updatedBy: { userId: 'dana', role: 'ORGANIZATION_ADMIN', name: 'Dana', label: null },
+    createdAt: at,
+    updatedAt: at,
+  };
 }
 
 const server = setupServer(...createHandlers({ baseUrl: '*/api/bff', store: build() }));
@@ -108,6 +133,20 @@ describe('Payments list screen', () => {
 
     await waitFor(() => expect(refs()).toEqual(['order-06', 'order-12', 'order-18', 'order-24']));
     expect(currentLocation()).toBe('/payments?status=SUCCEEDED&gatewayId=stripe');
+  });
+
+  it('filters by Pricing Plan', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByRole('link', { name: 'order-01' });
+
+    await waitFor(() =>
+      expect(optionNames(screen.getByRole('combobox', { name: 'Pricing Plan' }))).toEqual(['All Pricing Plans', 'Basic', 'Pro']),
+    );
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Pricing Plan' }), 'Pro');
+
+    await waitFor(() => expect(refs()).toEqual(['order-05', 'order-10', 'order-15', 'order-20', 'order-25']));
+    expect(currentLocation()).toBe('/payments?pricingPlanId=plan-pro');
   });
 
   it('filters by created date range', async () => {

@@ -132,10 +132,70 @@ const envObject = z.object({
       )
       .optional(),
   ),
+  // --- Webhooks (outbound delivery) -----------------------------------------
+  /**
+   * SSRF protection of Webhook deliveries: HTTPS only, and only public
+   * addresses (checked after DNS, then connected to exactly). Unset =>
+   * on in production, off in development and tests (a receiver on localhost).
+   */
+  WEBHOOK_SSRF_PROTECTION: z.stringbool().optional(),
+  /** Give up on one Webhook attempt after this many milliseconds. */
+  WEBHOOK_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(60_000)
+    .default(10_000),
+  /** Days a finished Webhook delivery is kept, matching the outbox retention. */
+  WEBHOOK_DELIVERY_RETENTION_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(3650)
+    .default(7),
   /** Stripe Gateway Plugin: all three keys or none. */
   STRIPE_SECRET_KEY: optionalKey(['sk_', 'rk_'], '"sk_" or "rk_"'),
   STRIPE_WEBHOOK_SECRET: optionalKey(['whsec_'], '"whsec_"'),
   STRIPE_PUBLISHABLE_KEY: optionalKey(['pk_'], '"pk_"'),
+
+  // --- Embedded Checkout (ticket 07): starting checkout Payments ---
+  /** Most checkout Payments started per Publishable Key in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_KEY: z.coerce.number().int().min(1).default(120),
+  /** Most checkout Payments started per client IP in one window. */
+  CHECKOUT_START_RATE_LIMIT_PER_IP: z.coerce.number().int().min(1).default(20),
+  /** Length of the checkout start rate-limit window, in seconds. */
+  CHECKOUT_START_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(60),
+  /**
+   * Express `trust proxy`, so the client IP (checkout rate limits) is the
+   * caller's, not the load balancer's: a hop count, `true`, or addresses /
+   * subnets, comma separated. Unset => the socket address.
+   */
+  TRUST_PROXY: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().optional(),
+  ),
+
+  // --- Embedded Checkout (ticket 09): the checkout app ---
+  /**
+   * Origins the checkout app (`apps/checkout`) is served from, comma
+   * separated. Its iframe page calls the checkout endpoints from there on
+   * behalf of the host page it names. Unset => `http://localhost:3200`
+   * outside production, none in production.
+   */
+  CHECKOUT_APP_ORIGINS: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z
+      .string()
+      .refine(
+        (v) => v.split(',').every((o) => !o.trim() || URL.canParse(o.trim())),
+        'must be comma-separated origins such as https://checkout.example.com',
+      )
+      .optional(),
+  ),
 });
 
 export const envSchema = envObject
@@ -184,6 +244,35 @@ export const envSchema = envObject
   }));
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Express's `trust proxy` setting from `TRUST_PROXY`, or undefined to leave it off. */
+export function resolveTrustProxy(
+  value: string | undefined,
+): boolean | number | string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed;
+}
+
+/** The checkout app's origins (`CHECKOUT_APP_ORIGINS`), normalised. */
+export function resolveCheckoutAppOrigins(
+  env: Pick<Env, 'NODE_ENV' | 'CHECKOUT_APP_ORIGINS'>,
+): string[] {
+  const raw =
+    env.CHECKOUT_APP_ORIGINS ??
+    (isProduction(env) ? '' : DEFAULT_CHECKOUT_APP_ORIGIN);
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => new URL(value).origin);
+}
+
+/** Where `pnpm --filter @paybridge/checkout dev` serves the checkout app. */
+export const DEFAULT_CHECKOUT_APP_ORIGIN = 'http://localhost:3200';
 
 /** Resolved values derived from the raw environment. */
 export function isProduction(env: Pick<Env, 'NODE_ENV'>): boolean {

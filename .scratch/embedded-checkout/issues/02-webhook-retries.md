@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A failed attempt (a non-2xx answer, a timeout, a network error or a refused address) schedules the next attempt with exponential backoff and jitter. The schedule spans about three days.
 - [ ] After the last attempt fails, the delivery is marked failed and is not retried automatically.

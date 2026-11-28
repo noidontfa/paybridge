@@ -18,7 +18,12 @@ import { paymentsListHandlers } from './payments-list';
 import { reviewHandlers } from './reviews';
 import { reviewResolutionHandlers } from './review-resolution';
 import { platformHandlers } from './platform';
+import { pricingPlansHandlers } from './pricing-plans';
+import { pricingTablesHandlers } from './pricing-tables';
+import { publishableKeysHandlers } from './publishable-keys';
 import { usersHandlers } from './users';
+import { webhookDeliveriesHandlers } from './webhook-deliveries';
+import { webhookEndpointsHandlers } from './webhook-endpoints';
 import { OVERVIEW_RANGES } from '@/lib/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
@@ -79,9 +84,15 @@ export function createHandlers({ baseUrl, store }: HandlerOptions): HttpHandler[
     ),
     ...platformHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...apiKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...pricingPlansHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...pricingTablesHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...publishableKeysHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...usersHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...invitationsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewayConnectionsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    // Before the endpoints' handlers, whose `:id/:action` would take `:id/test`.
+    ...webhookDeliveriesHandlers(base, store, (request, init) => apiError(request, init, store.now)),
+    ...webhookEndpointsHandlers(base, store, (request, init) => apiError(request, init, store.now)),
     ...gatewaysHandlers(base, store, (request, message) =>
       apiError(request, { status: 404, error: 'Not Found', code: 'GATEWAY_NOT_FOUND', message }, store.now),
     ),

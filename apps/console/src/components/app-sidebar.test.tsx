@@ -76,6 +76,7 @@ describe('Console sidebar', () => {
     ['Callbacks', '/callbacks'],
     ['Events', '/events'],
     ['Audit log', '/audit-log'],
+    ['Pricing Plans', '/pricing-plans'],
     ['Settings', '/settings'],
     ['Docs', '/docs'],
   ])('links %s to %s', (name, href) => {
@@ -184,8 +185,41 @@ describe('Console sidebar', () => {
     });
   });
 
+  describe('Checkout items', () => {
+    it('shows Pricing Plans under Checkout with pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'pricing:view'] });
+      const checkout = screen.getByRole('group', { name: 'Checkout' });
+      expect(within(checkout).getByRole('link', { name: 'Pricing Plans' })).toHaveAttribute('href', '/pricing-plans');
+    });
+
+    it('shows Pricing Tables under Checkout with pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'pricing:view'] });
+      const checkout = screen.getByRole('group', { name: 'Checkout' });
+      expect(within(checkout).getByRole('link', { name: 'Pricing Tables' })).toHaveAttribute('href', '/pricing-tables');
+    });
+
+    it('hides the Checkout section without pricing:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view'] });
+      expect(screen.queryByRole('link', { name: 'Pricing Plans' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Checkout' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Webhook deliveries', () => {
+    it('shows Webhook deliveries under Developers with webhook-deliveries:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'webhook-deliveries:view'] });
+      const developers = screen.getByRole('group', { name: 'Developers' });
+      expect(within(developers).getByRole('link', { name: 'Webhook deliveries' })).toHaveAttribute('href', '/webhooks/deliveries');
+    });
+
+    it('hides Webhook deliveries without webhook-deliveries:view', () => {
+      renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view'] });
+      expect(screen.queryByRole('link', { name: 'Webhook deliveries' })).not.toBeInTheDocument();
+    });
+  });
+
   describe('Settings items', () => {
-    const names = ['Users', 'Invitations', 'API Keys', 'Gateway Connections'];
+    const names = ['Users', 'Invitations', 'API Keys', 'Publishable Keys', 'Gateway Connections', 'Webhook Endpoints'];
 
     it('hides what the User has no Permission for', () => {
       renderShell('/', null, { id: 'u', name: 'Olu', role: 'OPERATOR', permissions: ['payments:view', 'reviews:resolve'] });
@@ -198,7 +232,14 @@ describe('Console sidebar', () => {
         id: 'u',
         name: 'Ana',
         role: 'ORGANIZATION_ADMIN',
-        permissions: ['payments:view', 'users:manage', 'api-keys:manage', 'gateway-connections:manage'],
+        permissions: [
+          'payments:view',
+          'users:manage',
+          'api-keys:manage',
+          'publishable-keys:manage',
+          'gateway-connections:manage',
+          'webhook-endpoints:manage',
+        ],
       });
       for (const name of names) expect(screen.getByRole('link', { name })).toBeInTheDocument();
     });

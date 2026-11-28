@@ -4,7 +4,11 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { applyGlobalPrefix } from './http-prefix.js';
-import { type Env, resolveSwaggerEnabled } from './config/env.schema.js';
+import {
+  type Env,
+  resolveSwaggerEnabled,
+  resolveTrustProxy,
+} from './config/env.schema.js';
 import { SWAGGER_PATH, setupSwagger } from './swagger.js';
 
 async function bootstrap() {
@@ -22,6 +26,8 @@ async function bootstrap() {
   const nodeEnv = config.get('NODE_ENV', { infer: true });
 
   app.disable('x-powered-by');
+  const trustProxy = resolveTrustProxy(config.get('TRUST_PROXY', { infer: true }));
+  if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
   applyGlobalPrefix(app);
   app.enableShutdownHooks(); // graceful SIGTERM/SIGINT: closes Prisma pool
 

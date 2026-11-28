@@ -31,8 +31,23 @@ async function main(): Promise<void> {
   console.log(
     `Seeded ${result.users} Users (password: ${SEED_PASSWORD}) and ${result.payments} Payments in ${result.organizations} Organizations, ${result.attempts} PaymentTransactions, ${result.transitions} status transitions, ${result.callbacks} Callbacks and ${result.events} Payment Events.`,
   );
+  console.log(`Seeded ${result.pricingPlans} Pricing Plans.`);
+  console.log(
+    `Seeded ${result.checkoutActivity.payments} checkout Payments and ${result.checkoutActivity.deliveries} Webhook deliveries.`,
+  );
+  for (const t of result.pricingTables) {
+    console.log(`Pricing Table (${t.name}, ${t.plans} Pricing Plans): ${t.id}`);
+  }
   for (const k of result.apiKeys) {
     console.log(`API Key (${k.label}${k.revoked ? ', revoked' : ''}): ${k.key}`);
+  }
+  console.log(
+    `Webhook Endpoint: ${result.webhookEndpoint.url} (signing secret ${result.webhookEndpoint.secret}); receive with \`pnpm webhooks:receive\`.`,
+  );
+  for (const k of result.publishableKeys) {
+    console.log(
+      `Publishable Key (${k.label}, ${k.allowedOrigins.join(' ')}): ${k.key}`,
+    );
   }
 }
 

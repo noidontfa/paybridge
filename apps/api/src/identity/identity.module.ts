@@ -1,7 +1,11 @@
-import { Module } from '@nestjs/common';
+import {
+  Module,
+  RequestMethod,
+  type MiddlewareConsumer,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import type { Env } from '../config/env.schema.js';
 import {
   AuthenticateApiKey,
   CreateApiKey,
@@ -9,6 +13,21 @@ import {
   RevokeApiKey,
 } from './application/use-cases/api-keys.js';
 import { ApiKeysController } from './infrastructure/http/api-keys.controller.js';
+import {
+  AuthenticatePublishableKey,
+  CreatePublishableKey,
+  ListPublishableKeys,
+  RevokePublishableKey,
+  SetPublishableKeyOrigins,
+} from './application/use-cases/publishable-keys.js';
+import { PublishableKeysController } from './infrastructure/http/publishable-keys.controller.js';
+import { CheckoutCorsMiddleware } from './infrastructure/http/checkout-cors.middleware.js';
+import { PublishableKeyRules } from './domain/services/publishable-key-rules.js';
+import {
+  isProduction,
+  resolveCheckoutAppOrigins,
+  type Env,
+} from '../config/env.schema.js';
 import { GetOrganization } from './application/use-cases/get-organization.js';
 import { GetSessionUser } from './application/use-cases/get-session-user.js';
 import { ChangePassword } from './application/use-cases/change-password.js';
@@ -64,6 +83,7 @@ import { UserRepository } from './domain/repositories/user.repository.js';
     OrganizationsController,
     InvitationsController,
     ApiKeysController,
+    PublishableKeysController,
     UsersController,
     SuperAdminsController,
   ],
@@ -103,6 +123,25 @@ import { UserRepository } from './domain/repositories/user.repository.js';
     ListApiKeys,
     RevokeApiKey,
     AuthenticateApiKey,
+    {
+      provide: PublishableKeyRules,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) =>
+        new PublishableKeyRules(
+          !isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) }),
+          resolveCheckoutAppOrigins({
+            NODE_ENV: config.get('NODE_ENV', { infer: true }),
+            CHECKOUT_APP_ORIGINS: config.get('CHECKOUT_APP_ORIGINS', {
+              infer: true,
+            }),
+          }),
+        ),
+    },
+    CreatePublishableKey,
+    ListPublishableKeys,
+    SetPublishableKeyOrigins,
+    RevokePublishableKey,
+    AuthenticatePublishableKey,
     SignIn,
     RefreshSession,
     SignOut,
@@ -123,4 +162,11 @@ import { UserRepository } from './domain/repositories/user.repository.js';
   ],
   exports: [EmailSender, GetOrganization, PrincipalResolver],
 })
-export class IdentityModule {}
+export class IdentityModule implements NestModule {
+  /** CORS for the checkout endpoints; the middleware ignores every other path. */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(CheckoutCorsMiddleware)
+      .forRoutes({ path: '{*path}', method: RequestMethod.ALL });
+  }
+}
