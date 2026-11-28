@@ -222,5 +222,6 @@ describe('Core public surface', () => {
     }
 
     expect(leaks).toEqual([]);
-  });
+    // Type-checks all of Payment Core: under 1 s locally, over 5 s on CI runners.
+  }, 10_000);
 });
