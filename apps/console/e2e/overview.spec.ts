@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { formatMoney } from '../src/lib/format';
+import { formatMoney } from '../src/utils/format';
 import { computeOverview } from '../src/mocks/overview';
 import { createSeededStore } from '../src/mocks/seed';
 

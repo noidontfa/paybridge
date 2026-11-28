@@ -5,8 +5,8 @@
  * `POST /internal/webhook-endpoints/:id/test` sends a `webhook.test` event.
  */
 import { z } from 'zod';
-import { request } from './client';
-import { listPageSchema, type ListPage, type ListQuery } from './pagination';
+import { request } from '@/services/client';
+import { listPageSchema, type ListPage, type ListQuery } from '@/services/pagination';
 
 export const WEBHOOK_DELIVERY_STATUSES = ['PENDING', 'SUCCEEDED', 'FAILED'] as const;
 export const webhookDeliveryStatusSchema = z.enum(WEBHOOK_DELIVERY_STATUSES);

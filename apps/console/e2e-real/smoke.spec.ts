@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { ReviewItem, ReviewSummary } from '../src/lib/api/reviews';
+import type { ReviewItem, ReviewSummary } from '@/features/reviews/api';
 
 // Needs the API running and `pnpm db:seed` applied. Expected values are read from the live API,
 // so the specs do not depend on the seed's exact numbers. Re-run `pnpm db:seed` to restore the

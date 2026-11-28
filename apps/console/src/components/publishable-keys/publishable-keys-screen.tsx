@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CopyButton } from '@/components/copy-button';
+import { CopyButton } from '@/components/shared/copy-button';
 import type { ReactNode } from 'react';
-import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
-import { EmptyListState } from '@/components/data-states';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/shared/data-table/data-table';
+import { EmptyListState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
   useRevokePublishableKey,
   useSetPublishableKeyOrigins,
 } from '@/lib/queries/publishable-keys';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 
 const when = (iso: string) => new Date(iso).toLocaleString();
 

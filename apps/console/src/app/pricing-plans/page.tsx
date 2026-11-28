@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { PricingPlansScreen } from '@/components/pricing-plans/pricing-plans-screen';
 
 export const metadata = { title: 'Pricing Plans' };

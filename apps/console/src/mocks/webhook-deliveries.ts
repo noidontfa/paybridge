@@ -6,7 +6,7 @@
  * 200, except the failing endpoint, which answers 500 until a resend.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { PaymentEvent } from '@/lib/api/schemas';
+import type { PaymentEvent } from '@/features/payments/schemas';
 import {
   WEBHOOK_DELIVERY_KINDS,
   WEBHOOK_DELIVERY_STATUSES,

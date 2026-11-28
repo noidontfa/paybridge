@@ -1,6 +1,6 @@
 /** The mocked API Keys endpoints: create returns the key once, list never does. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { ApiKey } from '@/lib/api/api-keys';
+import type { ApiKey } from '@/features/api-keys/api';
 import type { MockStore } from './store';
 
 export function apiKeysHandlers(

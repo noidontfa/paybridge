@@ -2,13 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ErrorState, NotFoundState } from '@/components/data-states';
+import { ErrorState, NotFoundState } from '@/components/shared/data-states';
 import { PRICING_MANAGE } from '@/components/pricing-plans/pricing-plans-screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError } from '@/services/errors';
 import type { PricingPlan } from '@/lib/api/pricing-plans';
 import {
   PRICING_TABLE_LIMITS,
@@ -17,8 +17,8 @@ import {
   type PricingTableLanguage,
   type PricingTableTheme,
 } from '@/lib/api/pricing-tables';
-import { formatMoney } from '@/lib/format';
-import { useCan } from '@/lib/operator';
+import { formatMoney } from '@/utils/format';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { usePricingPlans } from '@/lib/queries/pricing-plans';
 import {
   useCreatePricingTable,

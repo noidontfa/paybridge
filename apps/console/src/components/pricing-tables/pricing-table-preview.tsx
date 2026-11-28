@@ -3,7 +3,7 @@
 import { CheckIcon, XIcon } from 'lucide-react';
 import type { PricingPlan } from '@/lib/api/pricing-plans';
 import type { PricingTableLanguage, PricingTableTheme } from '@/lib/api/pricing-tables';
-import { formatMoney } from '@/lib/format';
+import { formatMoney } from '@/utils/format';
 
 /** The few words a card shows besides the Organization's own text. */
 const WORDS: Record<PricingTableLanguage, { recommended: string; unavailable: string }> = {

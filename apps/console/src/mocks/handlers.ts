@@ -24,7 +24,7 @@ import { publishableKeysHandlers } from './publishable-keys';
 import { usersHandlers } from './users';
 import { webhookDeliveriesHandlers } from './webhook-deliveries';
 import { webhookEndpointsHandlers } from './webhook-endpoints';
-import { OVERVIEW_RANGES } from '@/lib/overview-range';
+import { OVERVIEW_RANGES } from '@/features/overview/utils/overview-range';
 import { computeOverview } from './overview';
 import type { MockStore } from './store';
 

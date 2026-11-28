@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/page-header';
-import { ReviewPage } from '@/components/exceptions/review-page';
+import { PageHeader } from '@/components/layout/page-header';
+import { ReviewPage } from '@/features/reviews/components/review-page';
 
 export const metadata = { title: 'Review' };
 

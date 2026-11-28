@@ -3,7 +3,7 @@
  * Checkout, for one of the seeded Pricing Plans, so the Payment detail shows a
  * checkout origin and the Payments list can be filtered by Pricing Plan.
  */
-import type { CheckoutOrigin } from '@/lib/api/schemas';
+import type { CheckoutOrigin } from '@/features/payments/schemas';
 import type { MockStore } from './store';
 
 const CUSTOMERS: Pick<CheckoutOrigin, 'customerReference' | 'customerEmail'>[] = [

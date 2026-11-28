@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/page-header';
-import { InvitationsPanel } from '@/components/settings/invitations-panel';
+import { PageHeader } from '@/components/layout/page-header';
+import { InvitationsPanel } from '@/features/users/components/invitations-panel';
 
 export const metadata = { title: 'Invitations' };
 

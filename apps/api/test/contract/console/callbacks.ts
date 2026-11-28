@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/callbacks.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/callbacks/api.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // Do not edit this copy; change the Console file and copy again.
 /**
  * `GET /internal/callbacks` and `GET /internal/callbacks/:id`: what each

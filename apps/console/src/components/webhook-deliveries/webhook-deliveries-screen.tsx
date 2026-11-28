@@ -2,15 +2,15 @@
 
 import { SearchXIcon, SendIcon } from 'lucide-react';
 import { useMemo } from 'react';
-import { DataTable } from '@/components/data-table/data-table';
-import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/data-table/toolbar';
+import { DataTable } from '@/components/shared/data-table/data-table';
+import { ClearFiltersButton, DataTableToolbar, FilterSelect } from '@/components/shared/data-table/toolbar';
 import { Button } from '@/components/ui/button';
 import { WEBHOOK_DELIVERY_KINDS, WEBHOOK_DELIVERY_STATUSES } from '@/lib/api/webhook-deliveries';
 import { WEBHOOK_DELIVERY_LIST_URL_CONFIG, useWebhookDeliveryList } from '@/lib/queries/webhook-deliveries';
 import { useWebhookEndpoints } from '@/lib/queries/webhook-endpoints';
-import { useCan } from '@/lib/operator';
-import { statusBadge } from '@/lib/status-badges';
-import { useTableUrlState } from '@/lib/url-state/use-table-url-state';
+import { useCan } from '@/features/auth/hooks/use-operator';
+import { statusBadge } from '@/components/shared/status-badges';
+import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { webhookDeliveryColumns, webhookDeliveryHref } from './webhook-deliveries-columns';
 
 const STATUS_OPTIONS = WEBHOOK_DELIVERY_STATUSES.map((status) => ({ value: status, label: statusBadge('webhookDelivery', status).label }));

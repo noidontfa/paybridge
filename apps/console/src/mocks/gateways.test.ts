@@ -1,6 +1,6 @@
 import { setupServer } from 'msw/node';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { gatewayDetailSchema, gatewayListSchema } from '@/lib/api/gateways';
+import { gatewayDetailSchema, gatewayListSchema } from '@/features/gateways/api';
 import { createHandlers } from './handlers';
 import { createSeededStore } from './seed';
 import { MockStore, type MockCallback } from './store';

@@ -9,7 +9,7 @@ import {
   type WebhookDeliveryListItem,
   type WebhookDeliveryListQuery,
 } from '@/lib/api/webhook-deliveries';
-import type { TableUrlConfig, TableUrlState } from '@/lib/url-state/table-url-state';
+import type { TableUrlConfig, TableUrlState } from '@/components/shared/data-table/url-state/table-url-state';
 import { webhookEndpointKeys } from './webhook-endpoints';
 
 export const webhookDeliveryKeys = {

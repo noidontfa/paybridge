@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/reviews.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/reviews/api.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 /**
  * `GET /internal/reviews` and `GET /internal/reviews/summary`: the operator
  * Reviews (the Exceptions queue). A Review is a PaymentTransaction with a

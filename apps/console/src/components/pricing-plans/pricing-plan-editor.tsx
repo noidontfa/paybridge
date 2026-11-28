@@ -2,20 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ErrorState, NotFoundState } from '@/components/data-states';
+import { ErrorState, NotFoundState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ApiError } from '@/lib/api/errors';
+import { ApiError } from '@/services/errors';
 import {
   PRICING_PLAN_LIMITS,
   type PricingPlanDetail,
   type PricingPlanFeature,
   type PricingPlanInput,
 } from '@/lib/api/pricing-plans';
-import { useCan } from '@/lib/operator';
-import { useGatewayOptions } from '@/lib/queries/gateways';
+import { useCan } from '@/features/auth/hooks/use-operator';
+import { useGatewayOptions } from '@/features/gateways/hooks/queries';
 import {
   useArchivePricingPlan,
   useCreatePricingPlan,

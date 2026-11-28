@@ -16,7 +16,7 @@ import type {
   PaymentEventType,
   PaymentStatus,
   ReviewReason,
-} from '@/lib/api/schemas';
+} from '@/features/payments/schemas';
 import { createRandom, type Random } from './random';
 import { seedCallbacks } from './seed-callbacks';
 import { MockStore, type MockAttempt, type MockPayment } from './store';

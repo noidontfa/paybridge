@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
-import { EmptyListState } from '@/components/data-states';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/shared/data-table/data-table';
+import { EmptyListState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import type { PricingPlan } from '@/lib/api/pricing-plans';
-import { formatMoney } from '@/lib/format';
-import { useCan } from '@/lib/operator';
+import { formatMoney } from '@/utils/format';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { usePricingPlans } from '@/lib/queries/pricing-plans';
 
 export const PRICING_MANAGE = 'pricing:manage';

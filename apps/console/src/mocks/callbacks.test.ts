@@ -1,6 +1,6 @@
 import { setupServer } from 'msw/node';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { callbackDetailSchema, callbackListSchema, CALLBACK_STATUSES } from '@/lib/api/callbacks';
+import { callbackDetailSchema, callbackListSchema, CALLBACK_STATUSES } from '@/features/callbacks/api';
 import { createHandlers } from './handlers';
 import { createSeededStore } from './seed';
 import { MockStore, type MockCallback } from './store';

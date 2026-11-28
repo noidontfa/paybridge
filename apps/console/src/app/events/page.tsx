@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { EventsScreen } from '@/components/events/events-screen';
-import { PageHeader } from '@/components/page-header';
+import { EventsScreen } from '@/features/payment-events/components/events-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Events' };
 

@@ -8,7 +8,7 @@
  * COPIED BY HAND to apps/api/test/contract/console/pricing-tables.ts.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const pricingTableThemeSchema = z.enum(['light', 'dark']);
 export const pricingTableLanguageSchema = z.enum(['vi', 'en']);

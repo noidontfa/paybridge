@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { WebhookDeliveryDetailScreen } from '@/components/webhook-deliveries/webhook-delivery-detail-screen';
 
 export const metadata = { title: 'Webhook delivery' };

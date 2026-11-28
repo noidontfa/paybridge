@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/payments-list.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/payments/api.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // Tickets 03-07: do not edit this copy; add your own file next to it.
 /**
  * `GET /internal/payments`: the operator Payments list. Schema and client

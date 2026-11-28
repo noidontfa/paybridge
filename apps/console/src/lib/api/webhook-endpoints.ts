@@ -4,7 +4,7 @@
  * are POSTs (the BFF forwards no PUT or PATCH).
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 const BASE = '/internal/webhook-endpoints';
 

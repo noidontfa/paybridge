@@ -2,7 +2,7 @@
  * The BFF's calls to the API's sign-in endpoints (`/internal/auth/...`).
  * Only the BFF makes them: the tokens in their answers stay on the server.
  */
-import type { UserRole } from '@/lib/roles';
+import type { UserRole } from '@/features/auth/utils/roles';
 import type { Tokens } from './session-cookies';
 
 export interface SessionUser {

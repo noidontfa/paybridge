@@ -1,5 +1,5 @@
-import { CallbackDetailScreen } from '@/components/callbacks/callback-detail-screen';
-import { PageHeader } from '@/components/page-header';
+import { CallbackDetailScreen } from '@/features/callbacks/components/callback-detail-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Callback' };
 

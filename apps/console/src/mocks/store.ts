@@ -7,10 +7,10 @@
  * array plus an accessor here, seed it in `./seed.ts`, and serve it from
  * `./handlers.ts`. Mutating handlers push to / edit these arrays directly.
  */
-import type { CallbackStatus } from '@/lib/api/callbacks';
-import { ROLE_LABELS, type ManagedRole } from '@/lib/roles';
+import type { CallbackStatus } from '@/features/callbacks/api';
+import { ROLE_LABELS, type ManagedRole } from '@/features/auth/utils/roles';
 import type { MockUser } from './users';
-import type { OrganizationSummary } from '@/lib/api/organizations';
+import type { OrganizationSummary } from '@/features/platform/api/organizations';
 import type {
   AttemptStatus,
   NextAction,
@@ -20,7 +20,7 @@ import type {
   ReviewReason,
   StatusTransition,
   CheckoutOrigin,
-} from '@/lib/api/schemas';
+} from '@/features/payments/schemas';
 
 export interface MockPayment {
   id: string;
@@ -88,7 +88,7 @@ const mockUser = (id: string, name: string, role: ManagedRole, active = true): M
 
 export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
-  readonly apiKeys: import('@/lib/api/api-keys').ApiKey[] = [];
+  readonly apiKeys: import('@/features/api-keys/api').ApiKey[] = [];
 
   /** The Organization's Pricing Plans. */
   readonly pricingPlans: import('@/lib/api/pricing-plans').PricingPlan[] = [];
@@ -100,10 +100,10 @@ export class MockStore {
   readonly publishableKeys: import('@/lib/api/publishable-keys').PublishableKey[] = [];
 
   /** Pending Invitations, for the Invitations page. */
-  readonly invitations: import('@/lib/api/invitations').InvitationItem[] = [];
+  readonly invitations: import('@/features/users/api/invitations').InvitationItem[] = [];
 
   /** The Organization's Gateway Connections (none until it connects one). */
-  readonly gatewayConnections: import('@/lib/api/gateway-connections').GatewayConnection[] = [];
+  readonly gatewayConnections: import('@/features/gateway-connections/api').GatewayConnection[] = [];
 
   /** The Organization's Webhook Endpoints. */
   readonly webhookEndpoints: import('@/lib/api/webhook-endpoints').WebhookEndpoint[] = [];

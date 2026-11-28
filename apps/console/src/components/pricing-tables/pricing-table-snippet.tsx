@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { CopyButton } from '@/components/copy-button';
-import { ErrorState } from '@/components/data-states';
+import { CopyButton } from '@/components/shared/copy-button';
+import { ErrorState } from '@/components/shared/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buildSnippet, SNIPPET_OPTIONAL_ATTRIBUTES } from '@/lib/checkout-snippet';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { usePublishableKeys } from '@/lib/queries/publishable-keys';
 
 export const PUBLISHABLE_KEYS_MANAGE = 'publishable-keys:manage';

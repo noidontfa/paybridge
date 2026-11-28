@@ -6,7 +6,7 @@
  * COPIED BY HAND to apps/api/test/contract/console/pricing-plans.ts.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 export const pricingPlanFeatureSchema = z.object({ text: z.string(), included: z.boolean() });
 export type PricingPlanFeature = z.infer<typeof pricingPlanFeatureSchema>;

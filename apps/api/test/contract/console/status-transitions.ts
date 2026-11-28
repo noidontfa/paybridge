@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/status-transitions.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/payments/status-transitions.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // Do not edit this copy; change the Console file and copy again.
 /**
  * `GET /internal/status-transitions`: the audit log. Each row carries the

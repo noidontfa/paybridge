@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { NewPricingTableScreen } from '@/components/pricing-tables/pricing-table-editor';
 
 export const metadata = { title: 'New Pricing Table' };

@@ -3,7 +3,7 @@
  * They are not secret, so the full key is listed every time.
  */
 import { z } from 'zod';
-import { request } from './client';
+import { request } from '@/services/client';
 
 const writerSchema = z.object({
   name: z.string().nullable(),

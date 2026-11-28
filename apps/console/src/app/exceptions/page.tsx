@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { ExceptionsScreen } from '@/components/exceptions/exceptions-screen';
-import { PageHeader } from '@/components/page-header';
+import { ExceptionsScreen } from '@/features/reviews/components/exceptions-screen';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const metadata = { title: 'Exceptions' };
 

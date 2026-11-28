@@ -1,16 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { CopyButton } from '@/components/copy-button';
-import { ErrorState, NotFoundState } from '@/components/data-states';
-import { StatusBadge } from '@/components/status-badge';
-import { TimeText } from '@/components/time-text';
+import { CopyButton } from '@/components/shared/copy-button';
+import { ErrorState, NotFoundState } from '@/components/shared/data-states';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { TimeText } from '@/components/shared/time-text';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError } from '@/services/errors';
 import type { WebhookDeliveryAttempt, WebhookDeliveryDetail } from '@/lib/api/webhook-deliveries';
-import { useCan } from '@/lib/operator';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { useResendWebhookDelivery, useWebhookDelivery } from '@/lib/queries/webhook-deliveries';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

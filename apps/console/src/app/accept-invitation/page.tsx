@@ -1,5 +1,5 @@
-import { AcceptInvitationForm } from '@/components/password-forms';
-import { PRODUCT_NAME } from '@/lib/navigation';
+import { AcceptInvitationForm } from '@/features/auth/components/password-forms';
+import { PRODUCT_NAME } from '@/components/layout/navigation';
 
 export const metadata = { title: 'Accept invitation' };
 

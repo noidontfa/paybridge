@@ -4,7 +4,7 @@
  * status, JSON and non-JSON bodies, FAILED rows with a last error, and
  * Attempt Keys that match no PaymentTransaction. Only `stripe` and `fake`.
  */
-import type { CallbackStatus } from '@/lib/api/callbacks';
+import type { CallbackStatus } from '@/features/callbacks/api';
 import type { Random } from './random';
 import type { MockAttempt, MockCallback, MockStore } from './store';
 

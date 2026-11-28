@@ -1,6 +1,6 @@
-import { OverviewRoute } from '@/components/overview/overview-route';
-import { PageHeader } from '@/components/page-header';
-import { parseRange } from '@/lib/overview-range';
+import { OverviewRoute } from '@/features/overview/components/overview-route';
+import { PageHeader } from '@/components/layout/page-header';
+import { parseRange } from '@/features/overview/utils/overview-range';
 
 export const metadata = { title: 'Overview' };
 
