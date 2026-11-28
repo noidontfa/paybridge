@@ -18,7 +18,8 @@ test('adds an endpoint and shows its signing secret once', async ({ page }) => {
   const secret = page.getByRole('status', { name: 'New signing secret' });
   await expect(secret).toContainText('whsec_pb_');
   const row = page.getByRole('row').filter({ hasText: ENDPOINT_URL });
-  await expect(row).toContainText('payment.created, payment.succeeded');
+  await expect(row.getByText('payment.created', { exact: true })).toBeVisible();
+  await expect(row.getByText('payment.succeeded', { exact: true })).toBeVisible();
   await expect(row.getByText('Enabled')).toBeVisible();
   await secret.getByRole('button', { name: 'Done' }).click();
   await expect(secret).toHaveCount(0);
@@ -39,7 +40,8 @@ test('edits the URL and the Payment Events', async ({ page }) => {
 
   await expect(form).toHaveCount(0);
   const row = page.getByRole('row').filter({ hasText: EDITED });
-  await expect(row).toContainText('payment.succeeded, payment.expired');
+  await expect(row.getByText('payment.succeeded', { exact: true })).toBeVisible();
+  await expect(row.getByText('payment.expired', { exact: true })).toBeVisible();
 });
 
 test('refuses an invalid URL and says why', async ({ page }) => {
