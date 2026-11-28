@@ -8,6 +8,7 @@ export const paymentsListQuerySchema = z
     ...pagingShape,
     status: optionalParam(z.enum(PAYMENT_STATUSES)),
     gatewayId: optionalParam(z.string().max(100)),
+    pricingPlanId: optionalParam(z.uuid()),
     q: optionalParam(z.string().trim().max(200)),
     createdFrom: optionalParam(dayParam),
     createdTo: optionalParam(dayParam),
@@ -29,6 +30,7 @@ export const paymentsListQuerySchema = z
       filters: {
         status: query.status,
         gatewayId: query.gatewayId,
+        pricingPlanId: query.pricingPlanId,
         q: query.q || undefined,
         createdFrom: query.createdFrom
           ? new Date(`${query.createdFrom}T00:00:00.000Z`)

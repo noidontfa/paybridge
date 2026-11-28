@@ -144,6 +144,45 @@ describe('Core reaches identity only through its port (pnpm lint)', () => {
   });
 });
 
+describe('checkout reaches Core and identity only through their ports (pnpm lint)', () => {
+  const coreFiles = {
+    'src/payment-core/domain/value-objects/organization-scope.ts':
+      'export interface OrganizationScope { organizationId: string }\n',
+    'src/payment-core/port/organization-scope.ts':
+      "export type { OrganizationScope } from '../domain/value-objects/organization-scope.js';\n",
+  };
+
+  it('fails when checkout imports Core or identity internals', async () => {
+    const result = await lintSample({
+      ...coreFiles,
+      'src/identity/domain/entities/organization.ts':
+        "export const DEFAULT_ORGANIZATION_ID = 'x';\n",
+      'src/checkout/application/uses-core.ts':
+        "import type { OrganizationScope } from '../../payment-core/domain/value-objects/organization-scope.js';\n" +
+        'export type S = OrganizationScope;\n',
+      'src/checkout/application/uses-identity.ts':
+        "import { DEFAULT_ORGANIZATION_ID } from '../../identity/domain/entities/organization.js';\n" +
+        'export const id = DEFAULT_ORGANIZATION_ID;\n',
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.output).toContain('uses-core.ts');
+    expect(result.output).toContain('uses-identity.ts');
+  });
+
+  it('allows checkout to import a Core port file', async () => {
+    const result = await lintSample({
+      ...coreFiles,
+      'src/checkout/application/uses-port.ts':
+        "import type { OrganizationScope } from '../../payment-core/port/organization-scope.js';\n" +
+        'export type S = OrganizationScope;\n',
+    });
+
+    expect(result.output).not.toContain('no-restricted-imports');
+    expect(result.exitCode).toBe(0);
+  });
+});
+
 describe('Core public surface', () => {
   it('exports no plugin types or values from any Core module', () => {
     const coreFiles = ts.sys
@@ -183,5 +222,6 @@ describe('Core public surface', () => {
     }
 
     expect(leaks).toEqual([]);
-  });
+    // Type-checks all of Payment Core: under 1 s locally, over 5 s on CI runners.
+  }, 10_000);
 });

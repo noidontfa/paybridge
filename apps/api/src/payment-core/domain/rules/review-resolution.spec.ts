@@ -35,6 +35,7 @@ function payment(status: Payment['status'] = 'PENDING'): Payment {
     id: 'p1',
     organizationId: 'org-1',
     merchantOrderId: 'o1',
+    checkoutOrigin: null,
     amount: '150000',
     currency: 'VND',
     status,

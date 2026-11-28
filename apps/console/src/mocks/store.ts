@@ -19,6 +19,7 @@ import type {
   PaymentStatus,
   ReviewReason,
   StatusTransition,
+  CheckoutOrigin,
 } from '@/features/payments/schemas';
 
 export interface MockPayment {
@@ -30,6 +31,8 @@ export interface MockPayment {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+  /** Set on Payments the Embedded Checkout created. */
+  checkoutOrigin?: CheckoutOrigin | null;
 }
 
 export interface MockAttempt {
@@ -87,11 +90,26 @@ export class MockStore {
   /** The Organization's API Keys (the mock has one Organization). */
   readonly apiKeys: import('@/features/api-keys/api').ApiKey[] = [];
 
+  /** The Organization's Pricing Plans. */
+  readonly pricingPlans: import('@/features/pricing-plans/api').PricingPlan[] = [];
+
+  /** The Organization's Pricing Tables. */
+  readonly pricingTables: import('@/features/pricing-tables/api').PricingTable[] = [];
+
+  /** The Organization's Publishable Keys. */
+  readonly publishableKeys: import('@/features/publishable-keys/api').PublishableKey[] = [];
+
   /** Pending Invitations, for the Invitations page. */
   readonly invitations: import('@/features/users/api/invitations').InvitationItem[] = [];
 
   /** The Organization's Gateway Connections (none until it connects one). */
   readonly gatewayConnections: import('@/features/gateway-connections/api').GatewayConnection[] = [];
+
+  /** The Organization's Webhook Endpoints. */
+  readonly webhookEndpoints: import('@/features/webhooks/api/webhook-endpoints').WebhookEndpoint[] = [];
+
+  /** Deliveries to the Organization's Webhook Endpoints, each with its attempts. */
+  readonly webhookDeliveries: import('@/features/webhooks/api/webhook-deliveries').WebhookDeliveryDetail[] = [];
 
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [
@@ -165,6 +183,7 @@ export class MockStore {
     if (!payment) return undefined;
     return {
       ...payment,
+      checkoutOrigin: payment.checkoutOrigin ?? null,
       attempts: this.attemptsOf(id).map(({ paymentId: _paymentId, ...attempt }) => ({
         ...attempt,
         transitions: this.transitionsOf(attempt.id),

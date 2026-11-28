@@ -1,7 +1,8 @@
+import Link from 'next/link';
 import { CopyButton } from '@/components/shared/copy-button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { TimeText } from '@/components/shared/time-text';
-import type { OperatorPayment } from '@/features/payments/schemas';
+import type { CheckoutOrigin, OperatorPayment } from '@/features/payments/schemas';
 import { formatMoney } from '@/utils/format';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -39,6 +40,36 @@ export function PaymentSummary({ payment }: { payment: OperatorPayment }) {
           <TimeText iso={payment.updatedAt} />
         </Field>
       </dl>
+      {payment.checkoutOrigin && <CheckoutOriginFields origin={payment.checkoutOrigin} />}
     </section>
+  );
+}
+
+/** Where a Payment from the Embedded Checkout came from: its Pricing Plan (name at purchase) and Customer. */
+function CheckoutOriginFields({ origin }: { origin: CheckoutOrigin }) {
+  return (
+    <div role="group" aria-label="Embedded Checkout" className="mt-4 border-t pt-4">
+      <h3 className="mb-3 text-sm font-medium">Embedded Checkout</h3>
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Field label="Pricing Plan (name at purchase)">
+          <Link href={`/pricing-plans/${origin.pricingPlanId}`} className="underline-offset-4 hover:underline">
+            {origin.pricingPlanName}
+          </Link>
+        </Field>
+        <Field label="Customer Reference">
+          {origin.customerReference ? (
+            <>
+              <span className="font-mono break-all">{origin.customerReference}</span>
+              <CopyButton value={origin.customerReference} label="Customer Reference" />
+            </>
+          ) : (
+            <span className="text-muted-foreground">None</span>
+          )}
+        </Field>
+        <Field label="Customer email">
+          {origin.customerEmail ? <span className="break-all">{origin.customerEmail}</span> : <span className="text-muted-foreground">None</span>}
+        </Field>
+      </dl>
+    </div>
   );
 }

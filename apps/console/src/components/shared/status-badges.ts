@@ -33,7 +33,7 @@ export interface BadgeSpec {
   icon: LucideIcon;
 }
 
-export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event' | 'callback';
+export type BadgeKind = 'payment' | 'transaction' | 'review' | 'event' | 'callback' | 'webhookDelivery';
 
 const SUCCEEDED: BadgeSpec = { label: 'Succeeded', tone: 'success', icon: CheckCircle2Icon };
 const PENDING: BadgeSpec = { label: 'Pending', tone: 'info', icon: HourglassIcon };
@@ -74,6 +74,12 @@ const REGISTRY: Record<BadgeKind, Record<string, BadgeSpec>> = {
     RECEIVED: { label: 'Received', tone: 'neutral', icon: InboxIcon },
     PROCESSING: { label: 'Processing', tone: 'info', icon: LoaderIcon },
     PROCESSED: { label: 'Processed', tone: 'success', icon: CheckCircle2Icon },
+    FAILED: { label: 'Failed', tone: 'danger', icon: XCircleIcon },
+  },
+  /** Outbound Webhook deliveries (not Callbacks, which are inbound). */
+  webhookDelivery: {
+    PENDING,
+    SUCCEEDED: { label: 'Delivered', tone: 'success', icon: CheckCircle2Icon },
     FAILED: { label: 'Failed', tone: 'danger', icon: XCircleIcon },
   },
 };

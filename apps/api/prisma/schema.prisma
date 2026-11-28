@@ -3,7 +3,8 @@
 //
 // Conventions (spec: PostgreSQL schema; ADR 0001):
 // - Every table and enum type is mapped to a prefixed name: `core_` for Payment
-//   Core, `iam_` for the Identity module (ADR 0001). src/database/schema.spec.ts
+//   Core, `iam_` for the Identity module, `chk_` for the checkout module,
+//   `wh_` for Webhooks (ADR 0001). src/database/schema.spec.ts
 //   enforces the prefix and the partial indexes.
 // - Every `core_*` table that holds Organization data has a non-null
 //   `organization_id` foreign key to `iam_organizations` (ADR 0006).
@@ -134,6 +135,15 @@ model Organization {
   users               User[]
   invitations         Invitation[]
   apiKeys             ApiKey[]
+  pricingPlans        PricingPlan[]
+  webhookEndpoints    WebhookEndpoint[]
+  webhookDeliveries   WebhookDelivery[]
+  webhookAttempts     WebhookDeliveryAttempt[]
+  webhookSecretRolls  WebhookSecretRoll[]
+  publishableKeys     PublishableKey[]
+  checkoutSessions    CheckoutSession[]
+  pricingTables       PricingTable[]
+  pricingTablePlans   PricingTablePlan[]
 
   @@map("iam_organizations")
 }
@@ -159,7 +169,7 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization  Organization?  @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   refreshTokens  RefreshToken[]
   passwordResets PasswordReset[]
 
@@ -169,17 +179,17 @@ model User {
 
 /// A refresh token, stored hashed. Tokens of one sign-in form a family.
 model RefreshToken {
-  id          String    @id @db.Uuid
-  familyId    String    @map("family_id") @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
-  tokenHash   String    @unique @map("token_hash")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  id            String    @id @db.Uuid
+  familyId      String    @map("family_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   /// Absolute lifetime: 7 days from sign-in, carried over on rotation.
-  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Idle lifetime: 24 hours from this token's creation.
-  idleExpiresAt DateTime @map("idle_expires_at") @db.Timestamptz(3)
-  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
-  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
+  idleExpiresAt DateTime  @map("idle_expires_at") @db.Timestamptz(3)
+  usedAt        DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
 
@@ -243,6 +253,32 @@ model ApiKey {
   @@map("iam_api_keys")
 }
 
+/// A public key for Customers' browsers on the Organization's allowed
+/// websites; it works only on the checkout endpoints (ADR 0009). Not secret,
+/// so it is stored in clear and shown again at any time. The writer of each
+/// change is kept on the row (a Super Admin shows as the platform).
+model PublishableKey {
+  id              String    @id @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  label           String
+  key             String    @unique
+  allowedOrigins  String[]  @map("allowed_origins")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @map("updated_at") @db.Timestamptz(3)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdByRole   String?   @map("created_by_role")
+  createdByName   String?   @map("created_by_name")
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  updatedByRole   String?   @map("updated_by_role")
+  updatedByName   String?   @map("updated_by_name")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId], map: "iam_publishable_keys_organization_id_idx")
+  @@map("iam_publishable_keys")
+}
+
 // ---------------------------------------------------------------------------
 // Payment aggregate
 // ---------------------------------------------------------------------------
@@ -260,6 +296,15 @@ model Payment {
   expiresAt       DateTime      @map("expires_at") @db.Timestamptz(3)
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Checkout origin (embedded checkout): set together, once, when the
+  /// Embedded Checkout created the Payment; null for API Payments. Plain
+  /// columns, no foreign key into `chk_`, so Core stays independent.
+  pricingPlanId   String?       @map("pricing_plan_id") @db.Uuid
+  /// The Pricing Plan's name when the Payment was created.
+  pricingPlanName String?       @map("pricing_plan_name")
+  /// Customer Reference: the Organization's opaque id for its Customer.
+  customerRef     String?       @map("customer_ref")
+  customerEmail   String?       @map("customer_email")
 
   organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   transactions    PaymentTransaction[]
@@ -271,6 +316,8 @@ model Payment {
   /// Operator Payments list: keyset paging by creation time or amount (id is the tiebreaker), inside one Organization.
   @@index([organizationId, createdAt, id], map: "core_payments_org_created_at_id_idx")
   @@index([organizationId, amount, id], map: "core_payments_org_amount_id_idx")
+  /// Payments list filtered by Pricing Plan, newest first.
+  @@index([organizationId, pricingPlanId, createdAt, id], map: "core_payments_org_pricing_plan_idx")
   @@map("core_payments")
 }
 
@@ -469,4 +516,276 @@ model GatewayConnection {
 
   @@unique([organizationId, gatewayId], map: "core_gateway_connections_org_gateway_uq")
   @@map("core_gateway_connections")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): Pricing Plans
+// ---------------------------------------------------------------------------
+
+enum PricingPlanStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@map("chk_pricing_plan_status")
+}
+
+/// What an Organization sells for a fixed Amount. Payments copy the Amount and
+/// the name when they are created, so edits never touch them. `features` is an
+/// ordered JSON array of `{ text, included }`, plain text only. An empty
+/// `allowed_gateway_ids` means every enabled PaymentGateway. `amount > 0` and
+/// the Payment Expiry range are CHECK constraints in the migration.
+model PricingPlan {
+  id                String            @id @db.Uuid
+  organizationId    String            @map("organization_id") @db.Uuid
+  name              String
+  description       String
+  features          Json
+  amount            Decimal           @db.Decimal(19, 4)
+  currency          String
+  allowedGatewayIds String[]          @map("allowed_gateway_ids")
+  successUrl        String?           @map("success_url")
+  cancelUrl         String?           @map("cancel_url")
+  expiryMinutes     Int               @map("expiry_minutes")
+  status            PricingPlanStatus @default(ACTIVE)
+  /// The User who last changed it, with their Role and name at that moment.
+  updatedByUserId   String            @map("updated_by_user_id") @db.Uuid
+  updatedByRole     String            @map("updated_by_role")
+  updatedByName     String            @map("updated_by_name")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime          @map("updated_at") @db.Timestamptz(3)
+
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  checkoutSessions CheckoutSession[]
+  tables           PricingTablePlan[]
+
+  @@index([organizationId, createdAt, id], map: "chk_pricing_plans_org_created_at_idx")
+  @@map("chk_pricing_plans")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): checkout sessions
+// ---------------------------------------------------------------------------
+
+/// One Payment the Embedded Checkout started: which browser session (the
+/// SHA-256 of the token the SDK keeps), Pricing Plan and Customer Reference it
+/// was for, and through which Publishable Key. Resuming looks up the latest
+/// row for the same session, Pricing Plan and Customer Reference. `payment_id`
+/// points into Payment Core without a foreign key (Core stays independent).
+model CheckoutSession {
+  id                String   @id @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  sessionTokenHash  String   @map("session_token_hash")
+  pricingPlanId     String   @map("pricing_plan_id") @db.Uuid
+  /// Empty string when the Customer gave none, so it compares as a value.
+  customerReference String   @map("customer_reference")
+  customerEmail     String   @map("customer_email")
+  publishableKeyId  String   @map("publishable_key_id") @db.Uuid
+  paymentId         String   @unique(map: "chk_checkout_sessions_payment_id_uq") @map("payment_id") @db.Uuid
+  createdAt         DateTime @map("created_at") @db.Timestamptz(3)
+  /// Where the Customer came from and goes next, as the checkout page sent
+  /// them with the latest attempt (null: none sent yet).
+  returnHostPageUrl String?  @map("return_host_page_url")
+  returnSuccessUrl  String?  @map("return_success_url")
+  returnCancelUrl   String?  @map("return_cancel_url")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pricingPlan  PricingPlan  @relation(fields: [pricingPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([organizationId, sessionTokenHash, pricingPlanId, customerReference, customerEmail, createdAt], map: "chk_checkout_sessions_lookup_idx")
+  @@map("chk_checkout_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Checkout (chk_): Pricing Tables
+// ---------------------------------------------------------------------------
+
+enum PricingTableTheme {
+  light
+  dark
+
+  @@map("chk_pricing_table_theme")
+}
+
+enum PricingTableLanguage {
+  vi
+  en
+
+  @@map("chk_pricing_table_language")
+}
+
+/// One to three Pricing Plans shown side by side on a host page, with a
+/// simple look. Its Pricing Plans, in order, are `chk_pricing_table_plans`.
+/// `main_color` is `#rrggbb` in lower case (CHECK in the migration).
+model PricingTable {
+  id              String               @id @db.Uuid
+  organizationId  String               @map("organization_id") @db.Uuid
+  name            String
+  mainColor       String               @map("main_color")
+  theme           PricingTableTheme
+  language        PricingTableLanguage
+  buttonText      String               @map("button_text")
+  /// The User who last changed it, with their Role and name at that moment.
+  updatedByUserId String               @map("updated_by_user_id") @db.Uuid
+  updatedByRole   String               @map("updated_by_role")
+  updatedByName   String               @map("updated_by_name")
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  plans        PricingTablePlan[]
+
+  @@index([organizationId, createdAt, id], map: "chk_pricing_tables_org_created_at_idx")
+  @@map("chk_pricing_tables")
+}
+
+/// A Pricing Plan's place in a Pricing Table. At most one per table is
+/// recommended (partial unique index). A Pricing Plan may sit
+/// in several Pricing Tables, and cannot be deleted while it does.
+model PricingTablePlan {
+  pricingTableId String  @map("pricing_table_id") @db.Uuid
+  pricingPlanId  String  @map("pricing_plan_id") @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  /// 0-based card order.
+  position       Int
+  recommended    Boolean @default(false)
+
+  pricingTable PricingTable @relation(fields: [pricingTableId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  pricingPlan  PricingPlan  @relation(fields: [pricingPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([pricingTableId, pricingPlanId], map: "chk_pricing_table_plans_pkey")
+  @@unique([pricingTableId, position], map: "chk_pricing_table_plans_table_position_key")
+  @@unique([pricingTableId], map: "chk_pricing_table_plans_one_recommended_key", where: { recommended: true })
+  @@index([organizationId, pricingPlanId], map: "chk_pricing_table_plans_org_plan_idx")
+  @@map("chk_pricing_table_plans")
+}
+
+// ---------------------------------------------------------------------------
+// Webhooks (wh_): Webhook Endpoints, deliveries and their attempts
+// ---------------------------------------------------------------------------
+
+enum WebhookEndpointStatus {
+  ENABLED
+  DISABLED
+
+  @@map("wh_endpoint_status")
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+
+  @@map("wh_delivery_status")
+}
+
+/// A URL of an Organization's system that receives Webhooks. The signing
+/// secret is AES-256-GCM under `secretKeyId` (shown in full once, then by
+/// `secretPrefix`). Deleting sets `deletedAt`: deliveries keep their endpoint.
+/// `updatedBy*` record who wrote it last (a Super Admin shows as the platform).
+model WebhookEndpoint {
+  id                       String                @id @db.Uuid
+  organizationId           String                @map("organization_id") @db.Uuid
+  url                      String
+  /// Subscribed Payment Event kinds, such as `payment.succeeded`.
+  eventKinds               String[]              @map("event_kinds")
+  status                   WebhookEndpointStatus @default(ENABLED)
+  secretCiphertext         String                @map("secret_ciphertext")
+  secretKeyId              String                @map("secret_key_id")
+  secretPrefix             String                @map("secret_prefix")
+  /// The secret before the last roll (ticket 04): it still signs until
+  /// `previousSecretExpiresAt`.
+  previousSecretCiphertext String?               @map("previous_secret_ciphertext")
+  previousSecretKeyId      String?               @map("previous_secret_key_id")
+  previousSecretExpiresAt  DateTime?             @map("previous_secret_expires_at") @db.Timestamptz(3)
+  updatedByUserId          String                @map("updated_by_user_id") @db.Uuid
+  updatedByRole            String                @map("updated_by_role")
+  updatedByName            String                @map("updated_by_name")
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                DateTime?             @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  deliveries   WebhookDelivery[]
+  secretRolls  WebhookSecretRoll[]
+
+  @@index([organizationId], map: "wh_endpoints_organization_id_idx")
+  @@map("wh_endpoints")
+}
+
+/// One Payment Event to one Webhook Endpoint. `eventId` is the outbox event
+/// id (stable across attempts and resends); `payload` is the envelope's
+/// `data`, the Payment Event payload as Core wrote it.
+model WebhookDelivery {
+  id             String                @id @db.Uuid
+  organizationId String                @map("organization_id") @db.Uuid
+  endpointId     String                @map("endpoint_id") @db.Uuid
+  eventId        String                @map("event_id") @db.Uuid
+  eventKind      String                @map("event_kind")
+  eventCreatedAt DateTime              @map("event_created_at") @db.Timestamptz(3)
+  paymentId      String?               @map("payment_id") @db.Uuid
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// When a `PENDING` delivery is due for its next attempt (null: now).
+  nextAttemptAt  DateTime?             @map("next_attempt_at") @db.Timestamptz(3)
+  /// Set while one worker makes an attempt; an old lock lost its worker.
+  lockedAt       DateTime?             @map("locked_at") @db.Timestamptz(3)
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  endpoint     WebhookEndpoint          @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  attemptRows  WebhookDeliveryAttempt[]
+
+  @@unique([eventId, endpointId], map: "wh_deliveries_event_endpoint_uq")
+  @@index([organizationId, createdAt], map: "wh_deliveries_organization_created_idx")
+  @@index([endpointId], map: "wh_deliveries_endpoint_id_idx")
+  @@index([status, nextAttemptAt], map: "wh_deliveries_due_idx")
+  @@index([organizationId, paymentId], map: "wh_deliveries_organization_payment_idx")
+  @@map("wh_deliveries")
+}
+
+/// One HTTP POST of a delivery: when, the HTTP status (null when no answer),
+/// how long it took, a truncated response body, and why it failed.
+model WebhookDeliveryAttempt {
+  id             String   @id @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  deliveryId     String   @map("delivery_id") @db.Uuid
+  attemptedAt    DateTime @map("attempted_at") @db.Timestamptz(3)
+  succeeded      Boolean
+  httpStatus     Int?     @map("http_status")
+  durationMs     Int      @map("duration_ms")
+  responseBody   String?  @map("response_body")
+  error          String?
+  /// Who asked for this attempt (a resend or a test send); null when automatic.
+  /// It is the webhooks audit log: a Super Admin shows as the platform.
+  triggeredByUserId String? @map("triggered_by_user_id") @db.Uuid
+  triggeredByRole   String? @map("triggered_by_role")
+  triggeredByName   String? @map("triggered_by_name")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  delivery     WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([deliveryId, attemptedAt], map: "wh_delivery_attempts_delivery_idx")
+  @@map("wh_delivery_attempts")
+}
+
+/// The audit log of signing secret rolls: who rolled an endpoint's secret,
+/// when, and until when the previous secret stayed valid (null: at once).
+model WebhookSecretRoll {
+  id                      String    @id @db.Uuid
+  organizationId          String    @map("organization_id") @db.Uuid
+  endpointId              String    @map("endpoint_id") @db.Uuid
+  rolledAt                DateTime  @map("rolled_at") @db.Timestamptz(3)
+  previousSecretExpiresAt DateTime? @map("previous_secret_expires_at") @db.Timestamptz(3)
+  rolledByUserId          String    @map("rolled_by_user_id") @db.Uuid
+  rolledByRole            String    @map("rolled_by_role")
+  rolledByName            String    @map("rolled_by_name")
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  endpoint     WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([endpointId, rolledAt], map: "wh_secret_rolls_endpoint_idx")
+  @@map("wh_secret_rolls")
 }

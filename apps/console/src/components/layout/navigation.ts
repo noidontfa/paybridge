@@ -4,6 +4,7 @@ import {
   FileClockIcon,
   BuildingIcon,
   GaugeIcon,
+  GlobeIcon,
   ShieldCheckIcon,
   KeyRoundIcon,
   LandmarkIcon,
@@ -11,7 +12,10 @@ import {
   PlugIcon,
   OctagonAlertIcon,
   ReceiptIcon,
+  SendIcon,
   SettingsIcon,
+  TagIcon,
+  LayoutGridIcon,
   UsersIcon,
   WebhookIcon,
   ZapIcon,
@@ -58,8 +62,16 @@ export const mainNav: NavSection[] = [
     label: 'Developers',
     items: [
       { title: 'Callbacks', url: '/callbacks', icon: WebhookIcon },
+      { title: 'Webhook deliveries', url: '/webhooks/deliveries', icon: SendIcon, permission: 'webhook-deliveries:view' },
       { title: 'Events', url: '/events', icon: ZapIcon },
       { title: 'Audit log', url: '/audit-log', icon: FileClockIcon },
+    ],
+  },
+  {
+    label: 'Checkout',
+    items: [
+      { title: 'Pricing Plans', url: '/pricing-plans', icon: TagIcon, permission: 'pricing:view' },
+      { title: 'Pricing Tables', url: '/pricing-tables', icon: LayoutGridIcon, permission: 'pricing:view' },
     ],
   },
 ];
@@ -79,10 +91,22 @@ export const secondaryNav: NavItem[] = [
   { title: 'Settings', url: '/settings', icon: SettingsIcon },
   { title: 'API Keys', url: '/settings/api-keys', icon: KeyRoundIcon, permission: 'api-keys:manage' },
   {
+    title: 'Publishable Keys',
+    url: '/settings/publishable-keys',
+    icon: GlobeIcon,
+    permission: 'publishable-keys:manage',
+  },
+  {
     title: 'Gateway Connections',
     url: '/settings/gateway-connections',
     icon: PlugIcon,
     permission: 'gateway-connections:manage',
+  },
+  {
+    title: 'Webhook Endpoints',
+    url: '/settings/webhook-endpoints',
+    icon: SendIcon,
+    permission: 'webhook-endpoints:manage',
   },
   { title: 'Docs', url: '/docs', icon: BookOpenIcon },
 ];

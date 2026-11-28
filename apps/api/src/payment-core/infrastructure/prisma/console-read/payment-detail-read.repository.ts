@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../database/prisma.service.js';
-import { decimalToString } from '../mappers.js';
+import { decimalToString, toCheckoutOrigin } from '../mappers.js';
 import type { ReadScope } from '../../../domain/value-objects/organization-scope.js';
 import { scopeWhere } from '../scope.js';
 import { providerReportedAmount, uuidNeedle } from './read-helpers.js';
@@ -48,6 +48,7 @@ export class PrismaPaymentDetailReadRepository implements PaymentDetailReadRepos
       expiresAt: payment.expiresAt,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
+      checkoutOrigin: toCheckoutOrigin(payment),
       attempts: payment.transactions.map((t) => ({
         id: t.id,
         gatewayId: t.gatewayId,

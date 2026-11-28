@@ -41,6 +41,11 @@ const store = new MockStore(NOW);
 store.payments.push(
   payment({ id: 'pay-switch', upstreamReference: 'order-switch', amount: '1250000' }),
   payment({ id: 'pay-review', upstreamReference: 'order-review', status: 'PENDING' }),
+  payment({
+    id: 'pay-checkout',
+    upstreamReference: 'chk_0196f0c2',
+    checkoutOrigin: { pricingPlanId: 'plan-pro', pricingPlanName: 'Pro', customerReference: 'user-42', customerEmail: 'an@example.com' },
+  }),
 );
 store.attempts.push(
   attempt({ id: 'att-1', paymentId: 'pay-switch', gatewayId: 'stripe', status: 'FAILED', providerRef: 'pi_first', createdAt: ago(9 * MINUTE) }),
@@ -125,6 +130,23 @@ describe('Payment detail screen', () => {
     const events = screen.getByRole('region', { name: 'Payment Events' });
     expect(within(events).getByText('PaymentCreated')).toBeInTheDocument();
     expect(within(events).getByText('Unpublished')).toBeInTheDocument();
+  });
+
+  it('shows where a checkout Payment came from', async () => {
+    renderScreen('pay-checkout');
+    await screen.findByText('chk_0196f0c2');
+
+    const origin = screen.getByRole('group', { name: 'Embedded Checkout' });
+    expect(within(origin).getByText('Pro')).toBeInTheDocument();
+    expect(within(origin).getByRole('link', { name: 'Pro' })).toHaveAttribute('href', '/pricing-plans/plan-pro');
+    expect(within(origin).getByText('user-42')).toBeInTheDocument();
+    expect(within(origin).getByText('an@example.com')).toBeInTheDocument();
+  });
+
+  it('shows no checkout origin for a Payment created through the API', async () => {
+    renderScreen('pay-switch');
+    await screen.findByText('order-switch');
+    expect(screen.queryByRole('group', { name: 'Embedded Checkout' })).not.toBeInTheDocument();
   });
 
   it('offers no cancel action', async () => {

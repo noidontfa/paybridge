@@ -128,6 +128,8 @@ describe('cancelPayment', () => {
     ]);
     expect(events[1]?.payload).toMatchObject({
       paymentId: payment.id,
+      upstreamReference: payment.merchantOrderId,
+      expiresAt: payment.expiresAt.toISOString(),
       status: 'CANCELLED',
     });
     const trail = await repos.statusTransitions.listForEntity(

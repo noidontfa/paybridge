@@ -179,6 +179,8 @@ describe('a success with the Payment amount', () => {
     });
     expect(succeeded.payload).toMatchObject({
       paymentId: payment.id,
+      upstreamReference: payment.merchantOrderId,
+      expiresAt: payment.expiresAt.toISOString(),
       attemptId,
       gatewayId: 'fake',
       amount: '150000',
@@ -320,6 +322,10 @@ describe('a result that goes to review', () => {
       });
       expect(review.payload).toMatchObject({
         paymentId: payment.id,
+        upstreamReference: payment.merchantOrderId,
+        amount: '150000',
+        currency: 'VND',
+        expiresAt: payment.expiresAt.toISOString(),
         attemptId,
         reviewReason: reason,
         refundRequired: true,

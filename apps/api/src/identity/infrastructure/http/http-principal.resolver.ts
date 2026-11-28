@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { validate as isUuid } from 'uuid';
 import {
@@ -15,6 +17,13 @@ import { IdentityClock } from '../../domain/services/clock.js';
 import { PrincipalResolver } from '../../domain/services/principal-resolver.js';
 import { AuthenticateApiKey } from '../../application/use-cases/api-keys.js';
 import { InvalidApiKeyError } from '../../domain/entities/api-key.js';
+import { AuthenticatePublishableKey } from '../../application/use-cases/publishable-keys.js';
+import {
+  CheckoutOrganizationSuspendedError,
+  InvalidPublishableKeyError,
+  OriginNotAllowedError,
+} from '../../domain/entities/publishable-key.js';
+import { HOST_ORIGIN_HEADER, isCheckoutPath } from './checkout-endpoint.js';
 
 interface RequestLike {
   readonly path?: string;
@@ -47,8 +56,9 @@ function superAdminScope(
 /**
  * Who is calling. An operator route (`/internal/...`) needs the access token
  * of a User, verified with the public key only: a missing, malformed, forged
- * or expired token is refused. Every other route is the public payments API,
- * scoped by the API Key it carries.
+ * or expired token is refused. A checkout route (`/api/checkout/...`) needs a
+ * Publishable Key presented from one of its allowed origins (ADR 0009). Every
+ * other route is the public payments API, scoped by the API Key it carries.
  */
 @Injectable()
 export class HttpPrincipalResolver extends PrincipalResolver {
@@ -57,6 +67,8 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     @Inject(IdentityClock) private readonly clock: IdentityClock,
     @Inject(AuthenticateApiKey)
     private readonly apiKeys: AuthenticateApiKey,
+    @Inject(AuthenticatePublishableKey)
+    private readonly publishableKeys: AuthenticatePublishableKey,
   ) {
     super();
   }
@@ -64,6 +76,13 @@ export class HttpPrincipalResolver extends PrincipalResolver {
   async resolve(request: unknown): Promise<Principal> {
     const req = request as RequestLike;
     const path = req.path ?? req.url ?? '';
+    if (isCheckoutPath(path)) {
+      return this.resolveCheckout(
+        req.headers.authorization,
+        req.headers.origin,
+        req.headers[HOST_ORIGIN_HEADER],
+      );
+    }
     if (!path.startsWith(`/${INTERNAL_PREFIX}/`)) {
       return this.resolvePublic(path, req.headers.authorization);
     }
@@ -88,6 +107,60 @@ export class HttpPrincipalResolver extends PrincipalResolver {
     // Everyone else works in the Organization their token names; a header
     // naming another one is ignored.
     return { organizationId: claims.organizationId, user };
+  }
+
+  /**
+   * A Customer's browser: only a Publishable Key, and only from one of its
+   * allowed origins. An API Key is refused here like any unknown key.
+   */
+  private async resolveCheckout(
+    authorization: string | string[] | undefined,
+    origin: string | string[] | undefined,
+    hostOrigin: string | string[] | undefined,
+  ): Promise<Principal> {
+    const match =
+      typeof authorization === 'string'
+        ? /^Bearer (\S+)$/.exec(authorization)
+        : null;
+    try {
+      if (!match) throw new InvalidPublishableKeyError();
+      const caller = await this.publishableKeys.execute(
+        match[1]!,
+        typeof origin === 'string' ? origin : undefined,
+        typeof hostOrigin === 'string' ? hostOrigin : undefined,
+      );
+      return {
+        organizationId: caller.organizationId,
+        user: null,
+        checkout: {
+          publishableKeyId: caller.publishableKeyId,
+          allowedOrigins: caller.allowedOrigins,
+          origin: caller.origin,
+        },
+      };
+    } catch (error) {
+      if (error instanceof InvalidPublishableKeyError) {
+        throw new UnauthorizedException({
+          message: error.message,
+          code: 'INVALID_PUBLISHABLE_KEY',
+        });
+      }
+      if (error instanceof OriginNotAllowedError) {
+        throw new ForbiddenException({
+          message: error.message,
+          code: 'ORIGIN_NOT_ALLOWED',
+        });
+      }
+      if (error instanceof CheckoutOrganizationSuspendedError) {
+        // The checkout's generic "unavailable" answer (checkout module).
+        throw new UnprocessableEntityException({
+          message: error.message,
+          code: 'CHECKOUT_UNAVAILABLE',
+          details: { reason: 'ORGANIZATION_SUSPENDED' },
+        });
+      }
+      throw error;
+    }
   }
 
   /**

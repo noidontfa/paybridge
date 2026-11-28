@@ -9,7 +9,10 @@ import {
 import type { GatewayRegistration } from '../payment-core/port/index.js';
 import { registration } from '../payment-core/port/gateway-plugin-factory.js';
 import { GATEWAY_PLUGINS } from '../payment-core/port/gateway-plugins.token.js';
-import { fakeGatewayFactory } from './fake/fake-gateway.plugin.js';
+import {
+  fakeGatewayFactory,
+  fakeQrGatewayFactory,
+} from './fake/fake-gateway.plugin.js';
 import { stripeGatewayFactory } from './stripe/stripe-gateway.plugin.js';
 
 /**
@@ -28,7 +31,7 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
  * plugin is registered in every environment whenever its configuration is
  * present, with credentials read from env. The fake plugin is registered
  * outside production only, so tests and local development have a gateway to
- * talk to.
+ * talk to; its QR variant (`fake-qr`) in development only.
  */
 @Module({
   providers: [
@@ -41,10 +44,14 @@ export const STRIPE_HTTP_CLIENT = Symbol('STRIPE_HTTP_CLIENT');
         httpClient: Stripe.HttpClient | undefined,
       ): GatewayRegistration[] => {
         const registrations: GatewayRegistration[] = [];
-        if (
-          !isProduction({ NODE_ENV: config.get('NODE_ENV', { infer: true }) })
-        ) {
+        const nodeEnv = config.get('NODE_ENV', { infer: true });
+        if (!isProduction({ NODE_ENV: nodeEnv })) {
           registrations.push(registration(fakeGatewayFactory, undefined));
+        }
+        if (nodeEnv === 'development') {
+          // Pays by QR in the embedded checkout, locally and in its
+          // Playwright tests (ticket 09). Tests script the fake plugin.
+          registrations.push(registration(fakeQrGatewayFactory, undefined));
         }
         // Gateway Connections supply their own credentials; the test hook
         // replaces the HTTP layer for those instances too.

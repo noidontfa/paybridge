@@ -40,6 +40,8 @@ export type PaymentList = ListPage<PaymentListItem>;
 export interface PaymentListQuery extends ListQuery {
   status?: string;
   gatewayId?: string;
+  /** Checkout Payments of one Pricing Plan. */
+  pricingPlanId?: string;
   /** Payment id or Upstream Reference. */
   q?: string;
   /** `YYYY-MM-DD`, from the start of that day. */

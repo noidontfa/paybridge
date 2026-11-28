@@ -1,4 +1,5 @@
-import { Building2Icon, FileQuestionIcon, TriangleAlertIcon } from 'lucide-react';
+import { Building2Icon, FileQuestionIcon, InboxIcon, TriangleAlertIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { isApiError } from '@/services/errors';
 
@@ -35,6 +36,18 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry: () => vo
       <Button variant="outline" onClick={onRetry}>
         Retry
       </Button>
+    </div>
+  );
+}
+
+/** A list with no rows yet: the same dashed panel the data tables use. */
+export function EmptyListState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-10 text-center">
+      <InboxIcon className="size-8 text-muted-foreground" aria-hidden />
+      <h2 className="text-base font-medium">{title}</h2>
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {action}
     </div>
   );
 }

@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { CopyButton } from '@/components/shared/copy-button';
-import { ErrorState } from '@/components/shared/data-states';
+import type { ReactNode } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/shared/data-table/data-table';
+import { EmptyListState } from '@/components/shared/data-states';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { API_KEY_LABEL_MAX_LENGTH, type CreatedApiKey } from '@/features/api-keys/api';
+import { API_KEY_LABEL_MAX_LENGTH, type ApiKey, type CreatedApiKey } from '@/features/api-keys/api';
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/features/api-keys/hooks/queries';
 import { useCan } from '@/features/auth/hooks/use-operator';
 
@@ -73,50 +75,78 @@ export function ApiKeysScreen() {
         </div>
       )}
 
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading API Keys" className="h-24 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No API Keys yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="py-1">Label</th>
-              <th>Prefix</th>
-              <th>Created</th>
-              <th>Last used</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((key) => (
-              <tr key={key.id} className="border-t">
-                <td className="py-2">{key.label}</td>
-                <td className="font-mono">{key.prefix}…</td>
-                <td>{when(key.createdAt)}</td>
-                <td>{when(key.lastUsedAt)}</td>
-                <td>{key.revokedAt ? `Revoked ${when(key.revokedAt)}` : 'Active'}</td>
-                <td className="text-right">
-                  {!key.revokedAt && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={revoke.isPending}
-                      aria-label={`Revoke ${key.label}`}
-                      onClick={() => revoke.mutate(key.id)}
-                    >
-                      Revoke
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        label="API Keys"
+        columns={apiKeyColumns((key) =>
+          key.revokedAt ? null : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={revoke.isPending}
+              aria-label={`Revoke ${key.label}`}
+              onClick={() => revoke.mutate(key.id)}
+            >
+              Revoke
+            </Button>
+          ),
+        )}
+        rows={data?.items ?? []}
+        getRowId={(key) => key.id}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={<EmptyListState title="No API Keys yet." description="Create one above for your server to call the PayBridge API." />}
+      />
     </div>
   );
+}
+
+const column = createDataTableColumnHelper<ApiKey>();
+
+function apiKeyColumns(actions: (key: ApiKey) => ReactNode): DataTableColumns<ApiKey> {
+  return column.columns([
+    column.accessor('label', {
+      id: 'label',
+      header: 'Label',
+      cell: ({ row }) => <span className="font-medium">{row.original.label}</span>,
+    }),
+    column.display({
+      id: 'prefix',
+      header: 'Prefix',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.prefix}…</span>,
+    }),
+    column.display({
+      id: 'createdAt',
+      header: 'Created',
+      cell: ({ row }) => <span className="whitespace-nowrap">{when(row.original.createdAt)}</span>,
+    }),
+    column.display({
+      id: 'lastUsedAt',
+      header: 'Last used',
+      cell: ({ row }) =>
+        row.original.lastUsedAt ? (
+          <span className="whitespace-nowrap">{when(row.original.lastUsedAt)}</span>
+        ) : (
+          <span className="text-muted-foreground">Never</span>
+        ),
+    }),
+    column.display({
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) =>
+        row.original.revokedAt ? (
+          <Badge variant="outline" title={`Revoked ${when(row.original.revokedAt)}`}>
+            Revoked {when(row.original.revokedAt)}
+          </Badge>
+        ) : (
+          <Badge variant="secondary">Active</Badge>
+        ),
+    }),
+    column.display({
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      meta: { align: 'right' },
+      cell: ({ row }) => actions(row.original),
+    }),
+  ]);
 }

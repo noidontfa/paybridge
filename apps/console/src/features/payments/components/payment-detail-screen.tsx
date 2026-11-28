@@ -6,6 +6,7 @@ import { isApiError } from '@/services/errors';
 import { usePayment } from '@/features/payments/hooks/payments';
 import { PaymentEvents } from './payment-events';
 import { PaymentSummary } from './payment-summary';
+import { PaymentWebhooks } from './payment-webhooks';
 import { TransactionTimeline } from './transaction-timeline';
 
 /** The Payment detail page body: summary, PaymentTransaction timeline, Payment Events. */
@@ -30,6 +31,7 @@ export function PaymentDetailScreen({ id }: { id: string }) {
       <PaymentSummary payment={data} />
       <TransactionTimeline attempts={data.attempts} payment={data} />
       <PaymentEvents events={data.events} />
+      <PaymentWebhooks paymentId={data.id} />
     </div>
   );
 }

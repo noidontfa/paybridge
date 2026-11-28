@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { hashApiKey } from '../../src/identity/application/api-key-secret.js';
 import { runSeed, SeedRefusedError } from '../../seed/seed.js';
+import { DEVELOPMENT_CREDENTIAL_KEYS } from '../../src/config/env.schema.js';
+import { AesCredentialCipher } from '../../src/payment-core/infrastructure/crypto/credential-cipher.js';
 import { testDatabaseUrl } from '../setup/test-database.js';
 import { resetDatabase } from '../setup/reset-db.js';
 import { createTestPrismaClient } from '../setup/test-prisma.js';
@@ -76,11 +78,13 @@ function distinct<T>(values: T[]): T[] {
 describe('seed contents', () => {
   beforeEach(() => seed());
 
-  it('creates 25 Payments (22 in the default Organization, 3 in a second one), all with the SEED- Upstream Reference prefix', async () => {
+  it('creates 25 API Payments (22 in the default Organization, 3 in a second one) and 3 checkout Payments, all with the SEED- Upstream Reference prefix', async () => {
     const payments = await prisma.payment.findMany();
-    expect(payments.length).toBe(25);
+    const api = payments.filter((p) => p.pricingPlanId === null);
+    expect(api.length).toBe(25);
+    expect(payments.length).toBe(28);
     expect(
-      payments.filter((p) => p.organizationId === DEFAULT_ORGANIZATION_ID),
+      api.filter((p) => p.organizationId === DEFAULT_ORGANIZATION_ID),
     ).toHaveLength(22);
     expect(payments.every((p) => p.merchantOrderId.startsWith('SEED-'))).toBe(
       true,
@@ -222,9 +226,12 @@ describe('seed contents', () => {
     ).toBe(true);
   });
 
-  it('has six Payment Events of all five types, at least one unpublished', async () => {
+  it('has six Payment Events of all five types for API Payments, at least one unpublished', async () => {
     const events = await prisma.outboxEvent.findMany({
-      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+      where: {
+        organizationId: DEFAULT_ORGANIZATION_ID,
+        payment: { pricingPlanId: null },
+      },
     });
     expect(events).toHaveLength(6);
     expect(distinct(events.map((e) => e.eventType))).toEqual([
@@ -296,6 +303,13 @@ describe('seed organizations', () => {
     expect(await prisma.gatewayConnection.count()).toBe(connections.length);
   });
 
+  it('lets the default Organization take QR payments with the fake gateway', async () => {
+    const qr = await prisma.gatewayConnection.findFirst({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID, gatewayId: 'fake-qr' },
+    });
+    expect(qr?.enabled).toBe(true);
+  });
+
   it('keeps every row of a Payment in the Payment own Organization', async () => {
     const payments = await prisma.payment.findMany({
       include: { transactions: true, outboxEvents: true },
@@ -356,6 +370,163 @@ describe('seed API Keys', () => {
       expect(row.keyHash).toBe(hashApiKey(issued.key));
       expect(issued.key.startsWith(row.prefix)).toBe(true);
     }
+  });
+});
+
+describe('seed Pricing Plans', () => {
+  it('creates Pricing Plans in two Organizations, one archived, kept across re-runs', async () => {
+    const first = await seed();
+    await seed();
+
+    const plans = await prisma.pricingPlan.findMany();
+    expect(plans).toHaveLength(first.pricingPlans);
+    expect(new Set(plans.map((p) => p.organizationId)).size).toBe(2);
+    expect(plans.filter((p) => p.status === 'ARCHIVED')).toHaveLength(1);
+    expect(plans.some((p) => p.allowedGatewayIds.length === 0)).toBe(true);
+  });
+});
+
+describe('seed Pricing Tables', () => {
+  it('creates a Pricing Table with three Pricing Plans, one recommended, kept across re-runs', async () => {
+    const first = await seed();
+    await seed();
+
+    expect(first.pricingTables).toHaveLength(1);
+    const table = await prisma.pricingTable.findUniqueOrThrow({
+      where: { id: first.pricingTables[0]!.id },
+      include: { plans: { orderBy: { position: 'asc' } } },
+    });
+    expect(table.plans).toHaveLength(3);
+    expect(table.plans.filter((p) => p.recommended)).toHaveLength(1);
+    const plans = await prisma.pricingPlan.findMany({
+      where: { id: { in: table.plans.map((p) => p.pricingPlanId) } },
+    });
+    expect(plans.every((p) => p.organizationId === table.organizationId)).toBe(
+      true,
+    );
+  });
+});
+
+describe('seed Webhook Endpoint', () => {
+  it('points a Webhook Endpoint of the default Organization at a local receiver, kept across re-runs', async () => {
+    const first = await runSeed({
+      databaseUrl: DATABASE_URL,
+      nodeEnv: 'test',
+      now: NOW,
+    });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    const endpoints = await prisma.webhookEndpoint.findMany({
+      where: { organizationId: DEFAULT_ORGANIZATION_ID },
+    });
+    expect(endpoints).toHaveLength(1);
+    const [endpoint] = endpoints;
+    expect(endpoint).toMatchObject({
+      url: 'http://localhost:9998/webhooks',
+      status: 'ENABLED',
+      deletedAt: null,
+    });
+    expect([...endpoint!.eventKinds].sort()).toEqual([
+      'payment.cancelled',
+      'payment.created',
+      'payment.expired',
+      'payment.requires_review',
+      'payment.succeeded',
+    ]);
+    const cipher = AesCredentialCipher.fromConfig(DEVELOPMENT_CREDENTIAL_KEYS);
+    expect(
+      cipher.decrypt({
+        ciphertext: endpoint!.secretCiphertext,
+        keyId: endpoint!.secretKeyId,
+      }),
+    ).toBe(first.webhookEndpoint.secret);
+    expect(
+      first.webhookEndpoint.secret.startsWith(endpoint!.secretPrefix),
+    ).toBe(true);
+  });
+});
+
+describe('seed checkout activity', () => {
+  it('creates checkout Payments with their Pricing Plan, Customer Reference, email and session, kept across re-runs', async () => {
+    await seed();
+    await seed();
+
+    const payments = await prisma.payment.findMany({
+      where: { pricingPlanId: { not: null } },
+      orderBy: { merchantOrderId: 'asc' },
+    });
+    expect(
+      payments.map((p) => [
+        p.merchantOrderId,
+        p.status,
+        p.pricingPlanName,
+        p.customerRef,
+        p.customerEmail,
+      ]),
+    ).toEqual([
+      ['SEED-CHK-1', 'SUCCEEDED', 'Pro', 'cus_1001', 'linh.nguyen@example.com'],
+      ['SEED-CHK-2', 'PENDING', 'Basic', 'cus_1002', null],
+      ['SEED-CHK-3', 'EXPIRED', 'Basic', null, 'an.tran@example.com'],
+    ]);
+    const plans = await prisma.pricingPlan.findMany({
+      where: { id: { in: payments.map((p) => p.pricingPlanId!) } },
+    });
+    expect(plans.map((p) => p.name).sort()).toEqual(['Basic', 'Pro']);
+    const sessions = await prisma.checkoutSession.findMany();
+    expect(sessions.map((s) => s.paymentId).sort()).toEqual(
+      payments.map((p) => p.id).sort(),
+    );
+  });
+
+  it('creates Webhook deliveries that succeeded, still retry and failed, kept across re-runs', async () => {
+    await seed();
+    await seed();
+
+    const deliveries = await prisma.webhookDelivery.findMany({
+      include: { attemptRows: true },
+    });
+    expect(distinct(deliveries.map((d) => d.status))).toEqual([
+      'FAILED',
+      'PENDING',
+      'SUCCEEDED',
+    ]);
+    for (const d of deliveries) {
+      expect(d.attemptRows.length).toBeGreaterThan(0);
+      expect(d.paymentId).not.toBeNull();
+      expect(
+        d.attemptRows.filter((a) => a.triggeredByUserId === null),
+      ).toHaveLength(d.attempts);
+    }
+    const failed = deliveries.find((d) => d.status === 'FAILED')!;
+    expect(failed.attempts).toBe(12);
+    expect(
+      deliveries.some((d) => d.attemptRows.some((a) => a.triggeredByName)),
+    ).toBe(true);
+    const events = await prisma.outboxEvent.findMany({
+      where: { id: { in: deliveries.map((d) => d.eventId) } },
+    });
+    expect(events).toHaveLength(deliveries.length);
+  });
+});
+
+describe('seed Publishable Keys', () => {
+  it('creates a key for the default Organization allowing a local origin, kept across re-runs', async () => {
+    const first = await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+    await runSeed({ databaseUrl: DATABASE_URL, nodeEnv: 'test', now: NOW });
+
+    expect(first.publishableKeys.length).toBeGreaterThanOrEqual(1);
+    for (const issued of first.publishableKeys) {
+      const row = await prisma.publishableKey.findUniqueOrThrow({
+        where: { key: issued.key },
+      });
+      expect(issued.key).toMatch(/^pb_pk_seed_/);
+      expect(row.revokedAt).toBeNull();
+      expect(row.allowedOrigins).toEqual(issued.allowedOrigins);
+    }
+    const primary = first.publishableKeys.find(
+      (k) => k.organization === 'primary',
+    )!;
+    expect(primary.allowedOrigins).toContain('http://localhost:5173');
   });
 });
 
@@ -456,18 +627,19 @@ describe('seed command line', () => {
   it('seeds the database and honours --bulk', async () => {
     const result = run(['--bulk', '3'], { NODE_ENV: 'test' });
     expect(result.status).toBe(0);
-    expect(await prisma.payment.count()).toBe(28);
+    expect(await prisma.payment.count()).toBe(28 + 3); // + checkout Payments
   });
 });
 
 describe('seed bulk flag', () => {
   it('adds no bulk Payments by default and N more with the flag, replaced on re-run', async () => {
+    // 25 API Payments and 3 checkout Payments without the flag.
     await seed();
-    expect(await prisma.payment.count()).toBe(25);
+    expect(await prisma.payment.count()).toBe(28);
     await seed({ bulk: 150 });
-    expect(await prisma.payment.count()).toBe(175);
+    expect(await prisma.payment.count()).toBe(178);
     await seed();
-    expect(await prisma.payment.count()).toBe(25);
+    expect(await prisma.payment.count()).toBe(28);
   });
 
   it('keeps bulk Payments within 30 days', async () => {

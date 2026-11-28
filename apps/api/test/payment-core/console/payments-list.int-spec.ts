@@ -106,7 +106,7 @@ describe('seeded data', () => {
       now: new Date(),
     });
     const page = await list('?limit=100');
-    expect(page.items).toHaveLength(22);
+    expect(page.items).toHaveLength(22 + 3); // API and checkout Payments
     expect(page.nextCursor).toBeNull();
     expect(new Set(page.items.map((p) => p.status))).toEqual(
       new Set(PAYMENT_STATUSES),

@@ -25,6 +25,62 @@
           }
         ]
       }
+    },
+    {
+      "files": ["src/checkout/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/payment-core/**", "!**/payment-core/port/*"],
+                "message": "The checkout module may import Payment Core only through its public surface, src/payment-core/port/. Add a port file for what you need."
+              },
+              {
+                "group": ["**/identity/**", "!**/identity/port", "!**/identity/port/index.js"],
+                "message": "The checkout module may import identity only through its public surface, src/identity/port/index.ts."
+              },
+              {
+                "group": ["**/gateways", "**/gateways/**"],
+                "message": "The checkout module must not import Gateway Plugin code."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/webhooks/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/payment-core/**",
+                  "!**/payment-core/port",
+                  "!**/payment-core/port/**"
+                ],
+                "message": "The webhooks module may import Payment Core only through its public ports, src/payment-core/port/. Export what you need from there."
+              },
+              {
+                "group": [
+                  "**/identity/**",
+                  "!**/identity/port",
+                  "!**/identity/port/index.js"
+                ],
+                "message": "The webhooks module may import identity only through its public surface, src/identity/port/index.ts."
+              },
+              {
+                "group": ["**/gateways", "**/gateways/**"],
+                "message": "The webhooks module must not import Gateway Plugin code."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "env": {

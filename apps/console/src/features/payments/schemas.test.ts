@@ -10,6 +10,7 @@ const sample = {
   expiresAt: '2026-11-25T04:00:00.000Z',
   createdAt: '2026-11-25T03:00:00.000Z',
   updatedAt: '2026-11-25T03:05:00.000Z',
+  checkoutOrigin: { pricingPlanId: 'plan-pro', pricingPlanName: 'Pro', customerReference: 'user-42', customerEmail: null },
   attempts: [
     {
       id: 'a1b2c3d4-0000-4000-8000-000000000001',

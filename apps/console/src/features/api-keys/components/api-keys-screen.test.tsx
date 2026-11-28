@@ -2,12 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { OperatorProvider } from '@/features/auth/components/operator-provider';
 import type { Operator } from '@/features/auth/utils/operator';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
 import { ApiKeysScreen } from './api-keys-screen';
+
+vi.mock('next/navigation', async () => await import('@/test/fake-navigation'));
 
 const store = new MockStore(new Date('2026-11-25T03:00:00.000Z'));
 const server = setupServer(...createHandlers({ baseUrl: '*/api/bff', store }));

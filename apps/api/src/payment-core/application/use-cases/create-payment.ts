@@ -10,7 +10,11 @@ import {
 } from '../../domain/errors.js';
 import { newId } from '../../domain/ids.js';
 import type { OrganizationScope } from '../../domain/value-objects/organization-scope.js';
-import type { Payment } from '../../domain/entities/payment.js';
+import {
+  checkoutOriginPayload,
+  type CheckoutOrigin,
+  type Payment,
+} from '../../domain/entities/payment.js';
 import { resolvePaymentExpiry } from '../../domain/payment-expiry.js';
 import type { IdempotencyRecord } from '../../domain/records.js';
 import { INITIAL_PAYMENT_STATUS } from '../../domain/rules/payment-transitions.js';
@@ -29,6 +33,17 @@ export interface CreatePaymentInput {
   readonly upstreamReference: string;
   /** Payment Expiry. Default 30 minutes after creation. */
   readonly expiresAt?: Date;
+  /**
+   * Payment Expiry as a duration after creation, measured on Core's clock
+   * (the Embedded Checkout's Pricing Plans). Used instead of `expiresAt`, so
+   * a duration at the bound is never refused for time spent elsewhere.
+   */
+  readonly expiresAfterMs?: number;
+  /**
+   * Set only by the Embedded Checkout (through `CheckoutPayments`): stored on
+   * the Payment and copied into its Payment Events.
+   */
+  readonly checkoutOrigin?: CheckoutOrigin;
 }
 
 export interface CreatePaymentOptions {
@@ -102,7 +117,12 @@ export class CreatePayment {
       );
     }
     const now = this.clock.now();
-    const expiresAt = resolvePaymentExpiry(input.expiresAt, now);
+    const expiresAt = resolvePaymentExpiry(
+      input.expiresAfterMs === undefined
+        ? input.expiresAt
+        : new Date(now.getTime() + input.expiresAfterMs),
+      now,
+    );
     const key = options.idempotencyKey;
     const requestHash = hashRequest(input);
 
@@ -125,6 +145,7 @@ export class CreatePayment {
           currency: amount.currency,
           status: INITIAL_PAYMENT_STATUS,
           expiresAt,
+          ...(input.checkoutOrigin && { checkoutOrigin: input.checkoutOrigin }),
         });
         await repos.statusTransitions.record(scope, {
           entityType: 'PAYMENT',
@@ -144,6 +165,7 @@ export class CreatePayment {
             currency: payment.currency,
             status: payment.status,
             expiresAt: payment.expiresAt.toISOString(),
+            ...checkoutOriginPayload(payment),
           },
         });
         const snapshot = toSnapshot(payment);
@@ -244,6 +266,9 @@ export function hashRequest(input: CreatePaymentInput): string {
     input.currency,
     input.upstreamReference,
     input.expiresAt?.toISOString() ?? null,
+    // Only checkout Payments have these; API requests hash as they always did.
+    ...(input.checkoutOrigin ? [input.checkoutOrigin] : []),
+    ...(input.expiresAfterMs !== undefined ? [input.expiresAfterMs] : []),
   ]);
   return createHash('sha256').update(canonical).digest('hex');
 }

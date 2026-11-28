@@ -1,3 +1,4 @@
+import type { CheckoutOrigin } from '../../entities/payment.js';
 import type { ReadScope } from '../../value-objects/organization-scope.js';
 import type { StatusTransitionEntityType } from '../../records.js';
 import type {
@@ -52,6 +53,8 @@ export interface PaymentDetailRow {
   readonly expiresAt: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  /** Null unless the Embedded Checkout created the Payment. */
+  readonly checkoutOrigin: CheckoutOrigin | null;
   readonly attempts: AttemptDetailRow[];
   readonly events: PaymentEventRow[];
 }

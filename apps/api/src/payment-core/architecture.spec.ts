@@ -2,14 +2,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 // Build-time checks of the module boundaries (run by `pnpm test`), for Payment
-// Core and for the identity module, which is laid out the same way
+// Core and for the identity and checkout modules, which are laid out the same way
 // (domain/{entities,repositories,services}, application/, infrastructure/):
 // 1. The transaction runner is the only code that opens a database transaction.
 // 2. Outside `infrastructure/prisma`, a module never imports the database
 //    client, so repositories are the only place that sees Prisma types.
 
 const SRC = join(import.meta.dirname, '..');
-const MODULES = ['payment-core', 'identity'] as const;
+const MODULES = ['payment-core', 'identity', 'checkout', 'webhooks'] as const;
 const RUNNERS: readonly string[] = MODULES.map(
   (module) => `${module}/infrastructure/prisma/transaction-runner.ts`,
 );
@@ -112,6 +112,17 @@ describe('transaction boundary', () => {
       ]),
     ).toEqual(['identity/application/use-cases/x.ts']);
   });
+
+  it('flags a transaction opened outside the checkout runner', () => {
+    expect(
+      transactionOpeners([
+        {
+          path: 'checkout/application/use-cases/x.ts',
+          text: 'await prisma.$transaction(async (tx) => {})',
+        },
+      ]),
+    ).toEqual(['checkout/application/use-cases/x.ts']);
+  });
 });
 
 describe('application hands work to the queue through the port', () => {
@@ -211,6 +222,25 @@ export function layerViolations(
     })
     .map((f) => f.path);
 }
+
+describe('checkout follows the same rules', () => {
+  it('flags checkout code that imports Prisma or breaks the layers', () => {
+    const sources = [
+      {
+        path: 'checkout/application/use-cases/x.ts',
+        text: "import { PrismaService } from '../../../database/prisma.service.js';",
+      },
+      {
+        path: 'checkout/domain/entities/y.ts',
+        text: "import { z } from '../../infrastructure/http/z.js';",
+      },
+    ];
+    expect(databaseClientImporters(sources)).toEqual([
+      'checkout/application/use-cases/x.ts',
+    ]);
+    expect(layerViolations(sources)).toEqual(['checkout/domain/entities/y.ts']);
+  });
+});
 
 describe('layers depend inward', () => {
   it('domain and application import nothing from infrastructure, and domain nothing from application', () => {

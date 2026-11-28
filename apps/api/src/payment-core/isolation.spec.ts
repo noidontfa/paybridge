@@ -67,7 +67,22 @@ export function unscopedRepositoryMembers(
   return offenders;
 }
 
-const files = repositoryFiles(join(SRC, 'payment-core')).map((path) => ({
+/** Modules whose repositories hold Organization data, scope first. */
+const SCANNED_MODULES = ['payment-core', 'checkout', 'webhooks'] as const;
+/**
+ * Identity's repositories that hold Organization data and take a scope.
+ * (Its User, Organization and session repositories predate ADR 0006's scope
+ * and are keyed by the principal; they are not scanned yet.)
+ */
+const SCANNED_FILES = [
+  'identity/domain/repositories/publishable-key.repository.ts',
+  'identity/infrastructure/prisma/publishable-key.repository.ts',
+] as const;
+
+const files = [
+  ...SCANNED_MODULES.flatMap((module) => repositoryFiles(join(SRC, module))),
+  ...SCANNED_FILES.map((file) => join(SRC, file)),
+].map((path) => ({
   path: relative(SRC, path).split(sep).join('/'),
   text: readFileSync(path, 'utf8'),
 }));
@@ -78,6 +93,21 @@ describe('Organization isolation (static)', () => {
     expect(paths).toContain(`${PRISMA_ADAPTER}payment.repository.ts`);
     expect(paths).toContain(
       `${PRISMA_ADAPTER}console-read/payments-read.repository.ts`,
+    );
+    expect(paths).toContain(
+      'checkout/infrastructure/prisma/pricing-plan.repository.ts',
+    );
+    expect(paths).toContain(
+      'checkout/domain/repositories/pricing-plan.repository.ts',
+    );
+    expect(paths).toContain(
+      'webhooks/infrastructure/prisma/webhook-endpoint.repository.ts',
+    );
+    expect(paths).toContain(
+      'webhooks/domain/repositories/webhook-delivery.repository.ts',
+    );
+    expect(paths).toContain(
+      'identity/infrastructure/prisma/publishable-key.repository.ts',
     );
   });
 

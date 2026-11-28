@@ -13,6 +13,7 @@ import { AesCredentialCipher } from './infrastructure/crypto/credential-cipher.j
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConsoleReadModule } from './console-read.module.js';
 import { BestEffortCancel } from './application/best-effort-cancel.js';
+import { CheckoutPayments } from './application/checkout-payments.js';
 import { PaymentService } from './application/payment.service.js';
 import { CancelPayment } from './application/use-cases/cancel-payment.js';
 import { CreatePayment } from './application/use-cases/create-payment.js';
@@ -100,6 +101,7 @@ import {
     AttemptStatusQueryProcessor,
     BestEffortCancel,
     CancelPayment,
+    CheckoutPayments,
     ConnectionPlugins,
     CreatePayment,
     ExpirePayment,
@@ -133,6 +135,7 @@ import {
     WebhookIntake,
   ],
   exports: [
+    CheckoutPayments,
     Clock,
     CredentialCipher,
     PaymentService,

@@ -7,7 +7,9 @@ import { DataTable } from '@/components/shared/data-table/data-table';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_STATUSES } from '@/features/payments/schemas';
 import { statusBadge } from '@/components/shared/status-badges';
+import { useCan } from '@/features/auth/hooks/use-operator';
 import { useGatewayOptions } from '@/features/gateways/hooks/queries';
+import { usePricingPlanOptions } from '@/features/pricing-plans/hooks/queries';
 import { PAYMENT_LIST_URL_CONFIG, usePaymentList } from '@/features/payments/hooks/payments-list';
 import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { paymentColumns, paymentHref } from './payments-columns';
@@ -18,6 +20,8 @@ export function PaymentsScreen() {
   const { state, change, clear } = useTableUrlState(PAYMENT_LIST_URL_CONFIG);
   const list = usePaymentList(state);
   const gatewayOptions = useGatewayOptions();
+  const canViewPricing = useCan('pricing:view');
+  const pricingPlanOptions = usePricingPlanOptions(canViewPricing);
   const filtered = state.q !== '' || Object.keys(state.filters).length > 0;
   const hasRows = list.rows.length > 0;
 
@@ -44,13 +48,22 @@ export function PaymentsScreen() {
           options={gatewayOptions}
           onChange={(gatewayId) => change({ filters: { gatewayId } })}
         />
+        {canViewPricing && (
+          <FilterSelect
+            label="Pricing Plan"
+            allLabel="All Pricing Plans"
+            value={state.filters.pricingPlanId ?? ''}
+            options={pricingPlanOptions}
+            onChange={(pricingPlanId) => change({ filters: { pricingPlanId } })}
+          />
+        )}
         <DateFilter label="Created from" value={state.filters.createdFrom ?? ''} onChange={(createdFrom) => change({ filters: { createdFrom } })} />
         <DateFilter label="Created to" value={state.filters.createdTo ?? ''} onChange={(createdTo) => change({ filters: { createdTo } })} />
         {/* With no rows the empty state offers the same action. */}
         {filtered && (hasRows || list.isPending) && <ClearFiltersButton onClick={clear} />}
       </DataTableToolbar>
     ),
-    [state, change, clear, filtered, hasRows, list.isPending, gatewayOptions],
+    [state, change, clear, filtered, hasRows, list.isPending, gatewayOptions, canViewPricing, pricingPlanOptions],
   );
 
   return (

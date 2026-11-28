@@ -50,6 +50,17 @@ describe('FakeGatewayPlugin', () => {
     expect(fake.calls.initiate).toEqual([initiateInput]);
   });
 
+  it('initiates with a QR code carrying the attempt key when told to', async () => {
+    const qr = new FakeGatewayPlugin({ gatewayId: 'fake-qr', nextAction: 'QR_CODE' });
+
+    const result = await qr.initiate(initiateInput);
+
+    expect(result.nextAction).toEqual({
+      type: 'QR_CODE',
+      payload: `fake-qr://pay/${attemptKey}`,
+    });
+  });
+
   it('returns scripted results in order, then falls back to the default', async () => {
     fake.scriptInitiate(
       {
