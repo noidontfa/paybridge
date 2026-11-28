@@ -3,7 +3,7 @@
  * the editor's error path can be exercised. The mock has one Organization.
  */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { PRICING_PLAN_LIMITS, type PricingPlan, type PricingPlanInput } from '@/lib/api/pricing-plans';
+import { PRICING_PLAN_LIMITS, type PricingPlan, type PricingPlanInput } from '@/features/pricing-plans/api';
 import { pricingTablesOf } from './pricing-tables';
 import type { MockStore } from './store';
 

@@ -8,7 +8,7 @@ import {
   sendTestWebhook,
   type WebhookDeliveryListItem,
   type WebhookDeliveryListQuery,
-} from '@/lib/api/webhook-deliveries';
+} from '@/features/webhooks/api/webhook-deliveries';
 import type { TableUrlConfig, TableUrlState } from '@/components/shared/data-table/url-state/table-url-state';
 import { webhookEndpointKeys } from './webhook-endpoints';
 

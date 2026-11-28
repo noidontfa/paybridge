@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { CopyButton } from '@/components/shared/copy-button';
 import { ErrorState } from '@/components/shared/data-states';
 import { Skeleton } from '@/components/ui/skeleton';
-import { buildSnippet, SNIPPET_OPTIONAL_ATTRIBUTES } from '@/lib/checkout-snippet';
+import { buildSnippet, SNIPPET_OPTIONAL_ATTRIBUTES } from '@/features/pricing-tables/utils/checkout-snippet';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { usePublishableKeys } from '@/lib/queries/publishable-keys';
+import { usePublishableKeys } from '@/features/publishable-keys/hooks/queries';
 
 export const PUBLISHABLE_KEYS_MANAGE = 'publishable-keys:manage';
 

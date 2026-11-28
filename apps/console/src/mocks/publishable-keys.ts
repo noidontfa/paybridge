@@ -1,6 +1,6 @@
 /** The mocked Publishable Keys endpoints, with a simplified origin check. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import type { PublishableKey } from '@/lib/api/publishable-keys';
+import type { PublishableKey } from '@/features/publishable-keys/api';
 import type { MockStore } from './store';
 
 type ErrorInit = { status: number; error: string; code: string; message: string };

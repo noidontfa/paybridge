@@ -6,7 +6,7 @@ import {
   listPublishableKeys,
   revokePublishableKey,
   setPublishableKeyOrigins,
-} from '@/lib/api/publishable-keys';
+} from '@/features/publishable-keys/api';
 
 export const publishableKeyKeys = {
   all: ['publishable-keys'] as const,

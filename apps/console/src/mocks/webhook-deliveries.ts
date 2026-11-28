@@ -13,8 +13,8 @@ import {
   type WebhookDeliveryAttempt,
   type WebhookDeliveryDetail,
   type WebhookDeliveryListItem,
-} from '@/lib/api/webhook-deliveries';
-import type { WebhookEndpoint } from '@/lib/api/webhook-endpoints';
+} from '@/features/webhooks/api/webhook-deliveries';
+import type { WebhookEndpoint } from '@/features/webhooks/api/webhook-endpoints';
 import { BadQueryError, pageOf, readListWindow } from './payments-list';
 import type { MockStore } from './store';
 

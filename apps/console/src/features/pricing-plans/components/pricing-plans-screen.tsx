@@ -5,10 +5,10 @@ import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@
 import { EmptyListState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
-import type { PricingPlan } from '@/lib/api/pricing-plans';
+import type { PricingPlan } from '@/features/pricing-plans/api';
 import { formatMoney } from '@/utils/format';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { usePricingPlans } from '@/lib/queries/pricing-plans';
+import { usePricingPlans } from '@/features/pricing-plans/hooks/queries';
 
 export const PRICING_MANAGE = 'pricing:manage';
 

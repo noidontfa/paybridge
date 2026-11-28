@@ -9,7 +9,7 @@ import { PAYMENT_STATUSES } from '@/features/payments/schemas';
 import { statusBadge } from '@/components/shared/status-badges';
 import { useCan } from '@/features/auth/hooks/use-operator';
 import { useGatewayOptions } from '@/features/gateways/hooks/queries';
-import { usePricingPlanOptions } from '@/lib/queries/pricing-plans';
+import { usePricingPlanOptions } from '@/features/pricing-plans/hooks/queries';
 import { PAYMENT_LIST_URL_CONFIG, usePaymentList } from '@/features/payments/hooks/payments-list';
 import { useTableUrlState } from '@/components/shared/data-table/url-state/use-table-url-state';
 import { paymentColumns, paymentHref } from './payments-columns';

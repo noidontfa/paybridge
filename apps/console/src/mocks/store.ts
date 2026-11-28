@@ -91,13 +91,13 @@ export class MockStore {
   readonly apiKeys: import('@/features/api-keys/api').ApiKey[] = [];
 
   /** The Organization's Pricing Plans. */
-  readonly pricingPlans: import('@/lib/api/pricing-plans').PricingPlan[] = [];
+  readonly pricingPlans: import('@/features/pricing-plans/api').PricingPlan[] = [];
 
   /** The Organization's Pricing Tables. */
-  readonly pricingTables: import('@/lib/api/pricing-tables').PricingTable[] = [];
+  readonly pricingTables: import('@/features/pricing-tables/api').PricingTable[] = [];
 
   /** The Organization's Publishable Keys. */
-  readonly publishableKeys: import('@/lib/api/publishable-keys').PublishableKey[] = [];
+  readonly publishableKeys: import('@/features/publishable-keys/api').PublishableKey[] = [];
 
   /** Pending Invitations, for the Invitations page. */
   readonly invitations: import('@/features/users/api/invitations').InvitationItem[] = [];
@@ -106,10 +106,10 @@ export class MockStore {
   readonly gatewayConnections: import('@/features/gateway-connections/api').GatewayConnection[] = [];
 
   /** The Organization's Webhook Endpoints. */
-  readonly webhookEndpoints: import('@/lib/api/webhook-endpoints').WebhookEndpoint[] = [];
+  readonly webhookEndpoints: import('@/features/webhooks/api/webhook-endpoints').WebhookEndpoint[] = [];
 
   /** Deliveries to the Organization's Webhook Endpoints, each with its attempts. */
-  readonly webhookDeliveries: import('@/lib/api/webhook-deliveries').WebhookDeliveryDetail[] = [];
+  readonly webhookDeliveries: import('@/features/webhooks/api/webhook-deliveries').WebhookDeliveryDetail[] = [];
 
   /** The Organization's Users, for the Users page. */
   readonly users: MockUser[] = [

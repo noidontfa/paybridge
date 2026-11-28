@@ -13,7 +13,7 @@ import {
   type PricingPlanDetail,
   type PricingPlanFeature,
   type PricingPlanInput,
-} from '@/lib/api/pricing-plans';
+} from '@/features/pricing-plans/api';
 import { useCan } from '@/features/auth/hooks/use-operator';
 import { useGatewayOptions } from '@/features/gateways/hooks/queries';
 import {
@@ -23,7 +23,7 @@ import {
   usePricingPlan,
   useRestorePricingPlan,
   useUpdatePricingPlan,
-} from '@/lib/queries/pricing-plans';
+} from '@/features/pricing-plans/hooks/queries';
 import { editorLabel, PRICING_MANAGE } from './pricing-plans-screen';
 
 const textareaClass =

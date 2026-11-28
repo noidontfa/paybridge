@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createDataTableColumnHelper, type DataTableColumns } from '@/components/shared/data-table/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { TimeText } from '@/components/shared/time-text';
-import type { WebhookDeliveryListItem } from '@/lib/api/webhook-deliveries';
+import type { WebhookDeliveryListItem } from '@/features/webhooks/api/webhook-deliveries';
 
 const column = createDataTableColumnHelper<WebhookDeliveryListItem>();
 

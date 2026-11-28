@@ -16,9 +16,9 @@ import {
   type WebhookEndpoint,
   type WebhookEndpointInput,
   type WebhookEventKind,
-} from '@/lib/api/webhook-endpoints';
+} from '@/features/webhooks/api/webhook-endpoints';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { useSendTestWebhook } from '@/lib/queries/webhook-deliveries';
+import { useSendTestWebhook } from '@/features/webhooks/hooks/webhook-deliveries';
 import {
   useCreateWebhookEndpoint,
   useDeleteWebhookEndpoint,
@@ -26,7 +26,7 @@ import {
   useSetWebhookEndpointEnabled,
   useUpdateWebhookEndpoint,
   useWebhookEndpoints,
-} from '@/lib/queries/webhook-endpoints';
+} from '@/features/webhooks/hooks/webhook-endpoints';
 
 const when = (iso: string) => new Date(iso).toLocaleString();
 

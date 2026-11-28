@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header';
-import { PublishableKeysScreen } from '@/components/publishable-keys/publishable-keys-screen';
+import { PublishableKeysScreen } from '@/features/publishable-keys/components/publishable-keys-screen';
 
 export const metadata = { title: 'Publishable Keys' };
 

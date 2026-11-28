@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/pricing-plans.ts (client functions and form limits left out). Keep in sync: ADR 0004.
+// COPIED BY HAND from apps/console/src/features/pricing-plans/api.ts (client functions and form limits left out). Keep in sync: ADR 0004.
 // Do not edit this copy; change the Console file and copy again.
 /**
  * `/internal/pricing-plans`: what the Organization sells.

@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
-import { WebhookDeliveriesScreen } from '@/components/webhook-deliveries/webhook-deliveries-screen';
+import { WebhookDeliveriesScreen } from '@/features/webhooks/components/webhook-deliveries-screen';
 
 export const metadata = { title: 'Webhook deliveries' };
 

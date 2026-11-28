@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useCallback, useMemo } from 'react';
 import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/shared/data-table/data-table';
 import { EmptyListState } from '@/components/shared/data-states';
-import { PRICING_MANAGE } from '@/components/pricing-plans/pricing-plans-screen';
+import { PRICING_MANAGE } from '@/features/pricing-plans/components/pricing-plans-screen';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
-import type { PricingTable } from '@/lib/api/pricing-tables';
+import type { PricingTable } from '@/features/pricing-tables/api';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { usePricingPlans } from '@/lib/queries/pricing-plans';
-import { usePricingTables } from '@/lib/queries/pricing-tables';
+import { usePricingPlans } from '@/features/pricing-plans/hooks/queries';
+import { usePricingTables } from '@/features/pricing-tables/hooks/queries';
 
 export const LANGUAGE_NAMES = { vi: 'Tiếng Việt', en: 'English' } as const;
 export const THEME_NAMES = { light: 'Light', dark: 'Dark' } as const;

@@ -8,8 +8,8 @@ import {
   listPricingTables,
   updatePricingTable,
   type PricingTableInput,
-} from '@/lib/api/pricing-tables';
-import { pricingPlanKeys } from './pricing-plans';
+} from '@/features/pricing-tables/api';
+import { pricingPlanKeys } from '@/features/pricing-plans/hooks/queries';
 
 export const pricingTableKeys = {
   all: ['pricing-tables'] as const,

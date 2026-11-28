@@ -10,7 +10,7 @@ import {
   restorePricingPlan,
   updatePricingPlan,
   type PricingPlanInput,
-} from '@/lib/api/pricing-plans';
+} from '@/features/pricing-plans/api';
 
 export const pricingPlanKeys = {
   all: ['pricing-plans'] as const,

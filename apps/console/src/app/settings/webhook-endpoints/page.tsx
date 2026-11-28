@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header';
-import { WebhookEndpointsScreen } from '@/components/webhooks/webhook-endpoints-screen';
+import { WebhookEndpointsScreen } from '@/features/webhooks/components/webhook-endpoints-screen';
 
 export const metadata = { title: 'Webhook Endpoints' };
 

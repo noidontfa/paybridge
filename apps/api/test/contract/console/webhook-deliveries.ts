@@ -1,4 +1,4 @@
-// COPIED BY HAND from apps/console/src/lib/api/webhook-deliveries.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
+// COPIED BY HAND from apps/console/src/features/webhooks/api/webhook-deliveries.ts (client functions left out). Keep in sync: ADR 0004, ADR 0005.
 // Do not edit this copy; change the Console file and copy again.
 /**
  * `/internal/webhook-deliveries`: each Payment Event PayBridge delivered (or

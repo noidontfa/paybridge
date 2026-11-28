@@ -1,8 +1,8 @@
 'use client';
 
 import { CheckIcon, XIcon } from 'lucide-react';
-import type { PricingPlan } from '@/lib/api/pricing-plans';
-import type { PricingTableLanguage, PricingTableTheme } from '@/lib/api/pricing-tables';
+import type { PricingPlan } from '@/features/pricing-plans/api';
+import type { PricingTableLanguage, PricingTableTheme } from '@/features/pricing-tables/api';
 import { formatMoney } from '@/utils/format';
 
 /** The few words a card shows besides the Organization's own text. */

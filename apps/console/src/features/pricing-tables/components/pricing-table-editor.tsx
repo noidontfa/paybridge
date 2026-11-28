@@ -3,29 +3,29 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ErrorState, NotFoundState } from '@/components/shared/data-states';
-import { PRICING_MANAGE } from '@/components/pricing-plans/pricing-plans-screen';
+import { PRICING_MANAGE } from '@/features/pricing-plans/components/pricing-plans-screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError } from '@/services/errors';
-import type { PricingPlan } from '@/lib/api/pricing-plans';
+import type { PricingPlan } from '@/features/pricing-plans/api';
 import {
   PRICING_TABLE_LIMITS,
   type PricingTable,
   type PricingTableInput,
   type PricingTableLanguage,
   type PricingTableTheme,
-} from '@/lib/api/pricing-tables';
+} from '@/features/pricing-tables/api';
 import { formatMoney } from '@/utils/format';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { usePricingPlans } from '@/lib/queries/pricing-plans';
+import { usePricingPlans } from '@/features/pricing-plans/hooks/queries';
 import {
   useCreatePricingTable,
   useDeletePricingTable,
   usePricingTable,
   useUpdatePricingTable,
-} from '@/lib/queries/pricing-tables';
+} from '@/features/pricing-tables/hooks/queries';
 import { PricingTablePreview } from './pricing-table-preview';
 import { PricingTableSnippet } from './pricing-table-snippet';
 import { LANGUAGE_NAMES, tableEditorLabel, THEME_NAMES } from './pricing-tables-screen';

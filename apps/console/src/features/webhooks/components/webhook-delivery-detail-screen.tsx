@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/services/errors';
-import type { WebhookDeliveryAttempt, WebhookDeliveryDetail } from '@/lib/api/webhook-deliveries';
+import type { WebhookDeliveryAttempt, WebhookDeliveryDetail } from '@/features/webhooks/api/webhook-deliveries';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { useResendWebhookDelivery, useWebhookDelivery } from '@/lib/queries/webhook-deliveries';
+import { useResendWebhookDelivery, useWebhookDelivery } from '@/features/webhooks/hooks/webhook-deliveries';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

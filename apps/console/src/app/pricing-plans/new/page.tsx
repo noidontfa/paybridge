@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header';
-import { NewPricingPlanScreen } from '@/components/pricing-plans/pricing-plan-editor';
+import { NewPricingPlanScreen } from '@/features/pricing-plans/components/pricing-plan-editor';
 
 export const metadata = { title: 'New Pricing Plan' };
 

@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header';
-import { PricingTableEditorScreen } from '@/components/pricing-tables/pricing-table-editor';
+import { PricingTableEditorScreen } from '@/features/pricing-tables/components/pricing-table-editor';
 
 export const metadata = { title: 'Pricing Table' };
 

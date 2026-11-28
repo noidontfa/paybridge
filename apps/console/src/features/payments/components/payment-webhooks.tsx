@@ -7,8 +7,8 @@ import { TimeText } from '@/components/shared/time-text';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCan } from '@/features/auth/hooks/use-operator';
-import { usePaymentWebhookDeliveries } from '@/lib/queries/webhook-deliveries';
-import { webhookDeliveryHref } from '@/components/webhook-deliveries/webhook-deliveries-columns';
+import { usePaymentWebhookDeliveries } from '@/features/webhooks/hooks/webhook-deliveries';
+import { webhookDeliveryHref } from '@/features/webhooks/components/webhook-deliveries-columns';
 
 /** The Webhook deliveries of one Payment's events, so an Operator can tell whether it was reported. */
 export function PaymentWebhooks({ paymentId }: { paymentId: string }) {

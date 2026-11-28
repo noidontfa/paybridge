@@ -1,6 +1,6 @@
 /** The mocked Webhook Endpoints endpoints: create returns the secret once, list never does. */
 import { http, HttpResponse, type HttpHandler } from 'msw';
-import { WEBHOOK_EVENT_KINDS, type WebhookEndpoint } from '@/lib/api/webhook-endpoints';
+import { WEBHOOK_EVENT_KINDS, type WebhookEndpoint } from '@/features/webhooks/api/webhook-endpoints';
 import type { MockStore } from './store';
 import { isFailingEndpoint } from './webhook-deliveries';
 

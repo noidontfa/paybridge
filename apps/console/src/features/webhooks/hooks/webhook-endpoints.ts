@@ -10,7 +10,7 @@ import {
   updateWebhookEndpoint,
   type SecretOverlap,
   type WebhookEndpointInput,
-} from '@/lib/api/webhook-endpoints';
+} from '@/features/webhooks/api/webhook-endpoints';
 
 export const webhookEndpointKeys = {
   all: ['webhook-endpoints'] as const,

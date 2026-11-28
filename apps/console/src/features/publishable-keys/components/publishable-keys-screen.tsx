@@ -8,13 +8,13 @@ import { EmptyListState } from '@/components/shared/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PUBLISHABLE_KEY_LABEL_MAX_LENGTH, type PublishableKey } from '@/lib/api/publishable-keys';
+import { PUBLISHABLE_KEY_LABEL_MAX_LENGTH, type PublishableKey } from '@/features/publishable-keys/api';
 import {
   useCreatePublishableKey,
   usePublishableKeys,
   useRevokePublishableKey,
   useSetPublishableKeyOrigins,
-} from '@/lib/queries/publishable-keys';
+} from '@/features/publishable-keys/hooks/queries';
 import { useCan } from '@/features/auth/hooks/use-operator';
 
 const when = (iso: string) => new Date(iso).toLocaleString();
