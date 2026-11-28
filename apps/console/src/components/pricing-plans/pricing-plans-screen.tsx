@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { ErrorState } from '@/components/data-states';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import type { PricingPlan } from '@/lib/api/pricing-plans';
 import { formatMoney } from '@/lib/format';
 import { useCan } from '@/lib/operator';
@@ -27,56 +27,88 @@ export function PricingPlansScreen() {
   const { data, error, isPending, refetch } = usePricingPlans();
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-6">
-      {canManage && (
-        <div>
-          <Link href="/pricing-plans/new" className={buttonVariants()}>
-            New Pricing Plan
-          </Link>
-        </div>
-      )}
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading Pricing Plans" className="h-24 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No Pricing Plans yet.</p>
-      ) : (
-        <table aria-label="Pricing Plans" className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="py-1">Name</th>
-              <th>Amount</th>
-              <th>Features</th>
-              <th>Gateways</th>
-              <th>Payment Expiry</th>
-              <th>Status</th>
-              <th>Last changed by</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((plan) => (
-              <tr key={plan.id} className="border-t">
-                <td className="py-2">
-                  <Link href={`/pricing-plans/${encodeURIComponent(plan.id)}`} className="font-medium underline-offset-4 hover:underline">
-                    {plan.name}
-                  </Link>
-                </td>
-                <td className="tabular-nums">{formatMoney(plan.amount)}</td>
-                <td>{plan.features.length}</td>
-                <td>{gatewaysLabel(plan.allowedGatewayIds)}</td>
-                <td>{plan.expiryMinutes} min</td>
-                <td>
-                  <Badge variant={plan.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                    {plan.status === 'ACTIVE' ? 'Active' : 'Archived'}
-                  </Badge>
-                </td>
-                <td>{editorLabel(plan)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="px-4 pb-6">
+      <DataTable
+        label="Pricing Plans"
+        columns={PLAN_COLUMNS}
+        rows={data?.items ?? []}
+        getRowId={(plan) => plan.id}
+        getRowHref={(plan) => `/pricing-plans/${encodeURIComponent(plan.id)}`}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        toolbar={
+          canManage && (
+            <div>
+              <Link href="/pricing-plans/new" className={buttonVariants()}>
+                New Pricing Plan
+              </Link>
+            </div>
+          )
+        }
+        emptyState={
+          <EmptyListState
+            title="No Pricing Plans yet."
+            description="A Pricing Plan is what a Customer buys from a Pricing Table: a name, an Amount and its features."
+          />
+        }
+      />
     </div>
   );
 }
+
+const column = createDataTableColumnHelper<PricingPlan>();
+
+const PLAN_COLUMNS: DataTableColumns<PricingPlan> = column.columns([
+  column.accessor('name', {
+    id: 'name',
+    header: 'Name',
+    cell: ({ row }) => (
+      <Link href={`/pricing-plans/${encodeURIComponent(row.original.id)}`} className="font-medium underline-offset-4 hover:underline">
+        {row.original.name}
+      </Link>
+    ),
+  }),
+  column.display({
+    id: 'amount',
+    header: 'Amount',
+    meta: { align: 'right' },
+    cell: ({ row }) => <span className="tabular-nums">{formatMoney(row.original.amount)}</span>,
+  }),
+  column.display({
+    id: 'features',
+    header: 'Features',
+    meta: { align: 'right' },
+    cell: ({ row }) => <span className="tabular-nums">{row.original.features.length}</span>,
+  }),
+  column.display({
+    id: 'gateways',
+    header: 'Gateways',
+    cell: ({ row }) =>
+      row.original.allowedGatewayIds.length === 0 ? (
+        <span className="text-muted-foreground">{gatewaysLabel(row.original.allowedGatewayIds)}</span>
+      ) : (
+        <span className="font-mono text-xs">{gatewaysLabel(row.original.allowedGatewayIds)}</span>
+      ),
+  }),
+  column.display({
+    id: 'expiry',
+    header: 'Payment Expiry',
+    meta: { align: 'right' },
+    cell: ({ row }) => <span className="whitespace-nowrap tabular-nums">{row.original.expiryMinutes} min</span>,
+  }),
+  column.display({
+    id: 'status',
+    header: 'Status',
+    cell: ({ row }) => (
+      <Badge variant={row.original.status === 'ACTIVE' ? 'default' : 'secondary'}>
+        {row.original.status === 'ACTIVE' ? 'Active' : 'Archived'}
+      </Badge>
+    ),
+  }),
+  column.display({
+    id: 'updatedBy',
+    header: 'Last changed by',
+    cell: ({ row }) => editorLabel(row.original),
+  }),
+]);

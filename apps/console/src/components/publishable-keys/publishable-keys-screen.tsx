@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { CopyButton } from '@/components/copy-button';
-import { ErrorState } from '@/components/data-states';
+import type { ReactNode } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { PUBLISHABLE_KEY_LABEL_MAX_LENGTH, type PublishableKey } from '@/lib/api/publishable-keys';
 import {
   useCreatePublishableKey,
@@ -140,80 +142,103 @@ export function PublishableKeysScreen() {
         websites, and only for the Embedded Checkout. It is public, so it can be copied again at any time.
       </p>
 
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading Publishable Keys" className="h-24 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No Publishable Keys yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left align-top text-muted-foreground">
-              <th className="py-1">Label</th>
-              <th>Key</th>
-              <th>Allowed origins</th>
-              <th>Created</th>
-              <th>Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((key) => (
-              <tr key={key.id} className="border-t align-top">
-                <td className="py-2">{key.label}</td>
-                <td className="py-2">
-                  <span className="flex items-center gap-1">
-                    <code className="font-mono break-all">{key.key}</code>
-                    <CopyButton value={key.key} label="Publishable Key" />
-                  </span>
-                </td>
-                <td className="py-2">
-                  {editing === key.id ? (
-                    <OriginsEditor publishableKey={key} onDone={() => setEditing(null)} />
-                  ) : (
-                    <ul className="font-mono">
-                      {key.allowedOrigins.map((origin) => (
-                        <li key={origin}>{origin}</li>
-                      ))}
-                    </ul>
-                  )}
-                </td>
-                <td className="py-2">
-                  {when(key.createdAt)}
-                  {key.createdBy.label && <div className="text-muted-foreground">by {key.createdBy.label}</div>}
-                </td>
-                <td className="py-2">{key.revokedAt ? `Revoked ${when(key.revokedAt)}` : 'Active'}</td>
-                <td className="py-2 text-right">
-                  {!key.revokedAt && (
-                    <span className="flex justify-end gap-2">
-                      {editing !== key.id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          aria-label={`Edit origins of ${key.label}`}
-                          onClick={() => setEditing(key.id)}
-                        >
-                          Edit origins
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={revoke.isPending}
-                        aria-label={`Revoke ${key.label}`}
-                        onClick={() => revoke.mutate(key.id)}
-                      >
-                        Revoke
-                      </Button>
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        label="Publishable Keys"
+        columns={publishableKeyColumns({
+          origins: (key) =>
+            editing === key.id ? (
+              <OriginsEditor publishableKey={key} onDone={() => setEditing(null)} />
+            ) : (
+              <ul className="font-mono text-xs">
+                {key.allowedOrigins.map((origin) => (
+                  <li key={origin}>{origin}</li>
+                ))}
+              </ul>
+            ),
+          actions: (key) =>
+            key.revokedAt ? null : (
+              <span className="flex justify-end gap-2">
+                {editing !== key.id && (
+                  <Button variant="outline" size="sm" aria-label={`Edit origins of ${key.label}`} onClick={() => setEditing(key.id)}>
+                    Edit origins
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={revoke.isPending}
+                  aria-label={`Revoke ${key.label}`}
+                  onClick={() => revoke.mutate(key.id)}
+                >
+                  Revoke
+                </Button>
+              </span>
+            ),
+        })}
+        rows={data?.items ?? []}
+        getRowId={(key) => key.id}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={
+          <EmptyListState title="No Publishable Keys yet." description="Create one above to put a Pricing Table on your website." />
+        }
+      />
     </div>
   );
+}
+
+const column = createDataTableColumnHelper<PublishableKey>();
+
+function publishableKeyColumns({
+  origins,
+  actions,
+}: {
+  origins: (key: PublishableKey) => ReactNode;
+  actions: (key: PublishableKey) => ReactNode;
+}): DataTableColumns<PublishableKey> {
+  return column.columns([
+    column.accessor('label', {
+      id: 'label',
+      header: 'Label',
+      cell: ({ row }) => <span className="font-medium">{row.original.label}</span>,
+    }),
+    column.display({
+      id: 'key',
+      header: 'Key',
+      cell: ({ row }) => (
+        <span className="flex items-center gap-1">
+          <code className="font-mono text-xs break-all">{row.original.key}</code>
+          <CopyButton value={row.original.key} label="Publishable Key" />
+        </span>
+      ),
+    }),
+    column.display({ id: 'origins', header: 'Allowed origins', cell: ({ row }) => origins(row.original) }),
+    column.display({
+      id: 'createdAt',
+      header: 'Created',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">
+          {when(row.original.createdAt)}
+          {row.original.createdBy.label && <span className="block text-muted-foreground">by {row.original.createdBy.label}</span>}
+        </span>
+      ),
+    }),
+    column.display({
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) =>
+        row.original.revokedAt ? (
+          <Badge variant="outline">Revoked {when(row.original.revokedAt)}</Badge>
+        ) : (
+          <Badge variant="secondary">Active</Badge>
+        ),
+    }),
+    column.display({
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      meta: { align: 'right' },
+      cell: ({ row }) => actions(row.original),
+    }),
+  ]);
 }

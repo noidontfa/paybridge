@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { CopyButton } from '@/components/copy-button';
-import { ErrorState } from '@/components/data-states';
+import type { ReactNode } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   SECRET_OVERLAPS,
   WEBHOOK_EVENT_KINDS,
@@ -295,97 +296,126 @@ export function WebhookEndpointsScreen() {
         </div>
       )}
 
-      {isPending && !error ? (
-        <Skeleton role="status" aria-label="Loading Webhook Endpoints" className="h-24 rounded-xl" />
-      ) : error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : data.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No Webhook Endpoints yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="py-1">URL</th>
-              <th>Payment Events</th>
-              <th>Secret</th>
-              <th>Status</th>
-              <th>Last change</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((endpoint) => (
-              <tr key={endpoint.id} className="border-t align-top">
-                <td className="py-2 font-mono break-all">{endpoint.url}</td>
-                <td className="font-mono">{endpoint.eventKinds.join(', ')}</td>
-                <td>
-                  <span className="font-mono">{endpoint.secretPrefix}…</span>
-                  {endpoint.previousSecretExpiresAt && (
-                    <p className="text-xs text-muted-foreground">
-                      Previous secret valid until {when(endpoint.previousSecretExpiresAt)}
-                    </p>
-                  )}
-                </td>
-                <td>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge variant={endpoint.status === 'ENABLED' ? 'default' : 'secondary'}>
-                      {endpoint.status === 'ENABLED' ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                    {endpoint.failing && (
-                      <Badge variant="destructive" title="Its latest deliveries all failed. Check the receiver.">
-                        Failing
-                      </Badge>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  {when(endpoint.updatedAt)} by {writer(endpoint)}
-                </td>
-                <td className="flex justify-end gap-1 py-2">
-                  <TestSend endpoint={endpoint} />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-label={`Edit ${endpoint.url}`}
-                    onClick={() => setEditing(endpoint)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-label={`Roll secret ${endpoint.url}`}
-                    onClick={() => {
-                      setEditing(null);
-                      setRolling(endpoint);
-                    }}
-                  >
-                    Roll secret
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={setEnabled.isPending}
-                    aria-label={`${endpoint.status === 'ENABLED' ? 'Disable' : 'Enable'} ${endpoint.url}`}
-                    onClick={() => setEnabled.mutate({ id: endpoint.id, enabled: endpoint.status !== 'ENABLED' })}
-                  >
-                    {endpoint.status === 'ENABLED' ? 'Disable' : 'Enable'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={remove.isPending}
-                    aria-label={`Delete ${endpoint.url}`}
-                    onClick={() => remove.mutate(endpoint.id)}
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        label="Webhook Endpoints"
+        columns={endpointColumns((endpoint) => (
+          <span className="flex justify-end gap-1">
+            <TestSend endpoint={endpoint} />
+            <Button variant="outline" size="sm" aria-label={`Edit ${endpoint.url}`} onClick={() => setEditing(endpoint)}>
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Roll secret ${endpoint.url}`}
+              onClick={() => {
+                setEditing(null);
+                setRolling(endpoint);
+              }}
+            >
+              Roll secret
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={setEnabled.isPending}
+              aria-label={`${endpoint.status === 'ENABLED' ? 'Disable' : 'Enable'} ${endpoint.url}`}
+              onClick={() => setEnabled.mutate({ id: endpoint.id, enabled: endpoint.status !== 'ENABLED' })}
+            >
+              {endpoint.status === 'ENABLED' ? 'Disable' : 'Enable'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={remove.isPending}
+              aria-label={`Delete ${endpoint.url}`}
+              onClick={() => remove.mutate(endpoint.id)}
+            >
+              Delete
+            </Button>
+          </span>
+        ))}
+        rows={data?.items ?? []}
+        getRowId={(endpoint) => endpoint.id}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={
+          <EmptyListState
+            title="No Webhook Endpoints yet."
+            description="Add one above so your system learns about every Payment Event."
+          />
+        }
+      />
     </div>
   );
+}
+
+const column = createDataTableColumnHelper<WebhookEndpoint>();
+
+function endpointColumns(actions: (endpoint: WebhookEndpoint) => ReactNode): DataTableColumns<WebhookEndpoint> {
+  return column.columns([
+    column.accessor('url', {
+      id: 'url',
+      header: 'URL',
+      cell: ({ row }) => <span className="font-mono text-xs font-medium break-all">{row.original.url}</span>,
+    }),
+    column.display({
+      id: 'eventKinds',
+      header: 'Payment Events',
+      cell: ({ row }) => (
+        <span className="flex flex-wrap gap-1">
+          {row.original.eventKinds.map((kind) => (
+            <Badge key={kind} variant="secondary" className="font-mono">
+              {kind}
+            </Badge>
+          ))}
+        </span>
+      ),
+    }),
+    column.display({
+      id: 'secret',
+      header: 'Secret',
+      cell: ({ row }) => (
+        <>
+          <span className="font-mono text-xs">{row.original.secretPrefix}…</span>
+          {row.original.previousSecretExpiresAt && (
+            <p className="text-xs text-muted-foreground">Previous secret valid until {when(row.original.previousSecretExpiresAt)}</p>
+          )}
+        </>
+      ),
+    }),
+    column.display({
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          <Badge variant={row.original.status === 'ENABLED' ? 'default' : 'secondary'}>
+            {row.original.status === 'ENABLED' ? 'Enabled' : 'Disabled'}
+          </Badge>
+          {row.original.failing && (
+            <Badge variant="destructive" title="Its latest deliveries all failed. Check the receiver.">
+              Failing
+            </Badge>
+          )}
+        </div>
+      ),
+    }),
+    column.display({
+      id: 'updatedAt',
+      header: 'Last change',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">
+          {when(row.original.updatedAt)}
+          <span className="block text-muted-foreground">by {writer(row.original)}</span>
+        </span>
+      ),
+    }),
+    column.display({
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      meta: { align: 'right' },
+      cell: ({ row }) => actions(row.original),
+    }),
+  ]);
 }

@@ -1,17 +1,10 @@
 'use client';
 
-import { ErrorState } from '@/components/data-states';
+import type { ReactNode } from 'react';
+import { createDataTableColumnHelper, DataTable, type DataTableColumns } from '@/components/data-table/data-table';
+import { EmptyListState } from '@/components/data-states';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import type { ManagedUser } from '@/lib/api/users';
 import { useCan } from '@/lib/operator';
 import { useChangeUser, useUserList } from '@/lib/queries/users';
@@ -29,23 +22,6 @@ export function UsersScreen() {
       </p>
     );
   }
-  if (isPending && !error) {
-    return (
-      <Skeleton
-        role="status"
-        aria-label="Loading users"
-        className="mx-4 h-40 rounded-xl"
-      />
-    );
-  }
-  if (error) {
-    return (
-      <div className="px-4 pb-4">
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      </div>
-    );
-  }
-
   const act = (user: ManagedUser) => {
     const otherRole =
       user.role === 'ORGANIZATION_ADMIN' ? 'OPERATOR' : 'ORGANIZATION_ADMIN';
@@ -90,32 +66,44 @@ export function UsersScreen() {
 
   return (
     <div className="px-4 pb-6">
-      <Table aria-label="Users">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>State</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.items.map((user) => (
-            <TableRow key={user.id} aria-label={user.email}>
-              <TableCell>{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.roleLabel}</TableCell>
-              <TableCell>
-                <Badge variant={user.active ? 'secondary' : 'outline'}>
-                  {user.active ? 'Active' : 'Deactivated'}
-                </Badge>
-              </TableCell>
-              <TableCell>{act(user)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <DataTable
+        label="Users"
+        columns={userColumns(act)}
+        rows={data?.items ?? []}
+        getRowId={(user) => user.id}
+        getRowLabel={(user) => user.email}
+        isLoading={isPending && !error}
+        error={error}
+        onRetry={() => void refetch()}
+        emptyState={<EmptyListState title="No Users yet." description="Invite people from Invitations." />}
+      />
     </div>
   );
+}
+
+const column = createDataTableColumnHelper<ManagedUser>();
+
+function userColumns(actions: (user: ManagedUser) => ReactNode): DataTableColumns<ManagedUser> {
+  return column.columns([
+    column.accessor('name', {
+      id: 'name',
+      header: 'Name',
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    }),
+    column.accessor('email', { id: 'email', header: 'Email' }),
+    column.accessor('roleLabel', { id: 'role', header: 'Role' }),
+    column.display({
+      id: 'state',
+      header: 'State',
+      cell: ({ row }) => (
+        <Badge variant={row.original.active ? 'secondary' : 'outline'}>{row.original.active ? 'Active' : 'Deactivated'}</Badge>
+      ),
+    }),
+    column.display({
+      id: 'actions',
+      header: 'Actions',
+      meta: { align: 'right' },
+      cell: ({ row }) => actions(row.original),
+    }),
+  ]);
 }

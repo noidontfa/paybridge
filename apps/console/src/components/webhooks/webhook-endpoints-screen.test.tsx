@@ -2,12 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { OperatorProvider, type Operator } from '@/lib/operator';
 import { createHandlers } from '@/mocks/handlers';
 import { MockStore } from '@/mocks/store';
 import { seedWebhookDeliveries } from '@/mocks/webhook-deliveries';
 import { WebhookEndpointsScreen } from './webhook-endpoints-screen';
+
+vi.mock('next/navigation', async () => await import('@/test/fake-navigation'));
 
 const store = new MockStore(new Date('2026-11-25T03:00:00.000Z'));
 const server = setupServer(...createHandlers({ baseUrl: '*/api/bff', store }));
@@ -51,7 +53,8 @@ describe('WebhookEndpointsScreen', () => {
     const secret = banner.querySelector('code')!.textContent!;
     expect(secret).toMatch(/^whsec_pb_/);
     const row = (await screen.findByText('https://erp.example.com/hook')).closest('tr')!;
-    expect(within(row).getByText('payment.created, payment.succeeded')).toBeInTheDocument();
+    expect(within(row).getByText('payment.created')).toBeInTheDocument();
+    expect(within(row).getByText('payment.succeeded')).toBeInTheDocument();
     expect(within(row).getByText('Enabled')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Done' }));
@@ -102,7 +105,8 @@ describe('WebhookEndpointsScreen', () => {
     await user.click(within(form).getByRole('button', { name: 'Save' }));
 
     const row = (await screen.findByText('https://b.example.com/hook')).closest('tr')!;
-    expect(within(row).getByText('payment.succeeded, payment.expired')).toBeInTheDocument();
+    expect(within(row).getByText('payment.succeeded')).toBeInTheDocument();
+    expect(within(row).getByText('payment.expired')).toBeInTheDocument();
   });
 
   it('shows the API error when the URL is refused', async () => {
